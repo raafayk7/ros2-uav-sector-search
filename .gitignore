@@ -1,0 +1,39 @@
+# ROS 2 / colcon build artifacts
+build/
+install/
+log/
+.colcon/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+venv/
+
+# YOLO / Ultralytics runs
+runs/
+*.pt
+*.onnx
+weights/
+datasets/
+!docs/datasets/        # keep documented sample datasets if any
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*~
+
+# Gazebo logs and caches
+.gazebo/
+gz_cache/
+
+# Generated SDFormat caches
+*.sdf.bak
+
+# Docker
+.docker-build/
