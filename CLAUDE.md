@@ -31,15 +31,18 @@ Things explicitly NOT in the rebuild even though the original used them: MAVROS 
 
 ```
 multi-agent-uavs/
-├── docs/                  # thesis.pdf, legacy-implementation-guide.docx, assessment-ros2-migration.md
-├── src/                   # colcon workspace src/ — ROS 2 packages live here
-├── docker/                # Dockerfile + compose
-├── skills/                # versioned copy of the multi-agent-uavs Claude skill
+├── docs/                       # thesis.pdf, legacy-implementation-guide.docx, assessment-ros2-migration.md
+├── src/                        # colcon workspace src/ — ROS 2 packages live here
+├── docker/                     # Dockerfile + compose
+├── skills/                     # canonical multi-agent-uavs skill source + packaged .skill
+├── .claude/skills/             # Claude Code skill discovery — symlinks into skills/
 ├── CLAUDE.md
 └── README.md
 ```
 
 `build/`, `install/`, `log/` are gitignored (colcon outputs).
+
+Skill source-of-truth is `skills/multi-agent-uavs/SKILL.md`. `.claude/skills/multi-agent-uavs` is a symlink to that directory so Claude Code picks it up automatically when run in this project. `skills/multi-agent-uavs.skill` is the packaged bundle for installing the same skill into Cowork. Edits to the SKILL.md propagate to both tools without duplication.
 
 ## How to work with Claude on this project
 

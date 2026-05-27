@@ -22,6 +22,12 @@ multi-agent-uavs/
 ├── docs/                       # thesis, legacy guide, assessment, design notes
 ├── src/                        # ROS 2 packages (the colcon workspace src/)
 ├── docker/                     # Dockerfile + compose for the dev container
+├── skills/                     # canonical source of the multi-agent-uavs Claude skill
+│   ├── multi-agent-uavs/       # the skill (SKILL.md + future references/scripts)
+│   └── multi-agent-uavs.skill  # packaged for Cowork's "Save skill" install
+├── .claude/skills/             # Claude Code project-scoped skills
+│   └── multi-agent-uavs → ../../skills/multi-agent-uavs  (symlink)
+├── CLAUDE.md
 ├── .gitignore
 └── README.md
 ```
