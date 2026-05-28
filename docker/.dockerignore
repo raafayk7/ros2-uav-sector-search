@@ -1,0 +1,7 @@
+# Build context lives at docker/, so paths here are relative to docker/.
+# (We don't actually COPY anything from outside docker/ in the Dockerfile
+# - the project source comes in as a bind mount at runtime - but a tight
+# .dockerignore still speeds up `docker build` by shrinking the context.)
+
+.env
+*.log

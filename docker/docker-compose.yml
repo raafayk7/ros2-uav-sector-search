@@ -1,0 +1,117 @@
+# docker/docker-compose.yml
+#
+# Single-service compose for the multi-agent-uavs dev container.
+#
+# Usage:
+#   cd docker/
+#   cp .env.example .env        # then edit UID/GID if not 1000:1000
+#   xhost +local:docker         # allow X11 from the container (host side)
+#   docker compose build
+#   docker compose up -d
+#   docker compose exec ros2 bash
+# -------------------------------------------------------------------------
+
+services:
+  ros2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Match host UID/GID so files created in the bind mount don't end
+        # up root-owned on the host. Override in .env if your user isn't 1000.
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    image: multi-agent-uavs:jazzy
+    container_name: multi-agent-uavs
+    hostname: ros2-jazzy
+
+    # `init: true` runs a tiny PID-1 (tini) inside the container so signals
+    # propagate properly and zombie processes get reaped. Without it, Ctrl-C
+    # in ros2 launch can leave orphan SITL processes.
+    init: true
+    stdin_open: true
+    tty: true
+
+    # ---- Networking -----------------------------------------------------
+    # ROS 2 DDS discovery relies on multicast. With Docker's default bridge
+    # network, multicast either doesn't work or works flakily across the
+    # host<->container boundary. `network_mode: host` puts the container on
+    # the host's network namespace - nodes inside the container can see
+    # host-side ROS 2 nodes and vice versa, and DDS discovery Just Works.
+    # The cost: you lose container network isolation. Fine for single-host
+    # dev; you'd revisit this for production deployment.
+    network_mode: host
+
+    # `ipc: host` lets the X server and the container share SysV shared
+    # memory segments - needed for the MIT-SHM X extension that Qt apps
+    # (RViz, rqt) use for fast rendering. Without it you'll see warnings
+    # and slow GUI redraws.
+    ipc: host
+
+    # ---- Environment ----------------------------------------------------
+    environment:
+      # X11 forwarding - DISPLAY is whatever the host has, usually :0 or :1
+      - DISPLAY=${DISPLAY:-:0}
+      - QT_X11_NO_MITSHM=0
+      - XDG_RUNTIME_DIR=/tmp/runtime-ros
+      # ROS 2 / DDS settings - keep these consistent across any host-side
+      # ROS 2 you run, or set a non-zero domain to isolate this container.
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      # Make SDL/Gazebo behave better on iGPU
+      - LIBGL_ALWAYS_SOFTWARE=${LIBGL_ALWAYS_SOFTWARE:-0}
+
+    # ---- Volumes --------------------------------------------------------
+    volumes:
+      # The project root, bind-mounted as the colcon workspace. Edits made
+      # in your editor on the host appear instantly inside the container,
+      # and build/install/log land back in the host folder (gitignored).
+      - ../:/workspaces/multi-agent-uavs:cached
+
+      # X11 socket for GUI apps
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Xauthority - if your host uses one. `${XAUTHORITY:-${HOME}/.Xauthority}`
+      # picks up either an explicit XAUTHORITY env var (Wayland XWayland or
+      # custom setups) or the default file.
+      - ${XAUTHORITY:-${HOME}/.Xauthority}:/home/ros/.Xauthority:ro
+
+      # (ROS 2 logs at /home/ros/.ros live inside the container filesystem.
+      # If you want them persisted across `docker compose down`, add a bind
+      # mount to a host path you own - a named volume gets root-owned by
+      # Docker and breaks our non-root ros user.)
+
+    # ---- Devices (GPU passthrough) -------------------------------------
+    # Intel / AMD iGPU - the ThinkPad case. /dev/dri is the DRI render node
+    # Mesa uses for hardware-accelerated OpenGL. Without this, Gazebo falls
+    # back to llvmpipe (software) and you'll get ~5 FPS RTF.
+    #
+    # This block ONLY works on the system Docker daemon. Docker Desktop on
+    # Linux runs in its own VM that doesn't expose host /dev/dri - if you
+    # ever switch back to Desktop, comment this block out or compose will
+    # fail with "no such file or directory" before the container starts.
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      # 'video' and 'render' groups own /dev/dri/* on the host. We pass
+      # numeric GIDs (not names) because the 'render' group doesn't exist
+      # in the container's /etc/group by default and Docker would fail to
+      # resolve it. These GIDs match the host's `getent group video|render`
+      # output - adjust if your host differs (Debian Trixie defaults: 44 / 992).
+      - "44"     # video
+      - "992"    # render
+
+    # NVIDIA dGPU alternative (requires nvidia-container-toolkit on host):
+    # runtime: nvidia
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu, graphics, compute, utility]
+
+    working_dir: /workspaces/multi-agent-uavs
+
+    # Keep the container running in the background. `docker compose exec`
+    # is how you actually get into it.
+    command: ["sleep", "infinity"]

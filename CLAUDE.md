@@ -31,7 +31,7 @@ Things explicitly NOT in the rebuild even though the original used them: MAVROS 
 
 ```
 multi-agent-uavs/
-├── docs/                       # thesis.pdf, legacy-implementation-guide.docx, assessment-ros2-migration.md
+├── docs/                       # thesis.pdf, legacy-implementation-guide.docx, assessment-ros2-migration.md, docker-notes.md
 ├── src/                        # colcon workspace src/ — ROS 2 packages live here
 ├── docker/                     # Dockerfile + compose
 ├── skills/                     # canonical multi-agent-uavs skill source + packaged .skill
@@ -39,6 +39,18 @@ multi-agent-uavs/
 ├── CLAUDE.md
 └── README.md
 ```
+
+## Docker stack status
+
+The Docker stack is built and working on the system Docker daemon (NOT Docker Desktop — see `docs/docker-notes.md` for why). Image is `multi-agent-uavs:jazzy`, ~25 GB. To run:
+
+```bash
+docker context use default
+docker compose -f docker/docker-compose.yml up -d
+docker compose -f docker/docker-compose.yml exec ros2 bash
+```
+
+**Open issue:** `ArduPilotPlugin` in Gazebo loads but doesn't send FDM packets to SITL, so `/ap/*` DDS topics don't appear. Likely Copter-4.5.7 vs `ardupilot_gz` main version skew. Details and next-session fix in `docs/docker-notes.md`. **Doesn't block algorithm work** — DGA can be developed against mocked `/ap/*` topics while this is resolved.
 
 `build/`, `install/`, `log/` are gitignored (colcon outputs).
 

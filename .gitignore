@@ -37,3 +37,16 @@ gz_cache/
 
 # Docker
 .docker-build/
+
+# SITL / MAVProxy runtime files (generated when running arducopter or mavproxy in repo root)
+core
+core.*
+dumpcore.sh_*.out
+dumpstack.sh_*.out
+eeprom.bin
+mav.tlog
+mav.tlog.raw
+*.parm.bak
+
+# Docker local environment overrides (UID/GID specific, not portable)
+docker/.env
