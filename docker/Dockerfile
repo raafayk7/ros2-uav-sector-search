@@ -29,11 +29,31 @@ FROM osrf/ros:jazzy-desktop-full
 ARG USERNAME=ros
 ARG UID=1000
 ARG GID=1000
-# ArduPilot ref - pin to a stable Copter release so the image is reproducible.
-# Bump this when you want a newer SITL.
-ARG ARDUPILOT_REF=Copter-4.5.7
-# ardupilot_gz tracks main; it moves slowly enough that 'main' is fine for now.
-ARG ARDUPILOT_GZ_REF=main
+# ArduPilot ref - pin to a master SHA, not a Copter-* release tag.
+# Why a master SHA and not a release tag: ardupilot_gz's ros2_gz.repos
+# pins `ardupilot: master`, and the launch files in ardupilot_gz_bringup
+# (iris.launch.py et al) reference `dds_use_ns.parm` which was added to
+# ardupilot in commit b17c3db3dd on 2026-03-24 - AFTER all Copter stable
+# tags (4.6.3 is the latest stable and doesn't have it). So a release tag
+# can't carry the file at all; only master can.
+#
+# Pinning to a SHA instead of `master` keeps the image reproducible across
+# rebuilds. Bump this SHA when you want newer SITL behaviour.
+#
+# SHA below = master HEAD as of 2026-05-29, short hash ddba3b4
+# ("Tools: fix setup on docker"). Use the full 40-char SHA - GitHub's
+# upload-pack rejects short hashes as "couldn't find remote ref".
+# Replaces previous pin: Copter-4.5.7 (which never connected to
+# ArduPilotPlugin in Gazebo - FDM protocol drift + missing dds_use_ns.parm,
+# see docs/docker-notes.md "Known limitation" for the diagnosis).
+ARG ARDUPILOT_REF=ddba3b490eaec04dafa3a12b45b7527aef0d0341
+
+# ardupilot_gz: pin to a specific main SHA for reproducibility.
+# SHA below = main HEAD as of 2026-04-11, short hash 8df4dc1 ("Add
+# namespace as launch parameter"). Co-evolves with the ardupilot SHA
+# above - both need to be from the same era for the FDM handshake and
+# the dds_use_ns.parm path to line up. Bump in tandem with ARDUPILOT_REF.
+ARG ARDUPILOT_GZ_REF=8df4dc1726e37504e6fc8b952d02e554cfa3176f
 
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
@@ -128,8 +148,28 @@ RUN userdel -r ubuntu 2>/dev/null || true \
 # The clone is shallow per-branch but recurses submodules (ChibiOS, etc.) -
 # the submodules are unavoidable; waf will fail without them.
 # -------------------------------------------------------------------------
-RUN git clone --depth 1 --branch ${ARDUPILOT_REF} --recurse-submodules \
-        https://github.com/ArduPilot/ardupilot.git /opt/ardupilot
+# Clone master shallowly, then check out the pinned SHA. Why not
+# `git fetch --depth 1 origin <SHA>` directly: GitHub serves a
+# precomputed pack for branch heads (fast, reliable), but has to build a
+# custom pack for arbitrary-SHA requests against repos this size, and
+# negotiation reliably times out on slower connections (we hit a 30-min
+# RPC timeout on 2026-05-30 trying that path). Branch-then-checkout uses
+# the fast path.
+#
+# --depth 50 keeps the window big enough that a SHA bumped to anything
+# within the last few weeks of master stays reachable. If you bump
+# ARDUPILOT_REF to something older and the checkout fails with "no such
+# object", increase the depth or switch the clone to `--branch <SHA>`
+# (only works if <SHA> resolves to a ref name) / `--unshallow`.
+#
+# --shallow-submodules keeps the submodule history shallow too (ChibiOS,
+# mavlink, etc. are large). `git submodule update` re-runs after checkout
+# to re-align the submodules with the pinned SHA's pointers.
+RUN git clone --depth 50 --branch master --shallow-submodules --recurse-submodules \
+        https://github.com/ArduPilot/ardupilot.git /opt/ardupilot \
+    && cd /opt/ardupilot \
+    && git checkout ${ARDUPILOT_REF} \
+    && git submodule update --init --recursive --depth 1
 
 # install-prereqs-ubuntu.sh refuses to run as root (it edits ~/.bashrc / ~/.profile
 # and the upstream maintainers don't want root-owned dotfiles). So we chown
@@ -192,8 +232,13 @@ WORKDIR /
 RUN mkdir -p /opt/ardupilot_ws/src
 WORKDIR /opt/ardupilot_ws/src
 
-RUN git clone --branch ${ARDUPILOT_GZ_REF} --recurse-submodules \
-        https://github.com/ArduPilot/ardupilot_gz.git
+# Same clone-branch-then-checkout pattern as for ardupilot above. See
+# that block for the rationale on why we don't `git fetch <SHA>` directly.
+RUN git clone --depth 50 --branch main --shallow-submodules --recurse-submodules \
+        https://github.com/ArduPilot/ardupilot_gz.git /opt/ardupilot_ws/src/ardupilot_gz \
+    && cd /opt/ardupilot_ws/src/ardupilot_gz \
+    && git checkout ${ARDUPILOT_GZ_REF} \
+    && git submodule update --init --recursive --depth 1
 
 # ros2_gz.repos lists ardupilot itself among the companion repos, which
 # would re-clone the entire ~1 GB tree we already baked in at /opt/ardupilot.

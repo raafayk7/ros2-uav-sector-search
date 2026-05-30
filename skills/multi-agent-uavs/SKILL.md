@@ -125,6 +125,8 @@ Topic naming convention:
 - Project-level topics (`/heatmap`) are unnamespaced
 - Per-drone project topics (`/iris_2/detections`) use the namespace as a prefix
 
+**Current dev reality (2026-05-30):** AP_DDS is not yet producing `/ap/*` topics — see the open FDM-handshake issue in `docs/docker-notes.md`. Until that's resolved, the input columns above resolve to `ros_gz_bridge` topics instead: `/imu` for `/<robot>/ap/imu`, `/navsat` for `/<robot>/ap/navsat/navsat0`, `/camera/image` for `/<robot>/camera/image_raw`, `/odometry` for the position estimate. The output column (`/<robot>/ap/cmd_vel`, `/<robot>/ap/goal_pose`) has no current substitute — actuation goes via pymavlink over UDP 14550 as a fallback. The target architecture above is the goal; nodes should be written so the input topic names are a configurable launch arg, so we can flip them back to `/ap/*` without rewiring code when FDM gets fixed.
+
 QoS conventions:
 - Sensor data (images, IMU) → `BEST_EFFORT`, `VOLATILE`, depth 1
 - Detections → `RELIABLE`, depth 10
@@ -247,8 +249,9 @@ Roboflow workflow: collect images from headless Gazebo (screenshot the camera to
 - Try `gz model -m iris_with_standoffs -p` to see if Gazebo can find the model definition.
 
 **Symptom: `ros2 topic list` shows no `/ap/*` topics.**
-- The AP_DDS agent isn't running, or SITL didn't start with DDS enabled. Check the SITL command line includes `--enable-DDS`.
-- Verify the Micro XRCE-DDS Agent is running: `ps aux | grep MicroXRCE`.
+- First check the AP_DDS agent is running: `ps aux | grep MicroXRCE`. If absent, the launch's `use_dds_agent` arg defaulted false or the patched MicroXRCEAgent invocation failed.
+- Check SITL itself is running and listening on UDP 9002: `sudo ss -anup | grep ':9002'` should show `UNCONN 127.0.0.1:9002`. If absent, SITL crashed at boot.
+- If both processes are alive but no /ap/*: confirm FDM packets are actually flowing from Gazebo to SITL with `sudo tcpdump -i any -nn -c 30 'udp port 9002'`. **Known open issue (2026-05-30):** ArduPilotPlugin loads cleanly, finds the IMU, computes the right topic, logs "ArduPilot ready to fly", but emits zero `sendto()` calls to 9002 with no error. lock_step=0 doesn't unblock. Diagnosis pending — strace `gz sim`'s sendto path or debug-build the plugin to localize the silent failure. Full notes in `docs/docker-notes.md`. **Workaround:** project nodes consume `/imu`, `/navsat`, `/camera/image`, `/odometry` from ros_gz_bridge directly (sufficient for DGA development; only commanding the drone needs AP_DDS, fallback is pymavlink over UDP 14550).
 
 **Symptom: Two nodes on the same machine can't see each other.**
 - Almost always a QoS mismatch. Run `ros2 topic info <topic> --verbose` on both sides to check.

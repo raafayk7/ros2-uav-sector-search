@@ -43,19 +43,94 @@ Listed in execution order — each one cost a build iteration:
 15. **`sdformat_urdf` on Jazzy doesn't reliably resolve `package://` URIs via ament_index**, so `robot_state_publisher` crashes parsing the iris SDF. Workaround: extend `GZ_SIM_RESOURCE_PATH` and `SDF_PATH` to include `/opt/ardupilot_ws/install/ardupilot_gazebo/share` and `ardupilot_gz_description/share` (baked into `entrypoint.sh`).
 16. **`iris_runway.launch.py` calls `Node(package="micro_ros_agent")`** which we COLCON_IGNORE'd. Patched at image-build time to use `ExecuteProcess(cmd=["MicroXRCEAgent"] + args, ...)` instead — same args, runs the eProsima agent binary we already have. See the Python sed in the Dockerfile.
 
-## Known limitation (unresolved as of 2026-05-28)
+## Open issue: FDM handshake silence (diagnosis 2026-05-28, fix attempted 2026-05-30, verification pending)
+
+### Symptom
 
 ArduPilotPlugin in Gazebo loads cleanly but never sends FDM packets to SITL on UDP 9002. Verified by `tcpdump` — zero packets in 10 s. SITL stays at `Waiting for connection ...` forever, so AP_DDS never initializes and `/ap/*` topics never appear.
 
-Probably a version skew: we pinned `ARDUPILOT_REF=Copter-4.5.7` but `ardupilot_gz` is on `main`. Smoking gun: the launch references `dds_use_ns.parm` which doesn't exist anywhere on disk — newer ardupilot_gz expects newer ardupilot's default params. The JSON FDM protocol may also have changed.
+### Diagnosis (2026-05-30)
 
-Fix to try next session: bump `ARDUPILOT_REF` to Copter-4.6.x (or pin `ardupilot_gz` to a tag matching 4.5.7) and full rebuild. Or, if blocked, develop the DGA algorithm against mocked `/ap/*` topics — the rest of the simulation infrastructure is fine for visualization and ROS 2 node development.
+Root cause is version skew between `ardupilot` and `ardupilot_gz` checkouts in the image. The previous image pinned `ARDUPILOT_REF=Copter-4.5.7` (Oct 2024) but `ardupilot_gz=main` (April 2026), and the two repos co-evolve closely.
 
-## Useful commands once container is running
+Evidence:
+
+1. **`ardupilot_gz/main/ros2_gz.repos` pins `ardupilot: master`**, not a release tag. The official ardupilot_gz integration tests against ardupilot master, not against Copter stable.
+2. **`dds_use_ns.parm` was added to ardupilot on 2026-03-24** (commit `b17c3db3dd`, "Tools: Added DDS tests with new namespace nomenclature"). It is **not present in any Copter stable release tag**, including the latest Copter-4.6.3. The iris launch file in current ardupilot_gz_bringup references this file via `pkg_ardupilot_sitl/config/default_params/dds_use_ns.parm` — so any Copter-* tag will fail the launch silently.
+3. **Recent ardupilot_gz commits explicitly touch the FDM handshake path**:
+   - `1805eaa` (2026-02-16, WildThumper): "Ensure ArduPilot plugin and SITL have a consistent sim_address"
+   - `e26ab1d` (2026-03-25, MultiAgent): switches micro_ros_agent transport from serial to udp4
+   The JSON FDM wire format the plugin emits in ardupilot_gazebo's `ros2` branch (recent) has likely drifted from what arducopter Copter-4.5.7 (older) parses.
+
+### Fix attempted
+
+Bumped both refs in `docker/Dockerfile` to specific full-40-char SHAs from the same era:
+
+- `ARDUPILOT_REF` = `ddba3b490eaec04dafa3a12b45b7527aef0d0341` (master HEAD on 2026-05-29, short `ddba3b4`, "Tools: fix setup on docker")
+- `ARDUPILOT_GZ_REF` = `8df4dc1726e37504e6fc8b952d02e554cfa3176f` (main HEAD on 2026-04-11, short `8df4dc1`, "Add namespace as launch parameter")
+
+Pinning to SHAs (rather than the floating `master` / `main` we'd otherwise track) preserves reproducibility while keeping both repos aligned to the same window.
+
+The clone commands had to change from `git clone --depth 1 --branch <REF>` to `git init && git fetch --depth 1 origin <SHA> && git checkout FETCH_HEAD`, because `--branch` only accepts branch/tag names, not arbitrary SHAs. GitHub honours `uploadpack.allowReachableSHA1InWant=true` so the SHA fetch works as long as it's reachable from a branch.
+
+**Gotcha hit on first rebuild attempt (2026-05-30):** the SHA must be the **full 40-character hash**. Short SHAs (`ddba3b4`) get interpreted as ref names by `git fetch`, and the upload-pack server replies `fatal: couldn't find remote ref ddba3b4`. Always pin to the full hash.
+
+**Gotcha hit on second rebuild attempt (2026-05-30):** even with the full hash, `git fetch --depth 1 origin <SHA>` against the ardupilot repo from a typical home connection **times out after ~30 minutes** with `RPC failed; curl 56 Recv failure: Connection timed out`. Root cause: GitHub serves precomputed packs for branch heads (fast) but builds a custom pack for arbitrary-SHA requests, which for repos this size doesn't reliably complete. Switched to `git clone --depth 50 --branch master --shallow-submodules --recurse-submodules` followed by `git checkout <SHA>` — uses the fast precomputed-pack path, and `--depth 50` keeps the SHA in the shallow window. If you bump `ARDUPILOT_REF` to a SHA older than 50 commits behind master HEAD, the checkout will fail with "no such object" — increase the depth or convert the pin back to a branch/tag name.
+
+### Outcome of the version bump (2026-05-30, after rebuild)
+
+The bump fixed every layer except the very last one:
+
+- **Build succeeded** after two false starts (short-SHA gotcha, then GitHub-SHA-fetch timeout). Took ~60 min total.
+- **SITL boots cleanly** with the new dds_use_ns.parm in its `--defaults` list. eeprom.bin gets written. `arducopter` process is alive on the FDM listener (UDP 9002 on 127.0.0.1).
+- **MicroXRCEAgent** is up on UDP 2019 in udp4 mode.
+- **Gazebo** loads `runway.sdf`, spawns the `iris` model, all sensors advertise correctly (`/world/runway/model/iris/...` for imu, navsat, camera, magnetometer, air_pressure, altimeter, air_speed, battery).
+- **ros_gz_bridge** publishes the Gazebo sensors to ROS 2 at `/imu`, `/navsat`, `/camera/image`, `/camera/camera_info`, `/odometry`, `/magnetometer`, `/battery`, etc.
+- **ArduPilotPlugin loads successfully** — log shows `[iris] ArduPilot ready to fly. The force will be with you`, `Loaded system [ArduPilotPlugin] for entity [11]`, `Found IMU sensor with name [imu_link::imu_sensor]`, `Computed IMU topic to be: world/runway/model/iris/link/imu_link/sensor/imu_sensor/imu`. The plugin `.so` exists, `GZ_SIM_SYSTEM_PLUGIN_PATH` points at it, the IMU is found, the topic is computed correctly.
+
+**Still broken:** the plugin emits **zero** UDP packets on port 9002. Verified with `tcpdump -i any -nn udp port 9002 -c 30` — 0 packets captured. SITL stays at "Waiting for connection ..." forever, so AP_DDS never initializes and `/ap/*` topics never appear.
+
+Things ruled out this session (don't redo):
+
+1. **Not a `fdm_addr` / `fdm_port_in` mismatch** — both iris SDF variants (`iris_with_ardupilot`, `iris_with_gimbal`, `iris_with_lidar`) hardcode `127.0.0.1:9002`, which matches `arducopter --sim-address=127.0.0.1 --slave 0` (default JSON physics port).
+2. **Not a missing plugin `.so`** — present at `/opt/ardupilot_ws/install/ardupilot_gazebo/lib/ardupilot_gazebo/libArduPilotPlugin.so`, loaded by Gazebo.
+3. **Not a missing IMU sensor** — log shows the plugin finds it. IMU topic is alive (visible via `gz topic -l`).
+4. **Not a lock_step deadlock** — tried `<lock_step>0</lock_step>` (sed across all iris model SDFs in install/), relaunched, no change. Zero packets on 9002 either way.
+5. **Not a permissions issue** — `arducopter`, `MicroXRCEAgent`, and `gz sim` all run as the `ros` user and have appropriate caps.
+6. **Not a DDS-side issue** — UDP 2019 has zero packets too, which makes sense because SITL only initializes AP_DDS after it gets FDM. The DDS silence is downstream of the FDM silence, not a separate fault.
+
+### Where to look next session if you come back to this
+
+The plugin is running its update loop (Gazebo log shows IMU topic computed in `OnPreUpdate`, simulation is stepping at full CPU, 12 postupdate worker threads alive) but its `sendto()` to 127.0.0.1:9002 is either not being called or is failing silently. Three diagnostic paths:
+
+1. `sudo strace -f -e trace=sendto -p $(pidof gz)` on the `gz sim -v4 -s` process while the simulation runs. If no `sendto()` calls to 9002 appear, the plugin's `Update`/`PostUpdate` send-path isn't executing.
+2. Build a debug version of `libArduPilotPlugin.so` with extra logging around `SendFDMUDP()` (or whatever the current ros2-branch name is) and reinstall.
+3. Open an ArduPilot Discord / GitHub issue with this exact diagnosis ("plugin loads, finds IMU, emits zero FDM packets on UDP 9002, lock_step=0 doesn't change behaviour, Gazebo Harmonic + ardupilot_gz main 8df4dc1 + ardupilot master ddba3b4"). The plugin's main maintainer (`srmainwaring`) was active in late March 2026 — the FDM-handshake commit `1805eaa` is theirs — so this is a current/known-to-the-team area.
+
+### Pivot path the project is taking
+
+DGA development can proceed without `/ap/*` for now. The Gazebo sensors already arrive in ROS 2 via `ros_gz_bridge`:
+
+| Project node needs | Topic available now |
+|---|---|
+| Drone position | `/navsat` (lat/lon/alt), `/odometry` (local frame) |
+| Heatmap inputs | `/imu`, `/magnetometer` |
+| YOLO frames | `/camera/image`, `/camera/camera_info` |
+| Robot pose for TF | `/tf`, `/tf_static`, `/joint_states` |
+| Time | `/clock` (Gazebo synthetic clock) |
+
+What we **don't** have without `/ap/*`: a way to send commands back to arducopter's guided mode. That's the actuation half. We can develop the perception + planner + heatmap stack against the topics above, and tackle actuation when we crack the FDM handshake. If we never crack it: fallback to sending arducopter commands via pymavlink directly (MAVLink over UDP 14550, which the SITL is presumably still exposing whether or not its FDM is alive — verify next session).
+
+## Bringing the stack up and down
 
 ```bash
+# Always start with this (the desktop daemon can't render Gazebo with the iGPU)
 docker context use default
+
+# Bring up the container in the background
 docker compose -f docker/docker-compose.yml up -d
+
+# Open an interactive shell inside it (run this in every new terminal you want)
 docker compose -f docker/docker-compose.yml exec ros2 bash
 
 # Sanity checks once inside:
@@ -64,3 +139,28 @@ xclock                              # X11 forwarding check
 which arducopter microxrceddsgen   # both should resolve
 ros2 pkg list | grep ardupilot     # ardupilot_gz_* packages should be there
 ```
+
+When you're done working:
+
+```bash
+# Stop the container but keep it around (fast to restart later)
+docker compose -f docker/docker-compose.yml stop
+
+# Start it again next session (same state, anonymous volumes preserved)
+docker compose -f docker/docker-compose.yml start
+
+# OR: stop AND remove the container (next 'up -d' creates a fresh container
+# from the same image - quick, ~5s. Use this if the container's runtime state
+# got into a weird place and you want a clean slate.)
+docker compose -f docker/docker-compose.yml down
+
+# Nuclear option: remove the container AND named/anonymous volumes (wipes
+# anything written outside the bind-mounted workspace, e.g. /home/ros/.gz/
+# Gazebo logs, ros user's bash history, apt-installed packages added at
+# runtime like the tcpdump we installed during triage)
+docker compose -f docker/docker-compose.yml down -v
+```
+
+The image itself (~25 GB) is independent of any of these — it only goes away if you run `docker rmi multi-agent-uavs:jazzy` or `docker image prune -a`. Don't do that unless you want the ~60-min rebuild back.
+
+To kill just a running `ros2 launch` (e.g., the Gazebo + SITL stack) without taking the whole container down, Ctrl-C in the launch terminal. The container keeps running; you can re-launch from any exec shell.

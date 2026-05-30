@@ -50,7 +50,7 @@ docker compose -f docker/docker-compose.yml up -d
 docker compose -f docker/docker-compose.yml exec ros2 bash
 ```
 
-**Open issue:** `ArduPilotPlugin` in Gazebo loads but doesn't send FDM packets to SITL, so `/ap/*` DDS topics don't appear. Likely Copter-4.5.7 vs `ardupilot_gz` main version skew. Details and next-session fix in `docs/docker-notes.md`. **Doesn't block algorithm work** — DGA can be developed against mocked `/ap/*` topics while this is resolved.
+**Open issue:** `ArduPilotPlugin` in Gazebo loads cleanly (finds the IMU, computes the right topic, logs "ArduPilot ready to fly") but emits zero FDM packets on UDP 9002, so SITL stays at "Waiting for connection ..." and `/ap/*` DDS topics never appear. Ruled out this session: version skew (bumped both refs to matching SHAs), SDF port mismatch, missing `.so`, missing IMU sensor, lock_step deadlock. Smoking gun is a silent `sendto()` — needs strace or source-level debug to crack. Full diagnosis in `docs/docker-notes.md` under "Open issue: FDM handshake silence". **Doesn't block algorithm work** — `ros_gz_bridge` already publishes `/imu`, `/navsat`, `/camera/image`, `/odometry`, etc., which are sufficient inputs for the DGA stack. Project nodes are being scaffolded against those topics rather than `/ap/*` until the FDM handshake is resolved.
 
 `build/`, `install/`, `log/` are gitignored (colcon outputs).
 
