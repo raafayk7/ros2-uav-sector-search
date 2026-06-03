@@ -435,6 +435,17 @@ RUN pip3 install --break-system-packages --no-cache-dir --ignore-installed \
         "shapely"
 
 # -------------------------------------------------------------------------
+# Pin setuptools < 80. The torch/ultralytics install above pulls in
+# setuptools >= 80, which removed the `--editable` option from the `develop`
+# command (setuptools 80.0.0 defers editable installs to pip via PEP 517).
+# colcon's `--symlink-install` calls `setup.py develop --editable ...` for
+# ament_python packages, so any setuptools >= 80 breaks the build with
+# "error: option --editable not recognized". Keep this as the LAST pip step
+# touching setuptools so it wins. Ref: colcon/colcon-core#696.
+# -------------------------------------------------------------------------
+RUN pip3 install --break-system-packages --no-cache-dir "setuptools<80"
+
+# -------------------------------------------------------------------------
 # Entrypoint - sources every overlay so `docker compose exec ros2 bash` lands
 # you in a fully-sourced shell. See entrypoint.sh for details.
 # -------------------------------------------------------------------------
