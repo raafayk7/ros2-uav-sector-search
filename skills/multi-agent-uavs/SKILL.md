@@ -244,6 +244,10 @@ Roboflow workflow: collect images from headless Gazebo (screenshot the camera to
 
 ## Common debugging recipes
 
+**Symptom: `colcon build --symlink-install` fails with `error: option --editable not recognized`.**
+- Not the package — it's setuptools. Version ≥80 dropped the `--editable` option that `--symlink-install` depends on (torch/ultralytics drag it in). Check: `python3 -c "import setuptools; print(setuptools.__version__)"`.
+- The image now pins `setuptools<80`. In a container built before that pin, downgrade offline with `sudo pip3 uninstall -y --break-system-packages setuptools` (exposes the apt-installed 68.1.2 underneath — no network needed). The fix is container-runtime only and lost on `docker compose down`; permanent fix is an image rebuild. Full notes: `docs/docker-notes.md` gotcha #17.
+
 **Symptom: Gazebo shows up but the Iris doesn't appear.**
 - Check `GZ_SIM_RESOURCE_PATH` is set inside the container. Look at the ardupilot_gz launch file output for the resolved path.
 - Try `gz model -m iris_with_standoffs -p` to see if Gazebo can find the model definition.
