@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>uav_localization</name>
+  <version>0.1.0</version>
+  <description>
+    Per-drone localization for the multi-agent UAV search-and-rescue stack.
+    Converts GPS (sensor_msgs/NavSatFix) into a local ENU arena-frame pose
+    (geometry_msgs/PoseStamped), with orientation taken from odometry.
+  </description>
+  <maintainer email="raafaykazmi@yahoo.com">Raafay</maintainer>
+  <license>MIT</license>
+
+  <!-- Runtime dependencies: the rclpy client library plus the message
+       packages whose types this node touches. <depend> means the package
+       is needed at build, export, and exec time. -->
+  <depend>rclpy</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
+
+  <!-- Needed only to `ros2 launch` this package's launch files. -->
+  <exec_depend>ros2launch</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
