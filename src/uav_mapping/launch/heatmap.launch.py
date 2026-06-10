@@ -34,12 +34,20 @@ Key args
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
 
 def generate_launch_description():
     lc = LaunchConfiguration
+
+    # Standalone mode runs with no simulator, so nothing publishes /clock.
+    # A node with use_sim_time=true would freeze (its timers wait on a clock
+    # that never advances), so force sim time OFF whenever standalone is true;
+    # otherwise honour the use_sim_time arg (true for the iris_runway case).
+    sim_time = PythonExpression(
+        ["'false' if '", lc('standalone'), "' == 'true' else '",
+         lc('use_sim_time'), "'"])
 
     args = [
         DeclareLaunchArgument('pose_topic', default_value='/pose'),
@@ -76,7 +84,7 @@ def generate_launch_description():
             'grid_height': lc('grid_height'),
             'origin_x': lc('origin_x'),
             'origin_y': lc('origin_y'),
-            'use_sim_time': lc('use_sim_time'),
+            'use_sim_time': sim_time,
         }],
     )
 
@@ -94,7 +102,7 @@ def generate_launch_description():
             'u': lc('det_u'),
             'v': lc('det_v'),
             'score': lc('det_score'),
-            'use_sim_time': lc('use_sim_time'),
+            'use_sim_time': sim_time,
         }],
     )
 
