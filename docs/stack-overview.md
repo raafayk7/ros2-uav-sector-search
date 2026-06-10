@@ -9,7 +9,7 @@ choice (the trade-offs, the alternatives rejected), see
 `assessment-ros2-migration.md` — that's the source of truth for *why*. For
 build-environment gotchas, see `docker-notes.md`.
 
-Last updated: 2026-06-03.
+Last updated: 2026-06-10.
 
 ---
 
@@ -30,13 +30,17 @@ stacks on.
 
 - The simulation environment stands up fully: Gazebo + the ArduPilot flight
   controller + the ROS 2 bridge.
-- The **first project node** exists and is verified: `uav_localization/
-  localization_node`, which turns raw GPS into a clean local position in a
-  project-defined map frame.
-- No algorithm code yet (the DGA/BLL planners are still ahead).
+- **Two project nodes exist and are verified.** `uav_localization/
+  localization_node` turns raw GPS into a clean local position (`/pose`) in a
+  project-defined map frame. `uav_mapping/leader_node` — the first
+  algorithm-relevant node — turns the leader's camera detections into a
+  probability heatmap (`/heatmap`) over the thesis sector grid.
+- The DGA/BLL **follower planners are still ahead** — that's the next node
+  (`follower_planner_node`, consuming `/heatmap`).
 - One known blocker deferred: the Gazebo↔SITL FDM handshake is silent, so
   the drone can't be commanded to fly yet (details in `docker-notes.md`).
-  Development proceeds against the sensor bridge in the meantime.
+  Development proceeds against the sensor bridge in the meantime — and the
+  planner can be validated as a coordination simulation without flight.
 
 ---
 
@@ -74,7 +78,7 @@ pymavlink over UDP).
 
 ---
 
-## What was built this session
+## Session 2026-06-03: the localization node
 
 The `uav_localization` package, containing `localization_node`, which:
 
@@ -100,6 +104,55 @@ drone faces North and "North" is +90° from East in an ENU frame.
 A build blocker was also fixed: `setuptools>=80` (pulled in by
 torch/ultralytics) breaks `colcon build --symlink-install`. Pinned to
 `<80` in the Dockerfile; full notes in `docker-notes.md` gotcha #17.
+
+---
+
+## Session 2026-06-10: the leader heatmap node
+
+The `uav_mapping` package, containing `leader_node` — the first
+algorithm-relevant node. It is the leader's **perception-to-map** step: it
+turns camera detections into a probability map the follower planners will
+later consume.
+
+What it does, per detection: take the pixel of a detected marker, back-project
+it through the camera's pinhole model into a ray, rotate that ray into the
+arena frame, intersect it with the flat ground (z = 0) to get a world (x, y),
+find which sector that point falls in, and nudge that sector's probability.
+
+The decisions made consciously this session:
+
+- **Map = `nav_msgs/OccupancyGrid`, one cell == one thesis sector.** The
+  message's `0–100`/`-1` cells line up exactly with the thesis's per-sector
+  probability `p_ij ∈ [0,1]`, so the heatmap message *is* the probability map.
+  Defaults match the thesis (5 m sectors, 4×4 over the 20×20 m arena, with
+  the grid corner at home like the thesis leader's takeoff corner) and are all
+  launch params, so the grid reshapes without code edits.
+- **Camera pose from `/pose` ∘ a static down-facing mount**, not the
+  simulator's transform tree — so the node stays inside our own localization
+  pipeline and isn't coupled to sim-specific frame names. Intrinsics are read
+  live from `/camera/camera_info`.
+- **Probability via Bayesian log-odds.** Each detection raises a cell's
+  log-odds (scaled by the detector's confidence); cells the camera looked at
+  but saw nothing in decay toward empty; values are clamped so no cell ever
+  pins to absolute certainty. Cells never observed stay unknown (`-1`). This
+  is what makes it a real *search* map, not just a detection tally.
+- **`/heatmap` published RELIABLE + TRANSIENT_LOCAL** so a follower planner
+  that subscribes *after* the leader has been mapping still immediately
+  receives the current map.
+
+It ships with `fake_detection_publisher` (a stub that emits a synthetic
+detection at a known pixel, so the node could be tested before the real
+perception node exists) and `heatmap.launch.py`.
+
+Verified standalone: a drone posed at `(7.5, 7.5, 7.0)` looking straight down,
+fed a detection at the image center, lit up exactly the expected sector cell
+`(1,1)` at world `(7.5, 7.5)` — matching a hand computation. The projection
+math was also checked offline against four hand-worked cases before building.
+A ROS gotcha surfaced and was fixed: `use_sim_time=true` with no simulator
+running freezes every node timer (sim time never advances without `/clock`),
+so the launch now forces sim time off in standalone mode. **Still pending:** a
+run against the live `iris_runway` camera and confirming the real iris camera
+mount (the down-facing assumption is a parameter, not code).
 
 ---
 
@@ -167,3 +220,40 @@ underlying autopilot messaging protocol (used by MAVProxy for debugging).
 
 **ros_gz_bridge** — bridges Gazebo transport topics to ROS 2 topics; the
 current source of `/navsat`, `/odometry`, `/camera/image`, etc.
+
+**OccupancyGrid** — ROS's standard 2D map message (`nav_msgs/OccupancyGrid`):
+a flat array of cells over a rectangle of the world, with metadata for
+`resolution` (m/cell), `width`/`height`, and an `origin` pose. Each cell is
+`0–100` (percent probability) or `-1` (unknown). The heatmap uses it; one cell
+equals one thesis sector.
+
+**Sector grid (m × n)** — the thesis's partition of the arena into square
+sectors, each carrying a probability `p_ij` of holding a marker. The rebuild
+maps it 1:1 onto OccupancyGrid cells: 5 m sectors, 4×4 over the 20×20 m arena.
+
+**Detection2DArray** — `vision_msgs/Detection2DArray`, the standard message
+for a frame's worth of 2D detections (bounding boxes + class/score
+hypotheses). The contract between `perception_node` (producer) and
+`leader_node` (consumer).
+
+**Pinhole projection** — the camera model that maps a 3D direction to a pixel
+via the intrinsics matrix `K` (`/camera/camera_info`). Run backwards, a pixel
+becomes a ray; intersecting that ray with the ground plane gives the world
+point a detection sits on.
+
+**tf2** — ROS's coordinate-frame bookkeeper: nodes broadcast time-stamped
+transforms between frames and tf2 answers "where is this point, expressed in
+that frame?". `leader_node` deliberately does *not* use it — it composes the
+camera pose from `/pose` and a fixed mount instead, to stay independent of
+sim-specific frames — but it's the standard tool when you must bridge frames.
+
+**Log-odds / inverse sensor model** — the occupancy-grid way of accumulating
+evidence. Each cell stores log-odds `l` of "marker present"; `p = 1/(1+e^-l)`.
+An observation adds a fixed increment (positive for a detection, negative for
+an empty look), clamped so belief never saturates. Robust to repeated and
+conflicting observations.
+
+**TRANSIENT_LOCAL (QoS durability)** — a publisher setting that latches the
+last message so subscribers joining *after* it was sent still receive it. Used
+for `/heatmap` so a late-starting follower planner gets the current map at
+once instead of waiting for the next publish.
