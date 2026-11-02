@@ -18,7 +18,7 @@ docker context use desktop-linux  # Docker Desktop
 
 Use Desktop for other work (e.g., Honeycomb), `default` for this project.
 
-## Image is ~25 GB. That's normal.
+## Image is ~24 GB. That's normal.
 
 Bulk: ROS 2 desktop-full (3 GB) + Gazebo Harmonic (1.5 GB) + ArduPilot tree with submodules + waf build outputs (4 GB) + colcon workspace install (2 GB) + PyTorch CPU (2.5 GB) + ARM cross-compilers ArduPilot's installer pulls in but we don't need (~500 MB) + OpenJDK 17 + Micro-XRCE-DDS-Gen + Agent + duplicated apt/pip numpy etc. Could drop to ~15 GB with a multi-stage build later; not worth the time right now.
 
@@ -44,7 +44,9 @@ Listed in execution order — each one cost a build iteration:
 16. **`iris_runway.launch.py` calls `Node(package="micro_ros_agent")`** which we COLCON_IGNORE'd. Patched at image-build time to use `ExecuteProcess(cmd=["MicroXRCEAgent"] + args, ...)` instead — same args, runs the eProsima agent binary we already have. See the Python sed in the Dockerfile.
 17. **`torch`/`ultralytics` pull in `setuptools>=80`, which breaks `colcon build --symlink-install`.** (Hit 2026-06-03, building the first project package.) setuptools 80.0.0 removed the `--editable` option from the `develop` command — editable installs now defer to pip via PEP 517. colcon's `--symlink-install` runs `setup.py develop --editable …` for every `ament_python` package, so the build dies with `error: option --editable not recognized` even though the package itself is fine (a plain `colcon build` without `--symlink-install` still works, since only `develop --editable` broke). Fixed in the Dockerfile by pinning `setuptools<80` as the **last** pip step — after the torch/ultralytics block so it wins. Ref `colcon/colcon-core#696`. **For a container built before that pin (no rebuild yet), downgrade offline** — Noble's apt `python3-setuptools` (68.1.2) sits underneath the pip copy at `/usr/lib/python3/dist-packages`, so removing the `/usr/local` pip copy exposes it with no network needed: `sudo pip3 uninstall -y --break-system-packages setuptools` (the `--break-system-packages` flag is required on *uninstall* too under PEP 668, not just install), then verify with `python3 -c "import setuptools; print(setuptools.__version__)"` → should read `68.1.2`. This is container-runtime state only: it survives `docker compose stop`/`start` but **not** `docker compose down` (which rebuilds from the still-setuptools-81 image). The permanent fix is a `docker compose build` once the host is online.
 
-## Open issue: FDM handshake silence (diagnosis 2026-05-28, fix attempted 2026-05-30, verification pending)
+## FDM handshake silence: RESOLVED (verified 2026-11-02; history below)
+
+> **Update 2026-11-02:** on a fresh rebuild the handshake works (SITL logs "JSON received", `/ap/v1/*` topics are live, arm/takeoff succeed). The symptom below was most likely an environment problem. See "2026-11-02 rebuild notes". The rest of this section is kept as history.
 
 ### Symptom
 
@@ -121,6 +123,15 @@ DGA development can proceed without `/ap/*` for now. The Gazebo sensors already 
 | Time | `/clock` (Gazebo synthetic clock) |
 
 What we **don't** have without `/ap/*`: a way to send commands back to arducopter's guided mode. That's the actuation half. We can develop the perception + planner + heatmap stack against the topics above, and tackle actuation when we crack the FDM handshake. If we never crack it: fallback to sending arducopter commands via pymavlink directly (MAVLink over UDP 14550, which the SITL is presumably still exposing whether or not its FDM is alive — verify next session).
+
+## 2026-11-02 rebuild notes (Ubuntu 24.04 host, Docker 29)
+
+18. **Docker 29's containerd image store ignores `data-root`.** Layers and BuildKit cache live in `/var/lib/containerd`, so moving only `data-root` left the 25 GB image on `/` and the build died at export with "no space left on device". Move containerd's root too (`root = "..."` at the top of `/etc/containerd/config.toml`) and add `RequiresMountsFor=` drop-ins for `containerd` and `docker`. A build needs about 2x the image size (cache + unpacked image), roughly 55 GB.
+19. **Pinned-SHA clones need `--shallow-since`, not `--depth 50`.** Master moves past 50 commits within weeks and `git checkout <SHA>` fails with "reference is not a tree". The Dockerfile now uses `--shallow-since=<date of the pin>`. Bump the date with the SHA.
+20. **CPU torch needs `--index-url`, not `--extra-index-url`.** With both indexes visible pip picks PyPI's newer CUDA torch plus ~5 GB of `nvidia-*` wheels, which also timed out after 80 minutes. The Dockerfile now installs torch/torchvision from the CPU index and pins the exact `+cpu` wheels with a constraints file for the Ultralytics step (its `--ignore-installed` would otherwise re-resolve torch from PyPI). Image is 23.8 GB.
+21. **Non-interactive `exec bash -lc` skips `.bashrc`.** Source `/usr/local/bin/entrypoint.sh` explicitly, or the iris SDF cannot be resolved and the drone never spawns (see gotcha #15).
+22. **`/ap/v1/*` services hang under `rmw_cyclonedds_cpp`.** Requests are sent but never answered; use `RMW_IMPLEMENTATION=rmw_fastrtps_cpp` for the client. Topics interoperate under both.
+23. **`pkill` leaves SITL processes.** Stale `arducopter`/`MicroXRCEAgent` make the next launch's `arducopter` exit with code 1. `docker compose restart ros2` is the clean reset.
 
 ## Bringing the stack up and down
 

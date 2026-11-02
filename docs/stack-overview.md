@@ -37,10 +37,10 @@ stacks on.
   probability heatmap (`/heatmap`) over the thesis sector grid.
 - The DGA/BLL **follower planners are still ahead** — that's the next node
   (`follower_planner_node`, consuming `/heatmap`).
-- One known blocker deferred: the Gazebo↔SITL FDM handshake is silent, so
-  the drone can't be commanded to fly yet (details in `docker-notes.md`).
-  Development proceeds against the sensor bridge in the meantime — and the
-  planner can be validated as a coordination simulation without flight.
+- The Gazebo↔SITL FDM handshake works as of 2026-11-02 (`/ap/v1/*` is live and
+  the drone accepts arm/takeoff; see `docker-notes.md`), so actuation is no
+  longer blocked. The planner can still be validated first as a coordination
+  simulation without flight.
 
 ---
 
@@ -68,13 +68,10 @@ the simulated physics/sensor state, SITL sends back motor commands. Once
 that loop is alive, SITL starts **AP_DDS**, which publishes the autopilot's
 state and accepts commands as ROS 2 `/ap/*` topics.
 
-Today that FDM handshake is silent (the Gazebo plugin loads but emits zero
-packets), so AP_DDS never initializes. The workaround: **ros_gz_bridge**
-publishes Gazebo's sensors straight into ROS 2 regardless of SITL, giving us
-`/navsat`, `/odometry`, `/camera/image`, etc. — exactly the inputs the
-sensing and planning nodes need. The only capability we lose meanwhile is
-*commanding* the drone back; that half waits on the FDM fix (fallback:
-pymavlink over UDP).
+As of 2026-11-02 that handshake works: AP_DDS initializes and the `/ap/v1/*`
+topics and services are live. **ros_gz_bridge** also publishes Gazebo's
+sensors straight into ROS 2 (`/navsat`, `/odometry`, `/camera/image`, etc.),
+which is what the sensing and planning nodes use as inputs today.
 
 ---
 

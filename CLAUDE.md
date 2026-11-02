@@ -12,7 +12,7 @@ The original implementation (Spring 2025) was ROS Noetic + Gazebo 11 + ArduPilot
 
 Raafay graduated LUMS EE in 2025. Has high-level ROS understanding rather than deep technical fluency — explanations should lead with the *why* of each design choice so the rebuild doubles as a learning exercise. Comfortable with Python and Linux. Wants to leverage AI heavily for boilerplate so he can focus on architecture and the algorithm.
 
-Primary machine: Debian Trixie.
+Primary machine: now Ubuntu 24.04 (was Debian Trixie); Docker data lives on a USB ext4 partition, see `docs/docker-notes.md`.
 
 ## The chosen stack (locked in — don't relitigate)
 
@@ -50,7 +50,14 @@ docker compose -f docker/docker-compose.yml up -d
 docker compose -f docker/docker-compose.yml exec ros2 bash
 ```
 
-**Open issue:** `ArduPilotPlugin` in Gazebo loads cleanly (finds the IMU, computes the right topic, logs "ArduPilot ready to fly") but emits zero FDM packets on UDP 9002, so SITL stays at "Waiting for connection ..." and `/ap/*` DDS topics never appear. Ruled out this session: version skew (bumped both refs to matching SHAs), SDF port mismatch, missing `.so`, missing IMU sensor, lock_step deadlock. Smoking gun is a silent `sendto()` — needs strace or source-level debug to crack. Full diagnosis in `docs/docker-notes.md` under "Open issue: FDM handshake silence". **Doesn't block algorithm work** — `ros_gz_bridge` already publishes `/imu`, `/navsat`, `/camera/image`, `/odometry`, etc., which are sufficient inputs for the DGA stack. Project nodes are being scaffolded against those topics rather than `/ap/*` until the FDM handshake is resolved.
+**FDM handshake: resolved (verified 2026-11-02).** After rebuilding the image, headless `iris_runway` brings up SITL with "JSON received" and 18 live `/ap/v1/*` topics (namespaced `/ap/v1/...` in the current ardupilot_gz), and GUIDED + arm + takeoff worked (+10 m). The old "zero packets on 9002" symptom did not reproduce; the likely culprit was a missing environment in non-interactive shells (see below), not the plugin. Gotchas that cause false failures:
+
+- `docker compose exec ros2 bash -lc '...'` does not load `.bashrc`, so run `source /usr/local/bin/entrypoint.sh` first (it sets `GZ_SIM_RESOURCE_PATH`/`SDF_PATH`; without them `robot_state_publisher` dies on the iris SDF and the drone never spawns).
+- `/ap/v1/*` **services** (arm_motors, mode_switch, takeoff) hang under the container's default `rmw_cyclonedds_cpp`; export `RMW_IMPLEMENTATION=rmw_fastrtps_cpp` in the client shell. Topics work under both.
+- `pkill` leaves `arducopter`/`MicroXRCEAgent` behind; use `docker compose restart ros2` between sim runs.
+- Headless launch: `ros2 launch ardupilot_gz_bringup iris_runway.launch.py use_gz_sim_gui:=false rviz:=false`.
+
+Planner actuation can now target `/ap/v1/*` instead of a stub.
 
 `build/`, `install/`, `log/` are gitignored (colcon outputs).
 

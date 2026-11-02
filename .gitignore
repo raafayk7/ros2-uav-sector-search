@@ -50,3 +50,13 @@ mav.tlog.raw
 
 # Docker local environment overrides (UID/GID specific, not portable)
 docker/.env
+
+# host-specific one-off
+usb-ext4-setup.sh
+usb-ext4-setup2.sh
+
+# SITL run artifacts (written to the bind-mounted workspace root)
+logs/
+mav.parm
+mav_0_1.parm
+terrain/

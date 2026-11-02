@@ -156,7 +156,7 @@ RUN userdel -r ubuntu 2>/dev/null || true \
 # RPC timeout on 2026-05-30 trying that path). Branch-then-checkout uses
 # the fast path.
 #
-# --depth 50 keeps the window big enough that a SHA bumped to anything
+# --shallow-since (not --depth) keeps the pinned SHA in range however far master moves on; bump the date with the SHA.
 # within the last few weeks of master stays reachable. If you bump
 # ARDUPILOT_REF to something older and the checkout fails with "no such
 # object", increase the depth or switch the clone to `--branch <SHA>`
@@ -165,7 +165,7 @@ RUN userdel -r ubuntu 2>/dev/null || true \
 # --shallow-submodules keeps the submodule history shallow too (ChibiOS,
 # mavlink, etc. are large). `git submodule update` re-runs after checkout
 # to re-align the submodules with the pinned SHA's pointers.
-RUN git clone --depth 50 --branch master --shallow-submodules --recurse-submodules \
+RUN git clone --shallow-since=2026-05-28 --branch master --shallow-submodules --recurse-submodules \
         https://github.com/ArduPilot/ardupilot.git /opt/ardupilot \
     && cd /opt/ardupilot \
     && git checkout ${ARDUPILOT_REF} \
@@ -234,7 +234,7 @@ WORKDIR /opt/ardupilot_ws/src
 
 # Same clone-branch-then-checkout pattern as for ardupilot above. See
 # that block for the rationale on why we don't `git fetch <SHA>` directly.
-RUN git clone --depth 50 --branch main --shallow-submodules --recurse-submodules \
+RUN git clone --shallow-since=2026-04-10 --branch main --shallow-submodules --recurse-submodules \
         https://github.com/ArduPilot/ardupilot_gz.git /opt/ardupilot_ws/src/ardupilot_gz \
     && cd /opt/ardupilot_ws/src/ardupilot_gz \
     && git checkout ${ARDUPILOT_GZ_REF} \
@@ -425,10 +425,20 @@ ARG TORCH_INDEX=cpu
 # which Python's path search prefers over /usr/lib/python3 anyway. The apt
 # numpy stays in place for scipy/matplotlib/opencv (which depend on it via
 # apt) but Python imports resolve to the newer pip-installed one.
+# Why --index-url + a constraints file (not --extra-index-url): with both
+# indexes visible, pip picks PyPI's newer CUDA torch (+ ~5 GB of nvidia-*
+# wheels), and the second command's --ignore-installed would re-resolve torch
+# from PyPI too. The constraint pins the exact +cpu wheel for that step.
 RUN pip3 install --break-system-packages --no-cache-dir --ignore-installed \
-        --extra-index-url https://download.pytorch.org/whl/${TORCH_INDEX} \
+        --default-timeout=120 --retries 10 \
+        --index-url https://download.pytorch.org/whl/${TORCH_INDEX} \
         "torch>=2.3" "torchvision>=0.18" \
+    && pip3 freeze | grep -iE '^(torch|torchvision)==' > /tmp/torch-constraints.txt \
+    && cat /tmp/torch-constraints.txt \
     && pip3 install --break-system-packages --no-cache-dir --ignore-installed \
+        --default-timeout=120 --retries 10 \
+        -c /tmp/torch-constraints.txt \
+        --extra-index-url https://download.pytorch.org/whl/${TORCH_INDEX} \
         "ultralytics>=8.3" \
         "opencv-python-headless" \
         "transforms3d" \
