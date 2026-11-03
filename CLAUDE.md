@@ -65,6 +65,7 @@ Skill source-of-truth is `skills/multi-agent-uavs/SKILL.md`. `.claude/skills/mul
 
 ## How to work with Claude on this project
 
+- **Read `docs/roadmap.md` for the current plan** (architecture, milestones, eval, open questions) and `docs/next-session-prompt.md` for where to pick up. Career/application planning is intentionally NOT in this repo; if `~/Documents/robotics-action-plan.md` exists locally it is private context, never to be copied into committed files.
 - **Load the `multi-agent-uavs` skill** at session start. It contains the full stack, node architecture, algorithm recap, command patterns, and debugging recipes. The skill is installed via `skills/multi-agent-uavs.skill` in this repo if it ever needs reinstalling.
 - **Default to ROS 2 / Jazzy** for any installation or code question. The Noetic-era references in `docs/legacy-implementation-guide.docx` are historical context, not instructions to follow.
 - **Don't recommend MAVROS, MAVProxy in the runtime, or iq_sim.** Use AP_DDS and `ardupilot_gz` instead — see assessment §5.
