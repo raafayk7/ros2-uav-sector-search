@@ -23,7 +23,7 @@ Primary machine: now Ubuntu 24.04 (was Debian Trixie); Docker data lives on a US
 - **Drone harness:** `ArduPilot/ardupilot_gz` with `multiagent.launch.py`
 - **ROS ↔ ArduPilot:** AP_DDS (native, ArduPilot 4.5+) — not MAVROS
 - **Perception:** Ultralytics YOLO26
-- **Algorithm:** Distributed Gradient Ascent (DGA), with Bilinear Log-Linear (BLL) as a comparison baseline
+- **Algorithm:** each follower independently flies to the best open sector on the shared map, using the thesis's overlap penalty; thesis Distributed Gradient Ascent (DGA) and Bilinear Log-Linear (BLL) are library baselines (changed 2026-11-04 on measured evidence, see `docs/planner-decisions.md`)
 
 Things explicitly NOT in the rebuild even though the original used them: MAVROS as primary bridge, MAVProxy in the runtime path, iq_sim launch files, Gazebo Classic 11, hand-rolled UDP broadcast, Ubuntu 20.04, central-planner hack ("Drone 1 computes for Drone 2"). See the assessment doc §5 and the "do not use" list in the `multi-agent-uavs` skill for the replacements.
 
@@ -58,6 +58,8 @@ docker compose -f docker/docker-compose.yml exec ros2 bash
 - Headless launch: `ros2 launch ardupilot_gz_bringup iris_runway.launch.py use_gz_sim_gui:=false rviz:=false`.
 
 Planner actuation can now target `/ap/v1/*` instead of a stub.
+
+Multi-drone and actuation facts (verified 2026-11-04, see `docs/planner-decisions.md`): `multiagent.launch.py` hard-codes 4 different vehicles, so use our own launch. Topics are `/iris_N/*` (Gazebo) and `/ap/vN/*` (autopilot, N = sysid). `/ap/vN/goal_lla` is autopilot output, not a command. The command is `/ap/vN/cmd_gps_pose` with `frame_id "map"` and `FRAME_GLOBAL_REL_ALT`; any other `frame_id` is dropped silently, as is anything sent when not GUIDED and armed. The live iris camera is on a gimbal, 52 deg off nadir.
 
 `build/`, `install/`, `log/` are gitignored (colcon outputs).
 

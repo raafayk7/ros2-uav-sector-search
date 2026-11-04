@@ -4,9 +4,9 @@ Public-safe extract of the project plan: architecture, algorithms, eval and mile
 
 ## Pitch
 
-**"The language model decides where to look. Gradient ascent decides how to fly."**
+**"The language model decides where to look. A classical distributed planner decides how to fly."**
 
-An operator types a field report ("two hikers last seen near the river, heading north, one injured"). An LLM turns it into a structured prior probability map. Follower drones launch straight into the high-prior areas while the leader is still sweeping, and the leader's detections update the map as they arrive. Low-level flight stays classical: the thesis's distributed gradient ascent (DGA) plus potential-field separation. The LLM runs at mission speed (seconds), so its latency does not matter.
+An operator types a field report ("two hikers last seen near the river, heading north, one injured"). An LLM turns it into a structured prior probability map. Follower drones launch straight into the high-prior areas while the leader is still sweeping, and the leader's detections update the map as they arrive. Low-level flight stays classical: each follower independently picks the best open sector on the shared map and ArduPilot flies it there, with the thesis's overlap penalty and per-drone altitude layers keeping drones apart. The thesis's distributed gradient ascent (DGA) and BLL remain as measured baselines (see `docs/planner-decisions.md`). The LLM runs at mission speed (seconds), so its latency does not matter.
 
 ## Contribution claim (narrowed; verify against literature before publishing)
 
@@ -22,29 +22,29 @@ Closest prior pattern to cite, not hide: "Bootstrapped LLM Semantics for Context
 |---|---|---|
 | Sim | Docker: Jazzy + Gazebo Harmonic + ArduPilot SITL (AP_DDS) | done, verified 2026-11-02 |
 | State | `uav_localization/localization_node` | done |
-| Leader | `uav_mapping/leader_node`: boustrophedon sweep, detections + camera footprints | heatmap done; footprint publishing and prior-biased lane order still to do |
+| Leader | `uav_mapping/leader_node`: detections + camera footprints, plus a boustrophedon sweep controller | heatmap done; sweep controller (no flight code exists yet), footprint publishing and prior-biased lane order still to do |
 | Belief map | `belief_map_node`: **single owner of the posterior**; fuses detections + footprints from all agents; followers only read it | todo |
-| Followers | `follower_planner_node`: DGA over the posterior + potential-field separation | **next** |
+| Followers | `follower_planner_node`: best open sector over the posterior, thesis overlap penalty, altitude-layer separation; thesis DGA and BLL as library baselines | **next** |
 | Perception | primary: ground-truth detector (Gazebo target poses + noise, misses, false positives, footprint check); stretch: YOLO | todo |
 | Mission | state machine: launch -> prior-guided dispatch while leader sweeps -> localize -> report | todo |
 | Language prior | `mission_prior_node` (contract below) | todo, after go/no-go |
 | Eval | 2D kinematic sim runner reusing the planner and fusion library | todo |
 | CI | GitHub Actions smoke test | todo |
 
-**Code structure rule:** DGA, potential field, fusion and region rasterization are a **pure Python library with no ROS dependency**, unit-tested at the library level. ROS nodes are thin wrappers. This is what lets the 2D eval sim reuse the code unchanged.
+**Code structure rule:** the sector planner, its DGA and BLL baselines, fusion and region rasterization are a **pure Python library with no ROS dependency**, unit-tested at the library level. ROS nodes are thin wrappers. This is what lets the 2D eval sim reuse the code unchanged.
 
 ## Mission timing
 
-- **t = 0:** the clue becomes the prior. The leader starts its full sweep with lane order biased so high-prior lanes go first. Followers launch immediately and ascend the prior.
+- **t = 0:** the clue becomes the prior. The leader starts its full sweep with lane order biased so high-prior lanes go first. Followers launch immediately and fly to the prior's best open sectors.
 - **During the mission:** the posterior updates incrementally. Detections raise nearby cells. **Negative evidence** (a footprint with no detection) lowers covered cells, which pushes followers off a wrong prior's peak.
 - **Coverage guarantee:** the leader always completes the full sweep whatever the prior says. A wrong clue can delay a find but never prevent coverage.
 - **Baseline:** same timing with a flat prior.
 
 ## Fusion
 
-posterior is proportional to [alpha * prior_LLM + (1 - alpha) * uniform] * likelihood(detections, negative evidence)
+Each cell holds the independent probability that it contains at least one target; values need not sum to 1 (this handles an unknown target count and matches `leader_node`).
 
-alpha is capped at 0.7; the eval uses a fixed 0.5. The uniform share keeps every cell above zero. The likelihood is a log-odds update per camera footprint, extending the existing leader heatmap update.
+A cell's starting belief = alpha * prior_LLM + (1 - alpha) * 0.5, converted to log-odds, then updated per camera footprint with detections and negative evidence, extending the existing leader heatmap update. alpha is capped at 0.7; the eval uses a fixed 0.5. The 0.5 share keeps every cell above zero. This blend is untested.
 
 ## LLM contract (`mission_prior_node`)
 
@@ -70,8 +70,9 @@ Smoke test: 1 leader + 1 follower, ground-truth detector (no camera rendering, s
 
 | Date | Milestone |
 |---|---|
-| Nov 10 | Planner library + `follower_planner_node`, first follower ascending the stub heatmap in SITL; secret scan clean, repo public as a WIP |
-| **Nov 15** | **3 followers ascending the stub heatmap in SITL** (cut-order trigger) |
+| Nov 10 | Planner library + `follower_planner_node`, first follower flying to a stub-map sector in SITL; secret scan clean, repo public as a WIP |
+| **Nov 15** | **3 followers each holding a different peak on the 8x8 stub map in SITL** (cut-order trigger) |
+| Nov 20 | One follower completes the search loop: observes, map updates, departs, finds a target |
 | Nov 24 | `belief_map_node`, leader footprints, mission state machine end to end |
 | **Nov 30** | **Go/no-go:** leader + 3 followers complete a mission in Gazebo (ground-truth detector) from one command; video v1 |
 | Dec 8 | CI green |
@@ -92,4 +93,4 @@ Any UI beyond RViz/Gazebo and the README; GHCR or release engineering beyond a w
 
 ## Open engineering questions (settle in `/plan-eng-review` before week-2 planner code)
 
-Follower behavior on a flat posterior; post-find peak suppression; mission termination with an unknown target count; region rasterization rule; default alpha and run matrix; sweep time vs timeout; detector noise parameters and the true-find definition; multi-target clue mapping and the misleading-landmark rule; CI vehicle model and runtime; replay lookup for unmatched clues.
+Settled in `docs/planner-decisions.md`: follower behavior on a flat posterior, post-find peak suppression, mission termination with an unknown target count, the true-find definition at run time. Still open: region rasterization rule; default alpha and run matrix; sweep time vs timeout; detector noise parameters; multi-target clue mapping and the misleading-landmark rule; CI vehicle model and runtime; replay lookup for unmatched clues.

@@ -2,6 +2,8 @@
 
 Paste the block below to open the next session. Replace this file after the session, or delete it once the work is underway.
 
+**Update 2026-11-04:** the warm-up and step 1 are done. `docs/planner-decisions.md` holds the decisions, and wins wherever it differs from this prompt, notably on `goal_lla`, `multiagent.launch.py`, the camera mount, gradient ascent and the BLL anchor. Start at step 2, using its Implementation Tasks.
+
 ---
 
 Continuing the multi-agent UAV ROS 2 rebuild. This prompt supersedes the June 2026 one: the project has a plan now, the machine changed, and the biggest blocker turned out not to be one.
