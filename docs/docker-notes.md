@@ -133,6 +133,18 @@ What we **don't** have without `/ap/*`: a way to send commands back to arducopte
 22. **`/ap/v1/*` services hang under `rmw_cyclonedds_cpp`.** Requests are sent but never answered; use `RMW_IMPLEMENTATION=rmw_fastrtps_cpp` for the client. Topics interoperate under both.
 23. **`pkill` leaves SITL processes.** Stale `arducopter`/`MicroXRCEAgent` make the next launch's `arducopter` exit with code 1. `docker compose restart ros2` is the clean reset.
 
+## 2026-11-04 multi-drone and actuation notes
+
+Verified on the rebuilt image during the planner review. Full evidence is in `docs/planner-decisions.md`; scripts are in `docs/probes/`.
+
+24. **`multiagent.launch.py` can't launch N iris.** Its `robots` list is hard-coded to 4 different vehicles (iris, lidar iris, rover, plane) with no launch arg. Write our own launch reusing `robots/iris.launch.py`, as `docs/probes/rtf.sh` does by patching a copy. Each instance gets `namespace`, `instance`, `sysid` and `use_instance_dir`; only instance 0 runs the DDS agent. 3 iris reach "JSON received" in about 17 s.
+25. **Two namespaces, not one.** Gazebo bridge topics are `/iris_N/*`, autopilot topics and services are `/ap/vN/*` with N = sysid. Nothing is at `/iris_N/ap/...`. `ros2 topic list` right after launch can miss `/ap/` entirely while discovery settles, so don't conclude anything from one early listing.
+26. **`/ap/vN/goal_lla` is output, not a command.** `AP_DDS_Topic_Table.h` has it as a `DataWriter`. It echoes the accepted target. The command is `/ap/vN/cmd_gps_pose` (`ardupilot_msgs/GlobalPosition`, BEST_EFFORT + VOLATILE).
+27. **`cmd_gps_pose` fails silently in two ways.** `AP_DDS_ExternalControl.cpp` drops it unless `header.frame_id` is exactly `"map"`, and `ready_for_external_control` drops it unless GUIDED and armed. Neither replies, and the subscriber count still shows 1. Use `FRAME_GLOBAL_REL_ALT`: Gazebo navsat altitude reads 10.2 where the autopilot reads 584.2. One message is enough to fly the whole way (tested under CycloneDDS only), so stopping publication doesn't stop a flight.
+28. **The iris camera is on a gimbal, not fixed.** The bridge's `/camera/*` comes from `pitch_link` on `iris_with_gimbal`. It sits 52 deg off nadir, with the horizon and the drone's own leg in frame, and stays there when armed and flying (joints -120, -30, 135 deg). Measured `mount_quat` [0.3269, 0.8365, 0.4187, -0.1346] matched spawned markers to 0-4 px; the nadir default missed by 205-265 px. Publishing to `/gimbal/cmd_*` over `gz topic` left the joints unchanged. Setting it through ArduPilot mount params hasn't been tried.
+29. **Real-time factor falls fast.** Headless, idle: 1 iris 0.46, 3 iris about 0.25, 4 iris 0.11 (the 1 and 4 runs had no confirmed readiness), on 6 cores and 7.1 GB RAM with swap in use. Cause not established.
+30. **Each extra SITL instance writes `mav_N_1.parm` in the repo root.** Only `mav_0_1.parm` is gitignored today.
+
 ## Bringing the stack up and down
 
 ```bash

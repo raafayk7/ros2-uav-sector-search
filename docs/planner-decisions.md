@@ -69,6 +69,8 @@ Feature answers: D4 = BLL library only for now; D5 = thesis penalty + altitude l
 
 Scope Challenge result: scope reduced per recommendation.
 
+Later change: D17 replaced "DGA only at runtime" above with the direct best-open-sector rule.
+
 ## Scope Challenge findings
 
 Evidence below is from bounded probes on 2026-11-04 (headless SITL, 1-4 iris) and from reading the pinned ArduPilot and ardupilot_gz sources in the image. No proposed code was built.
@@ -259,7 +261,7 @@ B) Positions only
 State: approved
 Actual answer: A) Share goals (D11, 2026-11-04)
 Accepted scope: each node publishes its goal sector centre on `/<robot>/goal_sector` (`geometry_msgs/PointStamped`, RELIABLE + TRANSIENT_LOCAL) and subscribes to each named peer's. Peers' current and goal sectors both count as occupied in the utility. If two drones hold the same goal, the higher sysid re-plans at its next 1 Hz check. Includes a library test for the tie-break. The write-up states this departs from the thesis utility.
-History: none
+History: SUPERSEDED IN PART. Tie-break replaced by R19 (D24); QoS and expiry replaced by R23 (D28): build from those.
 
 ### R6: Arrival criterion and handoff to landing_node
 Finding: 6, P1, confidence 8/10, `docs/next-session-prompt.md` step 1 ("arrival criterion and handoff to the later landing_node") and step 3 ("3-5 m arrival"), native review.
@@ -293,7 +295,7 @@ C) 5 m + status/enable
 State: approved
 Actual answer: A) 3 m + status/enable (D12, 2026-11-04)
 Accepted scope: `arrival_radius` param, default 3.0 m horizontal. The node publishes `/<robot>/planner_status` (`std_msgs/String`: ASCENDING, ARRIVED, HOLDING) and obeys `/<robot>/planner_enable` (`std_msgs/Bool`), sending no goals while false. The planner has no knowledge of landing. Covered by tests.
-History: none
+History: SUPERSEDED IN PART. Radius is 2.0 m per R22 (D27), altitude also required per R21 (D26), hold on disable per R24 (D29): build from those.
 
 ### R7: Post-find peak suppression
 Finding: 7, P1, confidence 8/10, `docs/roadmap.md` "Open engineering questions" and architecture row ("single owner of the posterior ... followers only read it"), native review.
@@ -438,7 +440,7 @@ Runtime evidence: probe with the closed neighbourhood showed 0% stacked. Two adj
 State: approved
 Actual answer: no new question; carried from D5 and D11 (2026-11-04)
 Accepted scope: a sector is blocked if it is a peer's current or goal sector or one of their 8 neighbours. Known limit, stated in the write-up: two followers cannot hold adjacent sectors, so of two side-by-side targets only one gets a follower. At 10 m the holder's camera footprint is larger than one sector, so the neighbouring target should still be in view; this is not yet verified.
-History: none
+History: SUPERSEDED IN PART. A peer position blocks only once arrived per R20 (D25); goal zones block by sysid priority per R19 (D24): build from those.
 
 ### R12: How a drone reaches a peak on a sparse map
 Finding: 12, P1, confidence 8/10, `src/uav_mapping/uav_mapping/leader_node.py:183` (`p_clamp` 0.97) and `CLAUDE.md` ("Algorithm: Distributed Gradient Ascent (DGA)"), native review.

@@ -25,7 +25,7 @@ In `/home/raafayk7_cteq/Documents/Experiments/multi-agent-uavs/multi-agent-uavs/
 
 | Layer | Choice | Reason |
 |---|---|---|
-| Host OS | Debian Trixie | Raafay's primary machine |
+| Host OS | Ubuntu 24.04 (was Debian Trixie) | Raafay's primary machine |
 | Containment | Docker | Avoid native ROS 2 install pain on Trixie; reproducible env |
 | ROS 2 | Jazzy Jalisco (LTS) | Mature, paired with Gazebo Harmonic, supported through May 2029 |
 | Simulator | Gazebo Harmonic | Official pairing with Jazzy; Gazebo Classic 11 is EOL since Jan 31 2025 |
@@ -33,13 +33,13 @@ In `/home/raafayk7_cteq/Documents/Experiments/multi-agent-uavs/multi-agent-uavs/
 | ROS ↔ ArduPilot link | AP_DDS (native, ArduPilot 4.5+) | Replaces MAVROS for the main control loop; cleaner topic interface |
 | Perception | Ultralytics YOLO26 | Released Jan 14 2026, small-object detection improvements over YOLOv8 |
 | Vision wrapper | `mgonzs13/yolo_ros` or `Alpaca-zip/ultralytics_ros` | Standard ROS 2 nodes around Ultralytics |
-| Algorithm | Distributed Gradient Ascent (DGA), with Bilinear Log-Linear (BLL) as a comparison baseline | Same algorithms as the original thesis, but each drone runs its own planner (true decentralization) |
+| Algorithm | Each follower flies to the best open sector on the shared map, using the thesis's overlap penalty; thesis DGA and BLL are library baselines | Changed 2026-11-04 on measured evidence: the leader's spiky log-odds map has no gradient for 8-neighbour ascent to climb. See `docs/planner-decisions.md` |
 
 **What this project explicitly does NOT use anymore**, even though the original Noetic implementation did:
 
 - MAVROS as the primary bridge — use AP_DDS instead. Only fall back to MAVROS for specific commands AP_DDS doesn't expose yet.
 - MAVProxy in the runtime path — only for debugging.
-- `iq_sim` / Intelligent Quads launch files — superseded by `ardupilot_gz`'s `multiagent.launch.py`.
+- `iq_sim` / Intelligent Quads launch files — superseded by `ardupilot_gz` (`robots/iris.launch.py` under our own swarm launch; `multiagent.launch.py` is hard-coded to 4 different vehicles, so it's only a template).
 - `r0ch1n/ardupilot_gazebo_roscam` — superseded by ardupilot_gz.
 - Gazebo Classic 11 — EOL. Use new Gazebo (Harmonic).
 - Hand-rolled UDP broadcast between drones — DDS handles inter-drone discovery natively.
@@ -67,6 +67,8 @@ If the user asks about something on the "do not use" list, gently flag that the 
 The host folder maps directly into the Docker container — typically as `/workspaces/multi-agent-uavs`. Code edits work transparently; building happens inside the container where ROS 2 lives.
 
 ## Algorithm recap
+
+**Read this as the thesis algorithms, now baselines.** What flies is defined in `docs/planner-decisions.md`, which wins on any disagreement: best open sector anywhere on the grid, a stay rule with a 0.02 margin, and zones blocked by arrived peers and by lower-sysid goals. Read literally, the thesis's DGA has no stay action and never settles.
 
 ### Problem setup (from thesis §3.1.1.2)
 
@@ -113,22 +115,24 @@ Decompose the system into the following nodes. Each runs as a separate ROS 2 pro
 | Node | Per drone? | Subscribes | Publishes |
 |---|---|---|---|
 | `perception_node` | one per drone | `/<robot>/camera/image_raw` | `/<robot>/detections` (`vision_msgs/Detection2DArray`) |
-| `localization_node` | one per drone | `/<robot>/ap/navsat/navsat0`, `/<robot>/ap/imu` | `/<robot>/pose` (`geometry_msgs/PoseStamped` in arena frame) |
+| `localization_node` | one per drone | `/<robot>/navsat`, `/<robot>/odometry` | `/<robot>/pose` (`geometry_msgs/PoseStamped` in arena frame) |
 | `leader_node` | only on leader | own `/<robot>/detections`, own `/<robot>/pose` | `/heatmap` (`nav_msgs/OccupancyGrid`) |
-| `follower_planner_node` | one per follower | `/heatmap`, all `/<robot>/pose` | `/<robot>/ap/cmd_vel` or `/<robot>/ap/goal_pose` |
-| `landing_node` | one per follower | own camera, own pose | `/<robot>/ap/cmd_vel` (when in landing mode) |
+| `follower_planner_node` | one per follower | `/heatmap`, peers' `/<robot>/pose` and `/<robot>/goal_sector` | `/ap/vN/cmd_gps_pose`, `/<robot>/goal_sector`, `/<robot>/planner_status`; obeys `/<robot>/planner_enable` |
+| `landing_node` | one per follower | own camera, own pose | `/ap/vN/cmd_gps_pose` or `/ap/vN/cmd_vel` (after the planner is disabled) |
 
-`<robot>` is the per-drone namespace, e.g. `iris_1`, `iris_2`. Set this via the `robots` list in the launch file.
+`<robot>` is the per-drone namespace, e.g. `iris_1`, `iris_2`, set per drone by our own swarm launch. Each drone also has a sysid N for its `/ap/vN/*` topics.
 
 Topic naming convention:
-- ArduPilot's AP_DDS publishes everything under `/ap/...` per vehicle (already namespaced when using ardupilot_gz)
+- ArduPilot's AP_DDS publishes everything under `/ap/vN/...`, namespaced by sysid (`/iris_N/ap/...` does not exist)
 - Project-level topics (`/heatmap`) are unnamespaced
 - Per-drone project topics (`/iris_2/detections`) use the namespace as a prefix
 
+**Design status (2026-11-04):** the follower planner design is settled in `docs/planner-decisions.md`, with tasks T1-T8 and no code yet. Read that before planner work. Note: `leader_node` has no flight code, so a sweep controller is still to build.
+
 **Build status (2026-06-10):**
 - `localization_node` (`uav_localization`) — **done, verified in sim.** GPS + odometry → `/pose`, a `geometry_msgs/PoseStamped` in an ENU arena frame whose origin is latched at the first GPS fix.
-- `leader_node` (`uav_mapping`) — **done, verified standalone.** Projects `/detections` to the ground (pinhole via `/camera/camera_info` ∘ `/pose` ∘ a static nadir camera mount, flat ground z=0) and accumulates a Bayesian log-odds `/heatmap` (`nav_msgs/OccupancyGrid`, RELIABLE + TRANSIENT_LOCAL). One cell == one thesis sector; defaults match the thesis (5 m/cell, 4×4 over the 20×20 m arena, corner origin), all launch params. Comes with `fake_detection_publisher` (synthetic `Detection2DArray` at a known pixel) and `heatmap.launch.py`. **Pending:** an against-`iris_runway` run with the real `/camera` + confirming the actual iris camera mount (the nadir assumption is a `mount_quat` param, not code).
-- `perception_node`, `follower_planner_node`, `landing_node` — not built yet. `follower_planner_node` (the DGA/BLL planner consuming `/heatmap`) is the next target.
+- `leader_node` (`uav_mapping`) — **done, verified standalone.** Projects `/detections` to the ground (pinhole via `/camera/camera_info` ∘ `/pose` ∘ a static nadir camera mount, flat ground z=0) and accumulates a Bayesian log-odds `/heatmap` (`nav_msgs/OccupancyGrid`, RELIABLE + TRANSIENT_LOCAL). One cell == one thesis sector; defaults match the thesis (5 m/cell, 4×4 over the 20×20 m arena, corner origin), all launch params. Comes with `fake_detection_publisher` (synthetic `Detection2DArray` at a known pixel) and `heatmap.launch.py`. **Checked 2026-11-04 against live `iris_runway`:** the real camera is on a gimbal, 52 deg off nadir, so `leader_node`'s nadir default is wrong and getting the gimbal to nadir is a required task (D30).
+- `perception_node`, `follower_planner_node`, `landing_node` — not built yet. `follower_planner_node` is the next target, in package `uav_planning`.
 
 Conventions established by the two built nodes, mirror them in new ones: input topics are **absolute-default launch params** (so node namespacing doesn't rewrite them, and they flip to `/ap/*` later with no code change); project-level outputs are relative/unnamespaced; thesis-faithful numbers are defaults exposed as params.
 
@@ -179,14 +183,13 @@ colcon build --symlink-install --event-handlers console_direct+
 
 ### Running ArduPilot SITL + Gazebo + the swarm
 
-The canonical launch (once ardupilot_gz is set up):
+Single drone, headless:
 
 ```bash
-ros2 launch ardupilot_gz_bringup multiagent.launch.py \
-  rviz:=true use_gz_tf:=true
+ros2 launch ardupilot_gz_bringup iris_runway.launch.py use_gz_sim_gui:=false rviz:=false
 ```
 
-This brings up Gazebo, RViz, and N ArduPilot SITL instances with DDS. After expanding the `robots` list, each drone gets its own namespace and SITL instance.
+`multiagent.launch.py` hard-codes 4 different vehicles with no launch arg, so N iris needs our own launch reusing `robots/iris.launch.py` (a working patch is in `docs/probes/rtf.sh`). Topics are `/iris_N/*` from Gazebo and `/ap/vN/*` from the autopilot, N = sysid. Real-time factor falls quickly: 0.46, 0.25 and 0.11 for 1, 3 and 4 iris.
 
 To launch the project's own nodes alongside:
 
@@ -198,37 +201,22 @@ ros2 launch uav_bringup swarm.launch.py num_followers:=3
 
 ### Talking to a drone manually
 
-Via AP_DDS — set a goal in the local frame:
+Services need Fast DDS, because they hang under the container's CycloneDDS. Mode 4 is GUIDED:
 
 ```bash
-ros2 topic pub --once /iris_1/ap/goal_pose geometry_msgs/PoseStamped \
-  '{header: {frame_id: "map"}, pose: {position: {x: 5.0, y: 0.0, z: 7.0}}}'
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+ros2 service call /ap/v1/mode_switch ardupilot_msgs/srv/ModeSwitch "{mode: 4}"
+ros2 service call /ap/v1/arm_motors ardupilot_msgs/srv/ArmMotors "{arm: true}"
+ros2 service call /ap/v1/experimental/takeoff ardupilot_msgs/srv/Takeoff "{alt: 10.0}"
 ```
 
-Set velocity directly:
+Fly to a point with `/ap/vN/cmd_gps_pose` (`ardupilot_msgs/GlobalPosition`, BEST_EFFORT + VOLATILE, tested under CycloneDDS). It is **dropped silently** unless `header.frame_id` is exactly `"map"` and the vehicle is GUIDED and armed. Use `FRAME_GLOBAL_REL_ALT`, because Gazebo and autopilot altitudes differ by 574 m. `/ap/vN/goal_lla` is autopilot output, useful to confirm the accepted target, not a command. See `docs/probes/cmd_gps_pose_probe.py`.
+
+Inspect:
 
 ```bash
-ros2 topic pub /iris_1/ap/cmd_vel geometry_msgs/TwistStamped \
-  '{twist: {linear: {x: 1.0, y: 0.0, z: 0.0}}}'
-```
-
-Inspect what topics a drone exposes:
-
-```bash
-ros2 topic list | grep iris_1
-ros2 topic info /iris_1/ap/navsat/navsat0
-```
-
-### Switching modes / arming
-
-Currently AP_DDS doesn't expose mode-switching as a clean service everywhere; use MAVProxy or a small pymavlink helper for these. The fallback pattern:
-
-```bash
-# In a separate terminal, run MAVProxy against the same SITL instance
-mavproxy.py --master udp:127.0.0.1:14550 --console
-# Then:
-mode guided
-arm throttle
+ros2 topic list | grep -E "iris_1|ap/v1"
+ros2 interface show ardupilot_msgs/msg/GlobalPosition
 ```
 
 ### YOLO training

@@ -23,10 +23,10 @@ Closest prior pattern to cite, not hide: "Bootstrapped LLM Semantics for Context
 | Sim | Docker: Jazzy + Gazebo Harmonic + ArduPilot SITL (AP_DDS) | done, verified 2026-11-02 |
 | State | `uav_localization/localization_node` | done |
 | Leader | `uav_mapping/leader_node`: detections + camera footprints, plus a boustrophedon sweep controller | heatmap done; sweep controller (no flight code exists yet), footprint publishing and prior-biased lane order still to do |
-| Belief map | `belief_map_node`: **single owner of the posterior**; fuses detections + footprints from all agents; followers only read it | todo |
-| Followers | `follower_planner_node`: best open sector over the posterior, thesis overlap penalty, altitude-layer separation; thesis DGA and BLL as library baselines | **next** |
-| Perception | primary: ground-truth detector (Gazebo target poses + noise, misses, false positives, footprint check); stretch: YOLO | todo |
-| Mission | state machine: launch -> prior-guided dispatch while leader sweeps -> localize -> report | todo |
+| Belief map | `belief_map_node`: **single owner of the posterior**; fuses detections + footprints from all agents; followers only read it. A target is confirmed when a follower within arrival radius sees it in its sector for N consecutive frames (N set once detector noise is known); that whole sector is then lowered, so a second target in it stays hidden | todo |
+| Followers | `follower_planner_node`: best open sector over the posterior, thesis overlap penalty, altitude layers (leader 8 m, followers 10 + 2 x index m); thesis DGA and BLL as library baselines; `arm_takeoff` helper handles arming | **next** |
+| Perception | primary: ground-truth detector (Gazebo target poses + noise, misses, false positives, footprint check), publishing on every frame including empty ones; stretch: YOLO. Requires the camera at nadir: the live gimbal sits 52 deg off | todo |
+| Mission | state machine: launch -> prior-guided dispatch while leader sweeps -> localize -> report. Ends when the sweep is complete and every unsuppressed sector is below 0.5 for 30 s (provisional values), or at timeout; hands off through `planner_enable` | todo |
 | Language prior | `mission_prior_node` (contract below) | todo, after go/no-go |
 | Eval | 2D kinematic sim runner reusing the planner and fusion library | todo |
 | CI | GitHub Actions smoke test | todo |
@@ -38,7 +38,7 @@ Closest prior pattern to cite, not hide: "Bootstrapped LLM Semantics for Context
 - **t = 0:** the clue becomes the prior. The leader starts its full sweep with lane order biased so high-prior lanes go first. Followers launch immediately and fly to the prior's best open sectors.
 - **During the mission:** the posterior updates incrementally. Detections raise nearby cells. **Negative evidence** (a footprint with no detection) lowers covered cells, which pushes followers off a wrong prior's peak.
 - **Coverage guarantee:** the leader always completes the full sweep whatever the prior says. A wrong clue can delay a find but never prevent coverage.
-- **Baseline:** same timing with a flat prior.
+- **Baseline:** same timing with a flat prior. Followers hold on a flat map until evidence changes values, so the 2D sim must show that a uniform run explores, using follower footprints, before any uniform-baseline result is reported.
 
 ## Fusion
 
@@ -59,7 +59,7 @@ A cell's starting belief = alpha * prior_LLM + (1 - alpha) * 0.5, converted to l
 - Lightweight 2D kinematic sim (point-mass drones, camera footprint model, same planner/fusion library), faster than real time. Gazebo is used for 3 showcase runs for video, not for statistics.
 - 20 seeds, 1-3 targets each, placed relative to landmarks in a fixed world.
 - Conditions: uniform, accurate clue, misleading clue (same template, wrong landmark), alpha = 0.5.
-- Found = a detection within 2 m of the true position. Timeout 15 sim-minutes; unfound targets are censored and counted.
+- Found (scoring only, since a running system lacks true positions) = a detection within 2 m of the true position. Timeout 15 sim-minutes; unfound targets are censored and counted.
 - Report median time-to-first-find, time-to-all-found (with censor count) and coverage at timeout.
 
 ## CI scope
@@ -73,7 +73,7 @@ Smoke test: 1 leader + 1 follower, ground-truth detector (no camera rendering, s
 | Nov 10 | Planner library + `follower_planner_node`, first follower flying to a stub-map sector in SITL; secret scan clean, repo public as a WIP |
 | **Nov 15** | **3 followers each holding a different peak on the 8x8 stub map in SITL** (cut-order trigger) |
 | Nov 20 | One follower completes the search loop: observes, map updates, departs, finds a target |
-| Nov 24 | `belief_map_node`, leader footprints, mission state machine end to end |
+| Nov 24 | Mission state machine end to end. Build order from Nov 16: camera to nadir (2 h timebox) and sim speed (2 h timebox); ground-truth detector; sweep controller; `belief_map_node` + footprints; Nov 20 checkpoint; state machine. About 15-20 h, so the state machine may slip past Nov 24 |
 | **Nov 30** | **Go/no-go:** leader + 3 followers complete a mission in Gazebo (ground-truth detector) from one command; video v1 |
 | Dec 8 | CI green |
 | Dec 10 | Language prior drives a mission end to end |

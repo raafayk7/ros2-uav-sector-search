@@ -9,7 +9,7 @@ choice (the trade-offs, the alternatives rejected), see
 `assessment-ros2-migration.md` — that's the source of truth for *why*. For
 build-environment gotchas, see `docker-notes.md`.
 
-Last updated: 2026-06-10.
+Last updated: 2026-11-04.
 
 ---
 
@@ -35,8 +35,9 @@ stacks on.
   project-defined map frame. `uav_mapping/leader_node` — the first
   algorithm-relevant node — turns the leader's camera detections into a
   probability heatmap (`/heatmap`) over the thesis sector grid.
-- The DGA/BLL **follower planners are still ahead** — that's the next node
-  (`follower_planner_node`, consuming `/heatmap`).
+- The **follower planner is still ahead** — that's the next node
+  (`follower_planner_node`, consuming `/heatmap`). Its design is settled in
+  `planner-decisions.md`.
 - The Gazebo↔SITL FDM handshake works as of 2026-11-02 (`/ap/v1/*` is live and
   the drone accepts arm/takeoff; see `docker-notes.md`), so actuation is no
   longer blocked. The planner can still be validated first as a coordination
@@ -48,17 +49,17 @@ stacks on.
 
 | Layer | Choice | What it does for us |
 |---|---|---|
-| Host OS | Debian Trixie | The primary machine. ROS 2 targets Ubuntu, not Debian — which is the whole reason the next layer exists. |
+| Host OS | Ubuntu 24.04 (was Debian Trixie) | The primary machine. Docker keeps the ROS 2 toolchain reproducible regardless of host. |
 | Containment | Docker | Packages the entire ROS 2 + Gazebo + ArduPilot toolchain into one reproducible image, so we don't fight a native install on an unsupported OS. |
 | Framework | ROS 2 Jazzy | The robotics framework: node model, pub/sub messaging, standard message types, build tools, launch system. Modern replacement for ROS 1 Noetic; LTS to 2029. |
 | Middleware | DDS | The transport ROS 2 runs on. Handles node discovery and moving data between processes. The reason QoS settings exist. |
 | Simulator | Gazebo Harmonic | Simulates the drone body, the world, gravity, and onboard sensors (GPS, IMU, camera). Official pairing for Jazzy. |
 | Flight controller | ArduPilot SITL | The real autopilot firmware (`arducopter`) running as a desktop process instead of on a Pixhawk. Runs the same control loops a real drone would. |
 | Harness | ardupilot_gz | Glue package that launches Gazebo and SITL together and wires them up. Ships `iris_runway.launch.py`. |
-| ROS ↔ autopilot | AP_DDS | ArduPilot's native bridge: exposes the autopilot to ROS 2 as `/ap/*` topics. Replaces the older MAVROS. (Offline right now — see below.) |
-| Sensor bridge | ros_gz_bridge | Bridges Gazebo's sensor topics into ROS 2 (`/navsat`, `/odometry`, `/camera/image`, …). What's keeping development unblocked while AP_DDS is down. |
+| ROS ↔ autopilot | AP_DDS | ArduPilot's native bridge: exposes the autopilot to ROS 2 as `/ap/vN/*` topics and services. Replaces the older MAVROS. |
+| Sensor bridge | ros_gz_bridge | Bridges Gazebo's sensor topics into ROS 2 (`/navsat`, `/odometry`, `/camera/image`, …). |
 | Perception | YOLO26 | Computer-vision marker detection. Not built yet. |
-| Algorithm | DGA / BLL | The distributed coordination planners. Not built yet. |
+| Algorithm | Best open sector, with thesis DGA / BLL as baselines | The distributed coordination planner. Each follower picks the best open sector on the shared map. Designed, not built. |
 
 ### How the simulation pieces fit together
 
@@ -153,6 +154,25 @@ mount (the down-facing assumption is a parameter, not code).
 
 ---
 
+## Session 2026-11-04: warm-up and planner design review
+
+No planner code yet; this session settled the design. What changed in your
+picture of the system:
+
+- **Followers don't climb a gradient anymore.** The leader's map has isolated
+  spikes (97% next to 3%), so stepping to the best neighbour finds nothing. Each
+  follower now picks the best open sector anywhere and flies straight there. The
+  thesis algorithms stay as measured baselines.
+- **The camera isn't pointing down.** It sits on a gimbal, 52° off vertical, so
+  getting it to nadir is a required task before footprint work.
+- **Commands reach the autopilot on `/ap/vN/cmd_gps_pose`**, and it silently
+  ignores anything without `frame_id: "map"`.
+
+Decisions are in `planner-decisions.md`; environment facts are gotchas 24-30 in
+`docker-notes.md`.
+
+---
+
 ## Key terminology
 
 **Node** — one ROS 2 process that does one job. `localization_node` is the
@@ -223,6 +243,15 @@ a flat array of cells over a rectangle of the world, with metadata for
 `resolution` (m/cell), `width`/`height`, and an `origin` pose. Each cell is
 `0–100` (percent probability) or `-1` (unknown). The heatmap uses it; one cell
 equals one thesis sector.
+
+**Timer / executor** — a timer calls a function at a fixed rate, and with
+`use_sim_time` it follows the simulator's clock. The executor is the loop that
+runs a node's callbacks; the default runs them one at a time, so a node with one
+timer needs no locks.
+
+**RMW** — the messaging library underneath ROS 2 (CycloneDDS or Fast DDS here).
+Topics work across both; `/ap/*` services hang under CycloneDDS, so the arming
+helper uses Fast DDS.
 
 **Sector grid (m × n)** — the thesis's partition of the arena into square
 sectors, each carrying a probability `p_ij` of holding a marker. The rebuild

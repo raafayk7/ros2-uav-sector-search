@@ -4,7 +4,7 @@ This file is loaded automatically by Claude Code / Cowork when working in this r
 
 ## What this project is
 
-A ROS 2 rebuild of Raafay's LUMS senior project — a multi-agent UAV search-and-rescue system. A leader drone sweeps an area, runs YOLO to detect ground markers, builds a probability heatmap; follower drones then run a distributed gradient ascent algorithm to converge on the marked sectors, then precision-land via color masking + PID.
+A ROS 2 rebuild of Raafay's LUMS senior project — a multi-agent UAV search-and-rescue system. A leader drone sweeps an area, detects ground markers and builds a probability heatmap; follower drones independently fly to the best open sectors on that map, then precision-land via color masking + PID. The original used distributed gradient ascent, kept here as a measured baseline.
 
 The original implementation (Spring 2025) was ROS Noetic + Gazebo 11 + ArduPilot + MAVROS + YOLOv8. This rebuild targets a modern stack and aims to close out the future-work items the original team identified (true decentralization, GPS-denied follower phase, scale beyond 2 followers, more robust perception).
 
@@ -16,7 +16,7 @@ Primary machine: now Ubuntu 24.04 (was Debian Trixie); Docker data lives on a US
 
 ## The chosen stack (locked in — don't relitigate)
 
-- **Host:** Debian Trixie
+- **Host:** Ubuntu 24.04 (was Debian Trixie)
 - **Containment:** Docker
 - **ROS 2:** Jazzy Jalisco (LTS through May 2029)
 - **Simulator:** Gazebo Harmonic
