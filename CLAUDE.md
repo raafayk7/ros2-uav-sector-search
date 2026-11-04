@@ -92,3 +92,22 @@ Skill source-of-truth is `skills/multi-agent-uavs/SKILL.md`. `.claude/skills/mul
 - ArduPilot guided-mode commands: <https://ardupilot.org/dev/docs/copter-commands-in-guided-mode.html>
 - MAVLink common messages: <https://mavlink.io/en/messages/common.html>
 - YOLO26 docs: <https://docs.ultralytics.com/models/yolo26>
+
+## Skill routing
+
+When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
+
+Key routing rules:
+- Product ideas/brainstorming → invoke /office-hours
+- Strategy/scope → invoke /plan-ceo-review
+- Architecture → invoke /plan-eng-review
+- Design system/plan review → invoke /design-consultation or /plan-design-review
+- Full review pipeline → invoke /autoplan
+- Bugs/errors → invoke /investigate
+- QA/testing site behavior → invoke /qa or /qa-only
+- Code review/diff check → invoke /review
+- Visual polish → invoke /design-review
+- Ship/deploy/PR → invoke /ship or /land-and-deploy
+- Save progress → invoke /context-save
+- Resume context → invoke /context-restore
+- Author a backlog-ready spec/issue → invoke /spec
