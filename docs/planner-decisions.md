@@ -476,7 +476,7 @@ C) Thesis steps only
 State: approved
 Actual answer: A) Direct to best open (D17, 2026-11-04)
 Accepted scope: the flying rule picks the highest-value open sector on the whole grid and flies straight to it, with the R11 penalty and the R10 margin unchanged. Thesis DGA (8-neighbour steps) stays in the library beside BLL as a measured baseline. `docs/roadmap.md` and `CLAUDE.md` are reworded so they no longer say the followers fly by gradient ascent; the thesis algorithm is described as the baseline. Supersedes the "DGA only at runtime" wording in the scope record: the node runs this direct rule. The user changed the stack line marked locked in `CLAUDE.md`.
-History: none
+History: none. Later evidence, 2026-11-04: `leader_node.py:374` updates one cell per detection, with no spatial spread, so spikes are what it produces. `docs/probes/algo_probe6.py` then repeated the comparison on Gaussian-spread peaks (sigma 0-2 sectors, approved conflict rules, 200 seeds, whole-percent values). All 3 peaks held by local steps: 1%, 9%, 24%, 32% at 8x8 and 0%, 2%, 4%, 16% at 12x12. Direct: 100% in every case. The decision does not depend on peaks being single-sector.
 
 ### R13: Flat or all-unknown maps
 Finding: 13, P1, confidence 7/10, `src/uav_mapping/uav_mapping/leader_node.py:327` (`cur = 0.0  # first observation: prior p=0.5`) and `docs/next-session-prompt.md` step 1, native review.

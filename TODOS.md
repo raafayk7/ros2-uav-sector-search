@@ -30,9 +30,9 @@
 
 ### Test the direct rule on realistic maps
 
-**What:** Run the best-open-sector rule on unequal peaks and smooth region maps; try a distance discount only if results call for it.
+**What:** Run the best-open-sector rule on unequal peaks and LLM-shaped region maps; try a distance discount only if results call for it.
 
-**Why:** It was validated only on equal 0.97 spikes. It will cross the arena for a 97% sector while ignoring a 90% sector next door, and language priors produce smooth regions.
+**Why:** It was validated only on equal peaks, spiky or Gaussian. It will cross the arena for a 97% sector while ignoring a 90% sector next door, and language priors produce broad circles and capsules, where every cell in a region can tie.
 
 **Context:** Probes are described in `docs/planner-decisions.md` (R12). Do this before reporting any eval result. Start from the rule in `uav_planning/core/planner.py`.
 
