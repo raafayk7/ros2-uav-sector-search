@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>uav_planning</name>
+  <version>0.1.0</version>
+  <description>
+    Follower planner for the multi-agent UAV search-and-rescue stack. The
+    ROS-free core library (uav_planning.core.planner) picks the best open
+    sector on the shared map; ROS nodes will be thin wrappers around it.
+  </description>
+  <maintainer email="raafaykazmi@yahoo.com">Raafay</maintainer>
+  <license>MIT</license>
+
+  <!-- The core library needs no ROS. rclpy and message deps arrive with the
+       node. -->
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
