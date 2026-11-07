@@ -15,7 +15,9 @@ Design decisions (made consciously, see session notes):
   the first usable /navsat message and express every later fix relative to
   it. This mirrors what a real drone must do (it only has GPS, not a
   god's-eye ground-truth frame), so the GPS->local pipeline actually gets
-  built and exercised rather than shortcut via sim ground truth.
+  built and exercised rather than shortcut via sim ground truth. For a
+  swarm, the optional datum_lat/lon/alt params replace the latch with one
+  shared world origin so every drone reports in the same frame.
 
 * Position comes from /navsat (honest GPS, equirectangular projection).
   Orientation comes from /odometry's quaternion (a stand-in for the real
@@ -66,6 +68,13 @@ class LocalizationNode(Node):
         # If the very first fix reports NO_FIX we skip it and wait; set this
         # False only if your SITL navsat never reports a fix status.
         self.declare_parameter('require_fix', True)
+        # Optional shared world datum. Every drone in a swarm must measure
+        # from the same point, or each reports itself at (0, 0) and the map
+        # means something different to each. NaN = unset = latch the first fix
+        # (single-drone behaviour). Set all three together, or none.
+        self.declare_parameter('datum_lat', float('nan'))
+        self.declare_parameter('datum_lon', float('nan'))
+        self.declare_parameter('datum_alt', float('nan'))
 
         navsat_topic = self.get_parameter('navsat_topic').value
         odom_topic = self.get_parameter('odom_topic').value
@@ -79,6 +88,17 @@ class LocalizationNode(Node):
         self._lon0 = None
         self._alt0 = None
         self._cos_lat0 = None  # precomputed cos(lat0) for the East term
+        datum = [self.get_parameter(n).value
+                 for n in ('datum_lat', 'datum_lon', 'datum_alt')]
+        n_set = sum(math.isfinite(v) for v in datum)
+        if n_set == 3:
+            self._lat0, self._lon0, self._alt0 = datum
+            self._cos_lat0 = math.cos(math.radians(self._lat0))
+        elif n_set != 0:
+            # A half-set datum would silently shift the frame; refuse to start.
+            raise ValueError(
+                "datum_lat, datum_lon and datum_alt must be set together "
+                f"(got lat={datum[0]}, lon={datum[1]}, alt={datum[2]})")
         # Latest orientation from odometry; identity until odom arrives.
         self._orientation = None
 
@@ -112,7 +132,12 @@ class LocalizationNode(Node):
             f"localization_node up | in: navsat='{navsat_topic}', "
             f"odom='{odom_topic}' | out: pose='{pose_topic}' "
             f"| arena_frame='{self.arena_frame}'")
-        self.get_logger().info("Waiting for first GPS fix to set origin...")
+        if self._lat0 is not None:
+            self.get_logger().info(
+                f"Shared datum: lat={self._lat0:.7f} lon={self._lon0:.7f} "
+                f"alt={self._alt0:.2f} (ENU origin; no first-fix latch)")
+        else:
+            self.get_logger().info("Waiting for first GPS fix to set origin...")
 
     # ------------------------------------------------------------------
     def _on_odom(self, msg: Odometry):

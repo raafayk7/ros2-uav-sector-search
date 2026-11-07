@@ -14,12 +14,17 @@ Launch args (all overridable on the command line, e.g.
                                      set to iris_1 etc. for the swarm)
   arena_frame   frame_id on /pose  (default arena)
   use_sim_time  use /clock         (default true      — Gazebo drives time)
+  datum_lat/lon/alt  shared world datum (default nan = unset: latch the first
+                     fix). Set all three on every drone of a swarm so they
+                     share one frame, e.g. datum_lat:=-35.3632621
+                     datum_lon:=149.1652374 datum_alt:=10.19 (runway world).
 """
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -29,6 +34,9 @@ def generate_launch_description():
     robot = LaunchConfiguration('robot')
     arena_frame = LaunchConfiguration('arena_frame')
     use_sim_time = LaunchConfiguration('use_sim_time')
+    # Launch args are strings; ParameterValue makes them reach the node as doubles.
+    datum = {name: ParameterValue(LaunchConfiguration(name), value_type=float)
+             for name in ('datum_lat', 'datum_lon', 'datum_alt')}
 
     return LaunchDescription([
         DeclareLaunchArgument('navsat_topic', default_value='/navsat'),
@@ -37,6 +45,9 @@ def generate_launch_description():
         DeclareLaunchArgument('robot', default_value=''),
         DeclareLaunchArgument('arena_frame', default_value='arena'),
         DeclareLaunchArgument('use_sim_time', default_value='true'),
+        DeclareLaunchArgument('datum_lat', default_value='nan'),
+        DeclareLaunchArgument('datum_lon', default_value='nan'),
+        DeclareLaunchArgument('datum_alt', default_value='nan'),
 
         Node(
             package='uav_localization',
@@ -51,6 +62,7 @@ def generate_launch_description():
                 'arena_frame': arena_frame,
                 # Honour Gazebo's /clock so timestamps line up with the sim.
                 'use_sim_time': use_sim_time,
+                **datum,
             }],
         ),
     ])
