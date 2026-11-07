@@ -193,7 +193,7 @@ REP-103 is the standard that mandates it. ArduPilot internally uses NED
 stays in standard orientation.
 
 **Arena frame / origin (datum)** — the project's fixed map frame: ENU,
-anchored at the drone's first GPS fix.
+anchored at the drone's first GPS fix, or at a shared world datum passed as `datum_lat/lon/alt` so every drone in a swarm reports in one frame.
 
 **Equirectangular projection** — the flat-earth math that turns GPS
 lat/lon differences into local meters. Accurate to well under a meter at

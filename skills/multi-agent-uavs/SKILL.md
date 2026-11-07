@@ -127,12 +127,13 @@ Topic naming convention:
 - Project-level topics (`/heatmap`) are unnamespaced
 - Per-drone project topics (`/iris_2/detections`) use the namespace as a prefix
 
-**Design status (2026-11-04):** the follower planner design is settled in `docs/planner-decisions.md`, with tasks T1-T8 and no code yet. Read that before planner work. Note: `leader_node` has no flight code, so a sweep controller is still to build.
+**Design status (2026-11-04):** the follower planner design is settled in `docs/planner-decisions.md`, with tasks T1-T8. T1 (shared datum) and T2 (ROS-free `uav_planning/core/planner.py`, tested) are built; T3 onward is not. Read that before planner work. Note: `leader_node` has no flight code, so a sweep controller is still to build.
 
 **Build status (2026-06-10):**
-- `localization_node` (`uav_localization`) — **done, verified in sim.** GPS + odometry → `/pose`, a `geometry_msgs/PoseStamped` in an ENU arena frame whose origin is latched at the first GPS fix.
+- `localization_node` (`uav_localization`) — **done, verified in sim.** GPS + odometry → `/pose`, a `geometry_msgs/PoseStamped` in an ENU arena frame whose origin is latched at the first GPS fix, or set from the optional `datum_lat/lon/alt` params so a swarm shares one frame.
 - `leader_node` (`uav_mapping`) — **done, verified standalone.** Projects `/detections` to the ground (pinhole via `/camera/camera_info` ∘ `/pose` ∘ a static nadir camera mount, flat ground z=0) and accumulates a Bayesian log-odds `/heatmap` (`nav_msgs/OccupancyGrid`, RELIABLE + TRANSIENT_LOCAL). One cell == one thesis sector; defaults match the thesis (5 m/cell, 4×4 over the 20×20 m arena, corner origin), all launch params. Comes with `fake_detection_publisher` (synthetic `Detection2DArray` at a known pixel) and `heatmap.launch.py`. **Checked 2026-11-04 against live `iris_runway`:** the real camera is on a gimbal, 52 deg off nadir, so `leader_node`'s nadir default is wrong and getting the gimbal to nadir is a required task (D30).
-- `perception_node`, `follower_planner_node`, `landing_node` — not built yet. `follower_planner_node` is the next target, in package `uav_planning`.
+- `uav_planning/core/planner.py` — **library done, tested** (no ROS; sector indexing, blocked set, best-open-sector choice, `plan_step`, arena to lat/lon, thesis DGA and BLL baselines).
+- `perception_node`, `follower_planner_node`, `landing_node` — not built yet. `follower_planner_node` (the thin wrapper over the library, in `uav_planning`) is the next target.
 
 Conventions established by the two built nodes, mirror them in new ones: input topics are **absolute-default launch params** (so node namespacing doesn't rewrite them, and they flip to `/ap/*` later with no code change); project-level outputs are relative/unnamespaced; thesis-faithful numbers are defaults exposed as params.
 

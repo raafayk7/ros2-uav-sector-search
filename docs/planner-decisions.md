@@ -4,7 +4,7 @@ Review target (fixed): the follower planner section of `docs/roadmap.md`, scoped
 
 ## Decisions at a glance
 
-Status: decided, nothing built yet. Pure-Python probes and SITL spikes back these; the planner itself has not flown. Full reasoning is in the ledger below.
+Status: decided. T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07; the node and flight are not. Pure-Python probes and SITL spikes back these; the planner itself has not flown. Full reasoning is in the ledger below.
 
 | Topic | Decision | Ref |
 |---|---|---|
@@ -1194,6 +1194,25 @@ R18 sim speed. Otherwise: no database. The direct rule is O(cells x peers) at 1 
 
 Codex CLI completed: 8 findings, all resolved or recorded (R19-R28). Reviewers disagreed on two points: BLL and DGA baselines kept (Codex suggested deferring), and the search checkpoint placed after Nov 15 rather than before it. Reviewer error caught: the D12 arrival claim. Native probe limits it exposed: round-robin stepping could not show goal conflicts.
 
+## Implementation notes (session 1, 2026-11-07)
+
+Built: T1 and T2. These are code facts, not new decisions; where they pick a reading the decisions left open, it is listed here.
+
+Readings chosen where the record was open:
+
+- **"Arrived" for a peer** (D25 left it open): fresh pose and (no valid goal, or within `arrival_radius` of its goal centre). A drone with no valid goal, such as a disabled one, therefore blocks the zone where it is parked.
+- **A peer's goal vs its pose** (D21 vs D28): a goal is valid for `peer_timeout` after its own stamp, whatever the pose does (D28, literal). A peer whose pose and goal are both stale is fully released (D21). A fresh goal with a stale pose still blocks its goal zone.
+- **Timeout boundary:** a pose or goal is valid while its age is `<= peer_timeout`.
+- **Margin boundary:** move only if the best beats the current value by more than `move_margin`, with 1e-9 slack, so a 0.02 gap holds.
+- **No goal yet:** the sector under the drone is the current goal for the stay comparison, so the first decision can return "hold here" as a goal.
+- **Arrival altitude (D26)** is not in the library, only horizontal arrival. The node owns the altitude gate.
+- **Datum params** (T1): all three or none. A partial set raises at startup rather than shifting the frame.
+- **Thesis baselines** are literal by default (no stay, the peer's own sector not penalised). `allow_stay` and `penalise_peer_cell` switch to the variants the probes used.
+
+Evidence: 49 tests pass in the container (5 datum, 44 planner). The 200-seed coordination harness (3 drones, 3 peaks at least 2 apart, 8x8, simultaneous decisions on one-tick-stale state, 1 sector per tick) held all 3 peaks in 200/200 seeds with a mean of 4.0 goal changes, matching the probe. Mutation check: reverting D25 fails 4 tests and inverting the sysid priority fails 8. BLL on 4x4 (3 drones, 3 peaks at 0.97 on 0.03, spacing >= 2, closed peer penalty, 40 seeds): median 408 iterations to first all-3-on-peaks, reached in 40/40, against the thesis's 153 (no setup stated there). Reported, not asserted (D22).
+
+Not done: the datum was not re-measured in a live sim this session; the values in `core` tests and the launch docstring (lat -35.3632621, lon 149.1652374, alt 10.19) are the earlier measurement from `/iris_1/navsat`. Re-read them when the swarm launch exists (T5). `/verify` found no declared checks and the repo is untrusted for it, so it was not run.
+
 ## NOT in scope
 
 - Potential-field layer: altitude layers cover the sim (D5); revisit if a same-altitude flight is ever needed.
@@ -1269,11 +1288,11 @@ Parallel lanes: Lane A: library, then node, helper and stub (shared `uav_plannin
 
 Synthesized from this review's findings. Each task derives from a specific finding above. Run with Claude Code or Codex; checkbox as you ship.
 
-- [ ] **T1 (P1, human: ~1h / CC: ~5min)** — localization — shared world datum with unset regression
+- [x] **T1 (P1, human: ~1h / CC: ~5min)** — localization — shared world datum with unset regression
   - Surfaced by: Architecture R1 (D7)
   - Files: `src/uav_localization/uav_localization/localization_node.py`, launch, test
   - Verify: pytest in container; existing single-drone launch still latches
-- [ ] **T2 (P1, human: ~1 day / CC: ~40min)** — uav_planning — ROS-free library and tests
+- [x] **T2 (P1, human: ~1 day / CC: ~40min)** — uav_planning — ROS-free library and tests
   - Surfaced by: R10, R11, R12, R13, R15, R16, R17, R19, R20, R23 (D16-D28)
   - Files: `src/uav_planning/uav_planning/core/planner.py`, `src/uav_planning/test/test_planner.py`, package boilerplate
   - Verify: pytest; coordination harness holds all peaks across seeds on 8x8
