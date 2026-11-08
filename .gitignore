@@ -39,8 +39,8 @@ gz_cache/
 .docker-build/
 
 # SITL / MAVProxy runtime files (generated when running arducopter or mavproxy in repo root)
-core
-core.*
+/core
+/core.*
 dumpcore.sh_*.out
 dumpstack.sh_*.out
 eeprom.bin
