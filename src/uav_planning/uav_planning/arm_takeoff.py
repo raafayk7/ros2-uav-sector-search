@@ -16,6 +16,7 @@ import sys
 import time
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 
@@ -118,7 +119,8 @@ def main(args=None):
     ok = False
     try:
         ok = node.run()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
+        # Ctrl-C, or SIGTERM from launch / kill: rclpy has shut down already.
         pass
     finally:
         node.destroy_node()

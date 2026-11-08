@@ -14,6 +14,7 @@ arena size (4x4 over 20x20 m), on purpose; leader_node keeps those defaults.
 """
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import (QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy,
                        QoSDurabilityPolicy)
@@ -70,7 +71,8 @@ def main(args=None):
     try:
         # Stay alive: the latched message lives only as long as its publisher.
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
+        # Ctrl-C, or SIGTERM from launch / kill: rclpy has shut down already.
         pass
     finally:
         node.destroy_node()

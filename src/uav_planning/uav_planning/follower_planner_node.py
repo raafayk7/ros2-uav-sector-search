@@ -29,6 +29,7 @@ launch the node in namespace ``/<robot>`` so outputs land at ``/<robot>/...``):
 import math
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import (QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy,
                        QoSDurabilityPolicy)
@@ -338,7 +339,8 @@ def main(args=None):
     node = FollowerPlannerNode()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
+        # Ctrl-C, or SIGTERM from launch / kill: rclpy has shut down already.
         pass
     finally:
         node.destroy_node()
