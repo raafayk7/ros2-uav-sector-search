@@ -1,3 +1,5 @@
+from glob import glob
+
 from setuptools import find_packages, setup
 
 package_name = 'uav_planning'
@@ -15,14 +17,18 @@ setup(
             ['resource/' + package_name]),
         # Installs package.xml alongside the package's share dir.
         ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name + '/launch', glob('launch/*.launch.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='Raafay',
     maintainer_email='raafaykazmi@yahoo.com',
-    description='Follower sector planner: ROS-free core library '
-                '(follower_planner_node and helpers come next).',
+    description='Follower sector planner: ROS-free core library, '
+                'follower_planner_node, arm_takeoff and stub_heatmap_publisher.',
     license='MIT',
-    # No executables yet: this session is the library only.
-    entry_points={'console_scripts': []},
+    entry_points={'console_scripts': [
+        'follower_planner_node = uav_planning.follower_planner_node:main',
+        'arm_takeoff = uav_planning.arm_takeoff:main',
+        'stub_heatmap_publisher = uav_planning.stub_heatmap_publisher:main',
+    ]},
 )

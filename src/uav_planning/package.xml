@@ -6,13 +6,23 @@
   <description>
     Follower planner for the multi-agent UAV search-and-rescue stack. The
     ROS-free core library (uav_planning.core.planner) picks the best open
-    sector on the shared map; ROS nodes will be thin wrappers around it.
+    sector on the shared map; follower_planner_node is a thin wrapper around it.
   </description>
   <maintainer email="raafaykazmi@yahoo.com">Raafay</maintainer>
   <license>MIT</license>
 
-  <!-- The core library needs no ROS. rclpy and message deps arrive with the
-       node. -->
+  <!-- The core library needs no ROS; these are for the nodes around it. -->
+  <depend>rclpy</depend>
+  <depend>ardupilot_msgs</depend>
+  <depend>geographic_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>std_msgs</depend>
+
+  <!-- follower.launch.py also starts uav_localization's node. -->
+  <exec_depend>uav_localization</exec_depend>
+  <exec_depend>ros2launch</exec_depend>
+
   <test_depend>python3-pytest</test_depend>
 
   <export>
