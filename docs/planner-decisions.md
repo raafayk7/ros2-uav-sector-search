@@ -4,7 +4,7 @@ Review target (fixed): the follower planner section of `docs/roadmap.md`, scoped
 
 ## Decisions at a glance
 
-Status: decided. T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07; the node and flight are not. Pure-Python probes and SITL spikes back these; the planner itself has not flown. Full reasoning is in the ledger below.
+Status: decided. T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07. T3 (node) and T4 (arm helper, stub map) are built and flown as of 2026-11-08: one follower in headless SITL reaches the best stub sector and reports ARRIVED, and disabling holds it. Three followers have not flown (T5). Full reasoning is in the ledger below.
 
 | Topic | Decision | Ref |
 |---|---|---|
@@ -1213,6 +1213,33 @@ Evidence: 49 tests pass in the container (5 datum, 44 planner). The 200-seed coo
 
 Not done: the datum was not re-measured in a live sim this session; the values in `core` tests and the launch docstring (lat -35.3632621, lon 149.1652374, alt 10.19) are the earlier measurement from `/iris_1/navsat`. Re-read them when the swarm launch exists (T5). `/verify` found no declared checks and the repo is untrusted for it, so it was not run.
 
+## Implementation notes (session 2, 2026-11-08)
+
+Built: T3 and T4. These are code facts and readings, not new decisions.
+
+Readings chosen where the record was open:
+
+- **What the D12 status names mean** (from the state diagram): HOLDING = not flying anywhere (disabled, no pose, no map, not yet at layer, or nothing to fly to); ASCENDING = flying to a goal; ARRIVED = within 2.0 m and within 0.5 m of layer.
+- **The D26 altitude gate holds back only the first goal.** A drone already flying keeps its goal if it drifts off layer, because every command re-sends the layer altitude; it just cannot report ARRIVED until back on layer.
+- **Node logic that is not a library rule** (gate, status, when to command, hold on disable, parsing) lives in ROS-free `core/follower.py`, so it is tested without ROS. The node only translates messages.
+- **`peers` is one string, `"iris_2:2,iris_3:3"`,** not two parallel arrays, because an empty array launch param has no type in ROS 2.
+- **`goal_sector` carries the goal sector's centre** as a `PointStamped` (R5); each receiver maps it back to a sector on its own grid. Peer freshness uses the message header stamps, which are sim time.
+- **An ARRIVED drone re-decides every tick** (that is `plan_step`), so a map change moves it on; a flying drone stays committed (D10). Seen live: swapping the stub's best peak sent an arrived drone to the new peak.
+- **The `goal_lla` check** warns once per goal, throttled, if the autopilot has not echoed a target within 1 m after 5 s of sim time. It did not fire in any flight.
+- **The stub's default peaks** are (3,4) 90%, (6,1) 80%, (1,6) 70% on a 5% background, pairwise at least 2 apart so 3 followers can each hold one (a test pins this).
+
+Evidence (headless `iris_runway`, one iris, RTF about 0.46):
+
+- 72 tests pass in the container (49 from session 1 + 23 in `test_follower.py`; the `GlobalPosition` test needs ROS).
+- **Flight:** arm_takeoff GUIDED, armed and took off at once on a warm sim, exited at z = 9.72 m. The planner chose (3,4), went ASCENDING, and was ARRIVED 6.7 s wall later, then held 0.07-0.09 m from the centre at 10.00 m for 40 s.
+- **Cold start, sim first:** "JSON received" at +8 s; with our nodes started about 10 s later, GUIDED +21 s, armed +29 s (refused once while the EKF settled), climbed +39 s, ASCENDING +40 s, ARRIVED +46 s.
+- **Disable mid-flight:** sent 3 s into a 21 m leg at about 4 m/s. One hold command at (29.1, 10.9); the drone overshot to (32.3, 7.7), came back and stayed at (29.02, 10.96) for 30 s. Status HOLDING, and `goal_sector` stopped repeating (its last stamp stayed at sim 246).
+- **Late subscriber:** two subscribers started 5 s after the stub published each got the full 8x8 map with all three peaks.
+
+Found and fixed this session: the repo's `.gitignore` pattern `core` (for SITL core dumps) also matched `uav_planning/core/`, so commit 9eb2011 had shipped the tests without `core/planner.py`. Patterns are now `/core` and `/core.*`, and the library is committed (b9b21a2). Nodes now exit cleanly on SIGTERM.
+
+Not done or not shown: re-enabling after a disable has not been run live. `arm_takeoff` was not run without Fast DDS, so the hang it guards against was not reproduced. Peers have not flown (T5). Starting the sim and our nodes together lost ROS `/clock` in 1 run; see `docs/docker-notes.md` gotchas 31-34 before writing the swarm launch.
+
 ## NOT in scope
 
 - Potential-field layer: altitude layers cover the sim (D5); revisit if a same-altitude flight is ever needed.
@@ -1296,11 +1323,11 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R10, R11, R12, R13, R15, R16, R17, R19, R20, R23 (D16-D28)
   - Files: `src/uav_planning/uav_planning/core/planner.py`, `src/uav_planning/test/test_planner.py`, package boilerplate
   - Verify: pytest; coordination harness holds all peaks across seeds on 8x8
-- [ ] **T3 (P1, human: ~1 day / CC: ~40min)** — uav_planning — `follower_planner_node`
+- [x] **T3 (P1, human: ~1 day / CC: ~40min)** — uav_planning — `follower_planner_node`
   - Surfaced by: R2, R3, R4, R6, R21, R22, R24 (D8-D12, D26, D27, D29)
   - Files: `src/uav_planning/uav_planning/follower_planner_node.py`, launch
   - Verify: SITL, one follower flies to a stub sector and reports ARRIVED (Nov 10)
-- [ ] **T4 (P1, human: ~3h / CC: ~15min)** — uav_planning — `arm_takeoff` and `stub_heatmap_publisher`
+- [x] **T4 (P1, human: ~3h / CC: ~15min)** — uav_planning — `arm_takeoff` and `stub_heatmap_publisher`
   - Surfaced by: R9 (D15), R14 (D19)
   - Files: `src/uav_planning/uav_planning/`
   - Verify: arm helper exits after climb under Fast DDS; latched map received by a late subscriber

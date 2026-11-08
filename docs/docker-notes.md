@@ -145,6 +145,13 @@ Verified on the rebuilt image during the planner review. Full evidence is in `do
 29. **Real-time factor falls fast.** Headless, idle: 1 iris 0.46, 3 iris about 0.25, 4 iris 0.11 (the 1 and 4 runs had no confirmed readiness), on 6 cores and 7.1 GB RAM with swap in use. Cause not established.
 30. **Each extra SITL instance writes `mav_N_1.parm` in the repo root.** Only `mav_0_1.parm` is gitignored today.
 
+## 2026-11-08 first planner flight notes
+
+31. **Plain `exec bash -c` loses MAVProxy, and SITL then hangs before the FDM handshake.** MAVProxy is in `/home/ros/venv-ardupilot/bin`, which only a login shell puts on PATH (`~/.profile`). Under `bash -c`, `iris_runway.launch.py`'s `mavproxy.py` dies with exit code 127, and `arducopter` waits forever in `accept()` on TCP 5760 (SERIAL0). Its "Waiting for connection ...." is that port, not 9002. You get no "JSON received" and no `/ap/*`, while Gazebo runs normally (RTF 0.46, `/navsat` publishing). This looks exactly like the May "FDM silence" and was probably its cause, unproven. Failed 3 of 3 under `bash -c`; worked every time under `bash -lc`. Diagnose with `cat /proc/$(pgrep -x arducopter)/wchan`: `inet_csk_accept` means this. **Always `bash -lc`, then `source /usr/local/bin/entrypoint.sh`.**
+32. **`colcon build --symlink-install` copies `uav_planning`'s Python modules; it does not link them** (setuptools 78.1.0 in this container; the cause is not established). An edit runs only after a rebuild. A stale install looks like a fix that didn't work: a traceback cites the new line number but the old code.
+33. **Lead, unconfirmed: start our nodes after the sim, not with it.** In 1 run with `iris_runway` and `follower.launch.py` started together, Gazebo published `/clock` at ~1 kHz and the bridge said it created the clock bridge, but ROS `/clock` got nothing under either RMW. `/navsat` arrived at 30 Hz, and the planner's sim-time timer never fired. In 2 runs with the sim first ("JSON received" at +8 s, our nodes about 10 s later), ROS `/clock` ran at 859-937 Hz and the flight completed. The swarm launch (T5) should start project nodes after the sim is up and check `/clock` before relying on it.
+34. **`/clock` at ~900 Hz costs each `use_sim_time` Python node about 30-40% of a core** (`top`, one sample, idle nodes). `stub_heatmap_publisher` uses sim time only for its stamp, so it could drop it. With 3 followers that is 6+ such nodes, which bears on the RTF timebox (T7, D23). Not measured further.
+
 ## Bringing the stack up and down
 
 ```bash

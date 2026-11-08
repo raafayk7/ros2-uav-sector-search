@@ -53,11 +53,14 @@ docker compose -f docker/docker-compose.yml exec ros2 bash
 **FDM handshake: resolved (verified 2026-11-02).** After rebuilding the image, headless `iris_runway` brings up SITL with "JSON received" and 18 live `/ap/v1/*` topics (namespaced `/ap/v1/...` in the current ardupilot_gz), and GUIDED + arm + takeoff worked (+10 m). The old "zero packets on 9002" symptom did not reproduce; the likely culprit was a missing environment in non-interactive shells (see below), not the plugin. Gotchas that cause false failures:
 
 - `docker compose exec ros2 bash -lc '...'` does not load `.bashrc`, so run `source /usr/local/bin/entrypoint.sh` first (it sets `GZ_SIM_RESOURCE_PATH`/`SDF_PATH`; without them `robot_state_publisher` dies on the iris SDF and the drone never spawns).
+- Use `bash -lc`, never plain `bash -c`: only a login shell puts MAVProxy (`~/venv-ardupilot/bin`) on PATH. Without it SITL waits forever on TCP 5760 and never reaches "JSON received", which looks like the old FDM silence (docker-notes gotcha 31, 2026-11-08).
+- Start project nodes after the sim is up, not in the same breath: one run started together never got ROS `/clock` (gotcha 33, one sample).
+- `colcon build --symlink-install` copies `uav_planning`'s Python files, so rebuild after every edit (gotcha 32).
 - `/ap/v1/*` **services** (arm_motors, mode_switch, takeoff) hang under the container's default `rmw_cyclonedds_cpp`; export `RMW_IMPLEMENTATION=rmw_fastrtps_cpp` in the client shell. Topics work under both.
 - `pkill` leaves `arducopter`/`MicroXRCEAgent` behind; use `docker compose restart ros2` between sim runs.
 - Headless launch: `ros2 launch ardupilot_gz_bringup iris_runway.launch.py use_gz_sim_gui:=false rviz:=false`.
 
-Planner actuation can now target `/ap/v1/*` instead of a stub.
+First planner flight (2026-11-08): `ros2 launch uav_planning follower.launch.py` against a running `iris_runway` arms, climbs to 10 m, flies to the best stub-map sector and reports ARRIVED; `planner_enable` false holds it.
 
 Multi-drone and actuation facts (verified 2026-11-04, see `docs/planner-decisions.md`): `multiagent.launch.py` hard-codes 4 different vehicles, so use our own launch. Topics are `/iris_N/*` (Gazebo) and `/ap/vN/*` (autopilot, N = sysid). `/ap/vN/goal_lla` is autopilot output, not a command. The command is `/ap/vN/cmd_gps_pose` with `frame_id "map"` and `FRAME_GLOBAL_REL_ALT`; any other `frame_id` is dropped silently, as is anything sent when not GUIDED and armed. The live iris camera is on a gimbal, 52 deg off nadir.
 
