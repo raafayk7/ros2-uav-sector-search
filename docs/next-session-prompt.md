@@ -29,13 +29,13 @@ Continuing the multi-agent UAV ROS 2 rebuild: session 3 of 3 to the Nov 10 goal.
 1. **Secret scan over full history:** `docker run --rm -v "$PWD":/repo zricethezav/gitleaks:latest detect --source /repo -v`. Confirm `docker/.env` is gitignored and was never committed (`git log --all -- docker/.env`). Rotate anything found and tell the user before any rewrite of history.
 2. **Ignored files audit:** `git status --short --ignored`. Today that shows `0/ 1/ 2/ 3/`, `eeprom.bin`, `logs/`, `docker/.env` and colcon outputs. Confirm each is runtime output, and that `mav_N_1.parm` for N > 0 is ignored (docker-notes gotcha 30; that ignore was part of T5's scope, so it may still be missing).
 3. **Fresh-clone check:** clone into the scratchpad and run `python3 -m pytest src` against the clone inside the container (copy it under the mounted repo's ignored dir, or mount it), so nothing needed lives only on this disk. Expect 72 passed.
-4. **WIP README:** what it is (a leader maps, followers fly to the best open sectors), an architecture diagram placeholder, a one-command quickstart (container up, `bash -lc`, sim, then `ros2 launch uav_planning follower.launch.py`), honest status (what flew, what has not: peers, leader sweep, perception, landing), and a link to the thesis credit. No career or application content.
+4. **WIP README:** what it is (a leader maps, followers fly to the best open sectors), an architecture diagram placeholder, a one-command quickstart (container up, `exec ros2 bash -l`, sim, then `ros2 launch uav_planning follower.launch.py`), honest status (what flew, what has not: peers, leader sweep, perception, landing), and a link to the thesis credit. No career or application content.
 5. **Ask the user before making the repo public.** Show the scan result and the README first.
 
 ## Environment
 
 - Host is Ubuntu 24.04. Docker data is on a USB ext4 partition, so the USB stays plugged in. `docker compose -f docker/docker-compose.yml up -d`; use `stop`, never `down`.
-- In the container, always `docker compose exec ros2 bash -lc '...'` and `source /usr/local/bin/entrypoint.sh` first. Plain `bash -c` drops MAVProxy from PATH and SITL hangs.
+- In the container, always `docker compose exec ros2 bash -lc '...'` and `source /usr/local/bin/entrypoint.sh` first; interactively, `exec ros2 bash -l`. Plain `bash -c` or `bash` drops MAVProxy from PATH and SITL hangs.
 - Commit after each working sub-task on `main`. Do not push without asking.
 
 ## Done means

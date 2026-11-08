@@ -47,13 +47,13 @@ The Docker stack is built and working on the system Docker daemon (NOT Docker De
 ```bash
 docker context use default
 docker compose -f docker/docker-compose.yml up -d
-docker compose -f docker/docker-compose.yml exec ros2 bash
+docker compose -f docker/docker-compose.yml exec ros2 bash -l   # -l: login shell, needed for MAVProxy on PATH
 ```
 
 **FDM handshake: resolved (verified 2026-11-02).** After rebuilding the image, headless `iris_runway` brings up SITL with "JSON received" and 18 live `/ap/v1/*` topics (namespaced `/ap/v1/...` in the current ardupilot_gz), and GUIDED + arm + takeoff worked (+10 m). The old "zero packets on 9002" symptom did not reproduce; the likely culprit was a missing environment in non-interactive shells (see below), not the plugin. Gotchas that cause false failures:
 
 - `docker compose exec ros2 bash -lc '...'` does not load `.bashrc`, so run `source /usr/local/bin/entrypoint.sh` first (it sets `GZ_SIM_RESOURCE_PATH`/`SDF_PATH`; without them `robot_state_publisher` dies on the iris SDF and the drone never spawns).
-- Use `bash -lc`, never plain `bash -c`: only a login shell puts MAVProxy (`~/venv-ardupilot/bin`) on PATH. Without it SITL waits forever on TCP 5760 and never reaches "JSON received", which looks like the old FDM silence (docker-notes gotcha 31, 2026-11-08).
+- Use `bash -lc`, never plain `bash -c`, and `bash -l` for an interactive shell (plain `bash` has the same gap): only a login shell puts MAVProxy (`~/venv-ardupilot/bin`) on PATH. Without it SITL waits forever on TCP 5760 and never reaches "JSON received", which looks like the old FDM silence (docker-notes gotcha 31, 2026-11-08).
 - Start project nodes after the sim is up, not in the same breath: one run started together never got ROS `/clock` (gotcha 33, one sample).
 - `colcon build --symlink-install` copies `uav_planning`'s Python files, so rebuild after every edit (gotcha 32).
 - `/ap/v1/*` **services** (arm_motors, mode_switch, takeoff) hang under the container's default `rmw_cyclonedds_cpp`; export `RMW_IMPLEMENTATION=rmw_fastrtps_cpp` in the client shell. Topics work under both.

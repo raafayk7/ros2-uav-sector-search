@@ -138,7 +138,7 @@ Topic naming convention:
 
 Conventions established by the two built nodes, mirror them in new ones: input topics are **absolute-default launch params** (so node namespacing doesn't rewrite them, and they flip to `/ap/*` later with no code change); project-level outputs are relative/unnamespaced; thesis-faithful numbers are defaults exposed as params.
 
-**Shell gotcha (2026-11-08):** always `docker compose exec ros2 bash -lc`, never plain `bash -c`. Only a login shell has MAVProxy on PATH; without it SITL waits forever on TCP 5760, which looks like an FDM handshake failure. Also, `--symlink-install` copies `uav_planning` files, so rebuild after edits. See `docs/docker-notes.md` gotchas 31-34.
+**Shell gotcha (2026-11-08):** always `docker compose exec ros2 bash -lc` (or `bash -l` interactively), never plain `bash -c` or `bash`. Only a login shell has MAVProxy on PATH; without it SITL waits forever on TCP 5760, which looks like an FDM handshake failure. Also, `--symlink-install` copies `uav_planning` files, so rebuild after edits. See `docs/docker-notes.md` gotchas 31-34.
 
 **Current dev reality (updated 2026-11-02):** AP_DDS now produces `/ap/v1/*` topics and services in headless `iris_runway` (the FDM handshake issue no longer reproduces; GUIDED + arm + takeoff verified). Input columns can resolve to `/ap/v1/*` or the `ros_gz_bridge` topics (`/imu`, `/navsat`, `/camera/image`, `/odometry`); keep input topic names as launch args. For `ros2 service call /ap/v1/...` use `RMW_IMPLEMENTATION=rmw_fastrtps_cpp` (cyclonedds hangs), and in non-interactive `exec bash -lc` run `source /usr/local/bin/entrypoint.sh` first. See CLAUDE.md and `docs/docker-notes.md` (2026-11-02 rebuild notes).
 
@@ -162,8 +162,8 @@ docker compose build
 # Bring up the container
 docker compose up -d
 
-# Shell into it
-docker compose exec ros2 bash
+# Shell into it (-l: login shell, or MAVProxy is missing and SITL hangs)
+docker compose exec ros2 bash -l
 
 # Inside the container:
 source /opt/ros/jazzy/setup.bash

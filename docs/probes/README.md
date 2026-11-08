@@ -10,6 +10,7 @@ Throwaway scripts behind the numbers in `docs/planner-decisions.md`. They are ev
 | `algo_probe6.py` | Local steps versus direct flight on Gaussian-spread peaks | R12 |
 | `mount_check.py` | Marker test: spawns ground markers, compares real camera pixels with nadir and measured mounts. Rerun for the camera task | R25 |
 | `rtf.sh N` | Real-time factor for N iris. Its readiness check matched nothing in the 1- and 4-drone runs, so fix that first | R18 |
+| `follower_watch.py ROBOT SYSID [SECS]` | Pose, `planner_status` and `goal_sector` once a second; the evidence for the first flight and the disable hold (2026-11-08) | T3, T4 |
 | `cmd_gps_pose_probe.py` | One `cmd_gps_pose` flies a drone and `goal_lla` echoes it. Needs a 3-iris swarm, with `iris_2` in GUIDED and airborne | R2 |
 
 Limits: pure Python, no flight dynamics, equal peaks only (see `TODOS.md`).
