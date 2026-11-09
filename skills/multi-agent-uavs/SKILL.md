@@ -15,7 +15,7 @@ The current work is to **rebuild the simulation aspect on a modern ROS 2 stack**
 
 ## Source documents in the workspace
 
-In `/home/raafayk7_cteq/Documents/Experiments/multi-agent-uavs/multi-agent-uavs/docs/`:
+In `<repo>/docs/`:
 
 - `thesis.pdf` — full 49-page thesis. Chapter 3 covers methodology + algorithms (BLL and DGA), Chapter 4 the simulation, Chapter 5 the hardware implementation, Chapter 6 cost analysis, Chapter 7 future work.
 - `legacy-implementation-guide.docx` — original team's command cheat sheet from the Noetic era. Useful for context, mostly superseded.
@@ -51,7 +51,7 @@ If the user asks about something on the "do not use" list, gently flag that the 
 ## Workspace layout
 
 ```
-/home/raafayk7_cteq/Documents/Experiments/multi-agent-uavs/multi-agent-uavs/
+<repo>/
 ├── docs/                                   # thesis, legacy guide, assessment
 │   ├── thesis.pdf
 │   ├── legacy-implementation-guide.docx
@@ -156,7 +156,7 @@ If a subscriber isn't receiving messages, **first hypothesis is always QoS misma
 
 ```bash
 # Build the image (one time)
-cd /home/raafayk7_cteq/Documents/Experiments/multi-agent-uavs/multi-agent-uavs
+cd <repo>
 docker compose build
 
 # Bring up the container

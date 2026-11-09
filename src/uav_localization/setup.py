@@ -25,7 +25,7 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='Raafay',
-    maintainer_email='raafaykazmi@yahoo.com',
+    maintainer_email='182409092+raafayk7@users.noreply.github.com',
     description='Per-drone GPS->ENU arena-frame localization node.',
     license='MIT',
     entry_points={

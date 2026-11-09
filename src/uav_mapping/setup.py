@@ -25,7 +25,7 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='Raafay',
-    maintainer_email='raafaykazmi@yahoo.com',
+    maintainer_email='182409092+raafayk7@users.noreply.github.com',
     description='Leader-drone detection-to-heatmap node (OccupancyGrid over '
                 'the thesis sector grid).',
     license='MIT',

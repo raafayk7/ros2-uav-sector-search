@@ -8,7 +8,7 @@
     Converts GPS (sensor_msgs/NavSatFix) into a local ENU arena-frame pose
     (geometry_msgs/PoseStamped), with orientation taken from odometry.
   </description>
-  <maintainer email="raafaykazmi@yahoo.com">Raafay</maintainer>
+  <maintainer email="182409092+raafayk7@users.noreply.github.com">Raafay</maintainer>
   <license>MIT</license>
 
   <!-- Runtime dependencies: the rclpy client library plus the message

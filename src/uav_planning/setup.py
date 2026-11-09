@@ -22,7 +22,7 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='Raafay',
-    maintainer_email='raafaykazmi@yahoo.com',
+    maintainer_email='182409092+raafayk7@users.noreply.github.com',
     description='Follower sector planner: ROS-free core library, '
                 'follower_planner_node, arm_takeoff and stub_heatmap_publisher.',
     license='MIT',

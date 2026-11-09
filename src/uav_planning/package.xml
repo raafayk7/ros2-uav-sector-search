@@ -8,7 +8,7 @@
     ROS-free core library (uav_planning.core.planner) picks the best open
     sector on the shared map; follower_planner_node is a thin wrapper around it.
   </description>
-  <maintainer email="raafaykazmi@yahoo.com">Raafay</maintainer>
+  <maintainer email="182409092+raafayk7@users.noreply.github.com">Raafay</maintainer>
   <license>MIT</license>
 
   <!-- The core library needs no ROS; these are for the nodes around it. -->

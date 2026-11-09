@@ -9,7 +9,7 @@
     plane and accumulates a probability heatmap (nav_msgs/OccupancyGrid)
     over the thesis m x n sector grid, using a Bayesian log-odds update.
   </description>
-  <maintainer email="raafaykazmi@yahoo.com">Raafay</maintainer>
+  <maintainer email="182409092+raafayk7@users.noreply.github.com">Raafay</maintainer>
   <license>MIT</license>
 
   <!-- Runtime deps: rclpy plus every message package this node touches.

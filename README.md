@@ -101,6 +101,10 @@ multi-agent-uavs/
 
 `build/`, `install/` and `log/` are colcon output and gitignored, as are SITL's runtime files.
 
+## License
+
+[MIT](LICENSE).
+
 ## Credit
 
 Rebuilt by Raafay Saeed Kazmi, one of the four original authors. The algorithms, the sector model and the evaluation setup come from the senior project, advised by Dr. Hassan Jaleel and Dr. Murtaza Taj, LUMS Electrical Engineering.
