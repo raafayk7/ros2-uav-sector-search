@@ -143,7 +143,7 @@ Verified on the rebuilt image during the planner review. Full evidence is in `do
 27. **`cmd_gps_pose` fails silently in two ways.** `AP_DDS_ExternalControl.cpp` drops it unless `header.frame_id` is exactly `"map"`, and `ready_for_external_control` drops it unless GUIDED and armed. Neither replies, and the subscriber count still shows 1. Use `FRAME_GLOBAL_REL_ALT`: Gazebo navsat altitude reads 10.2 where the autopilot reads 584.2. One message is enough to fly the whole way (tested under CycloneDDS only), so stopping publication doesn't stop a flight.
 28. **The iris camera is on a gimbal, not fixed.** The bridge's `/camera/*` comes from `pitch_link` on `iris_with_gimbal`. It sits 52 deg off nadir, with the horizon and the drone's own leg in frame, and stays there when armed and flying (joints -120, -30, 135 deg). Measured `mount_quat` [0.3269, 0.8365, 0.4187, -0.1346] matched spawned markers to 0-4 px; the nadir default missed by 205-265 px. Publishing to `/gimbal/cmd_*` over `gz topic` left the joints unchanged. Setting it through ArduPilot mount params hasn't been tried.
 29. **Real-time factor falls fast.** Headless, idle: 1 iris 0.46, 3 iris about 0.25, 4 iris 0.11 (the 1 and 4 runs had no confirmed readiness), on 6 cores and 7.1 GB RAM with swap in use. Cause not established.
-30. **Each extra SITL instance writes `mav_N_1.parm` in the repo root.** Only `mav_0_1.parm` is gitignored today.
+30. **Each extra SITL instance writes `mav_N_1.parm` in the repo root.** All of them are gitignored since 2026-11-09 (`mav*.parm`).
 
 ## 2026-11-08 first planner flight notes
 

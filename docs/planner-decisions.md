@@ -1331,9 +1331,9 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R9 (D15), R14 (D19)
   - Files: `src/uav_planning/uav_planning/`
   - Verify: arm helper exits after climb under Fast DDS; latched map received by a late subscriber
-- [ ] **T5 (P1, human: ~half day / CC: ~20min)** — uav_planning — swarm launch; ignore `mav_*.parm`
+- [ ] **T5 (P1, human: ~half day / CC: ~20min)** — uav_planning — swarm launch (the `mav*.parm` ignore was done early, 2026-11-09)
   - Surfaced by: Scope finding 1, finding 4
-  - Files: `src/uav_planning/launch/`, `.gitignore`
+  - Files: `src/uav_planning/launch/`
   - Verify: 3 followers each hold a different peak on 8x8 (Nov 15)
 - [ ] **T6 (P1, human: ~2h / CC: ~30min)** — sim — camera to nadir and expose `mount_quat`
   - Surfaced by: R25 (D30)
