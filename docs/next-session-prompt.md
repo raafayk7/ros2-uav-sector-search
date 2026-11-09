@@ -4,7 +4,7 @@ Paste the block below to open the next session. Replace this file after each ses
 
 ## Where the plan stands
 
-Nov 10 goal (planner library + `follower_planner_node`, one follower flying to a stub-map sector in SITL, secret scan clean, README written) is met except the last step: **making the repo public was put to the user and is their call.** Check `gh repo view raafayk7/multi-agent-uavs --json visibility` before assuming either way. Nothing has been pushed since session 2's last commit unless the user did it.
+Nov 10 goal (planner library + `follower_planner_node`, one follower flying to a stub-map sector in SITL, secret scan clean, README written) is met. **The repo is public as of 2026-11-09, renamed to `raafayk7/ros2-uav-sector-search`** (local folder, container name, image tag and skill name keep `multi-agent-uavs`). Everything pushed from here on is visible to anyone, so do not commit private notes or career content.
 
 | Session | Work | Tasks | Model | Why that model | Time |
 |---|---|---|---|---|---|
