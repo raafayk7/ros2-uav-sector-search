@@ -4,7 +4,7 @@ Paste the block below to open the next session. Replace this file after each ses
 
 ## Where the plan stands
 
-The Nov 15 trigger is met early (2026-11-12): `ros2 launch uav_planning swarm.launch.py` brings up 3 iris and 3 followers, which each hold a different stub peak about 102 s after a cold launch, in 2 of 2 runs. The repo is public as `raafayk7/ros2-uav-sector-search`, so do not commit private notes or career content.
+The Nov 15 trigger is met early (2026-11-12): `ros2 launch uav_planning swarm.launch.py` brings up 3 iris and 3 followers, which each hold a different stub peak 90-103 s after a cold launch, in 3 of 3 runs. The repo is public as `raafayk7/ros2-uav-sector-search`, so do not commit private notes or career content.
 
 What is left before the Nov 20 checkpoint and Nov 24 (build order from `docs/roadmap.md`): camera to nadir (T6, 2 h timebox), sim speed (T7, 2 h timebox), ground-truth detector, sweep controller, `belief_map_node` + footprints, the Nov 20 search loop (T8), then the mission state machine. That is more than the remaining sessions hold at 12-15 h a week, so the state machine may slip past Nov 24 (already expected in the roadmap).
 

@@ -71,7 +71,7 @@ Smoke test: 1 leader + 1 follower, ground-truth detector (no camera rendering, s
 | Date | Milestone |
 |---|---|
 | Nov 10 | Planner library + `follower_planner_node`, first follower flying to a stub-map sector in SITL; secret scan clean, repo public as a WIP |
-| **Nov 15** | **3 followers each holding a different peak on the 8x8 stub map in SITL** (cut-order trigger). **Met 2026-11-12**, 2 cold runs, RTF about 0.3 |
+| **Nov 15** | **3 followers each holding a different peak on the 8x8 stub map in SITL** (cut-order trigger). **Met 2026-11-12**, 3 cold runs, RTF about 0.3-0.44 |
 | Nov 20 | One follower completes the search loop: observes, map updates, departs, finds a target |
 | Nov 24 | Mission state machine end to end. Build order from Nov 16: camera to nadir (2 h timebox) and sim speed (2 h timebox); ground-truth detector; sweep controller; `belief_map_node` + footprints; Nov 20 checkpoint; state machine. About 15-20 h, so the state machine may slip past Nov 24 |
 | **Nov 30** | **Go/no-go:** leader + 3 followers complete a mission in Gazebo (ground-truth detector) from one command; video v1 |

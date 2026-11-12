@@ -84,9 +84,9 @@ Verified in headless SITL with one iris (real-time factor about 0.46):
 - Arm, take off to the 10 m layer, fly to the best stub-map sector and report `ARRIVED` about 7 s after the planner picks it (warm sim), then hold within 0.1 m of the sector centre for 40 s. From a cold start the whole sequence takes under a minute.
 - `planner_enable` false mid-flight holds position.
 
-Verified with three iris and three followers (`swarm.launch.py`, real-time factor about 0.26-0.38), 2026-11-12, in 2 cold runs:
+Verified with three iris and three followers (`swarm.launch.py`, real-time factor about 0.26-0.44), 2026-11-12, in 3 cold runs:
 
-- Each follower settles on a different peak of the stub map, all `ARRIVED` about 102 s after launch, with at most one goal change (a same-tick tie the higher sysid gives up).
+- Each follower settles on a different peak of the stub map, all `ARRIVED` 90-103 s after launch, with at most one goal change (a same-tick tie the higher sysid gives up).
 - When one follower goes completely silent, its peak is released about 5.6 sim seconds later and the others move up to the better peaks.
 - 72 tests pass: the planner library, the DGA/BLL baselines, a 200-seed coordination harness, the follower logic and the shared-datum localization.
 

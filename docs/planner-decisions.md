@@ -1266,6 +1266,8 @@ Evidence (headless, 3 iris, 6 cores, 7.1 GB RAM; 72 tests pass):
 | Longest shared live goal | 2.5 s wall (one tick) | none |
 | Held after all ARRIVED | about 50 s, then the release test | 142 s, to the end of the watch |
 
+A third cold run later that day, as a health check after a power cut (Chrome closed, about 4.5 GB RAM free), matched: `/clock` at +13.9 s, all ARRIVED on (3,4), (6,1), (1,6) at 90 s wall, held 91 s, watcher mean RTF 0.44; iris_2 and iris_3 tied on (6,1) for 2 s and iris_3 yielded (goal changes 0, 0, 1).
+
 In run 1, iris_1 and iris_2 chose (3,4) on the same tick, and iris_2 yielded to the lower sysid on the next (D24). In run 2 the drones reached their layers at different times, decided one after another and never conflicted.
 
 **Peer release** (`docs/probes/peer_release.py`, run 1, all ARRIVED):
@@ -1281,7 +1283,7 @@ In run 1, iris_1 and iris_2 chose (3,4) on the same tick, and iris_2 yielded to 
 
 Lead from session 2 (docker-notes gotcha 33): in 3 of 3 cold starts with the sim and the gate started together, `/clock` flowed. The setup differs from that run (a dedicated `/clock` bridge here), so the lead is not reproduced rather than disproved; the gate stays as insurance.
 
-Not done or not shown: 2 runs only. The release was tested on iris_1 alone, and re-enabling after a disable is still not run live. The trimmed bridge's own effect on RTF was not measured. Peers were not tested at 4 drones.
+Not done or not shown: 3 runs only. The release was tested on iris_1 alone, and re-enabling after a disable is still not run live. The trimmed bridge's own effect on RTF was not measured. Peers were not tested at 4 drones.
 
 ## NOT in scope
 
