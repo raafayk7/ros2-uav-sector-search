@@ -1,55 +1,62 @@
-# Next-session prompt: swarm launch and 3 followers (session 4, T5)
+# Next-session prompt: camera to nadir (session 5, T6)
 
 Paste the block below to open the next session. Replace this file after each session.
 
 ## Where the plan stands
 
-Nov 10 goal (planner library + `follower_planner_node`, one follower flying to a stub-map sector in SITL, secret scan clean, README written) is met. **The repo is public as of 2026-11-09, renamed to `raafayk7/ros2-uav-sector-search`** (local folder, container name, image tag and skill name keep `multi-agent-uavs`). Everything pushed from here on is visible to anyone, so do not commit private notes or career content.
+The Nov 15 trigger is met early (2026-11-12): `ros2 launch uav_planning swarm.launch.py` brings up 3 iris and 3 followers, which each hold a different stub peak about 102 s after a cold launch, in 2 of 2 runs. The repo is public as `raafayk7/ros2-uav-sector-search`, so do not commit private notes or career content.
+
+What is left before the Nov 20 checkpoint and Nov 24 (build order from `docs/roadmap.md`): camera to nadir (T6, 2 h timebox), sim speed (T7, 2 h timebox), ground-truth detector, sweep controller, `belief_map_node` + footprints, the Nov 20 search loop (T8), then the mission state machine. That is more than the remaining sessions hold at 12-15 h a week, so the state machine may slip past Nov 24 (already expected in the roadmap).
 
 | Session | Work | Tasks | Model | Why that model | Time |
 |---|---|---|---|---|---|
 | 1 (done 2026-11-07) | Shared datum, ROS-free library, tests | T1, T2 | Sonnet | Rules were all pinned; pure functions | ~3 h |
 | 2 (done 2026-11-08) | Node, arm helper, stub map, first flight | T3, T4 | Opus | Live SITL debugging | ~4 h |
 | 3 (done 2026-11-09) | Secret scan, ignore audit, fresh-clone test, WIP README | none | Sonnet | Mechanical | ~1 h |
-| **4 (this prompt)** | Swarm launch, 3 followers each hold a different peak | T5 | **Opus** | Live multi-process SITL debugging; has to deal with the `/clock` lead and the RTF cost | ~3-4 h |
-
-For the Nov 15 trigger. After that: T6 camera to nadir, T7 speed timebox, T8 Nov 20 search checkpoint (see `docs/planner-decisions.md`, "Implementation Tasks").
+| 4 (done 2026-11-12) | Swarm launch, 3 followers on 3 peaks | T5 | Opus | Live multi-process SITL debugging | ~3 h |
+| **5 (this prompt)** | Camera to nadir, `mount_quat` exposed, marker test passes | T6 | **Opus** | The method (ArduPilot mount params) is untried, and the evidence is a live marker test in SITL | ~2-3 h |
+| 6 | Sim speed timebox: re-measure 1 and 4 iris, try the D23 candidates | T7 | Opus | Diagnosis across Gazebo, SITL and DDS, with measurements that can mislead | ~2 h |
+| 7 | Ground-truth detector (Gazebo target poses + noise, every frame including empty) | part of T8 | Sonnet | Specified in the roadmap; mostly a node and tests, once noise values are picked | ~3 h |
+| 8+ | Sweep controller, `belief_map_node` + footprints, Nov 20 search loop | T8 | Opus | Integration across nodes in live SITL | ~4-6 h |
 
 ---
 
-Continuing the multi-agent UAV ROS 2 rebuild: session 4. One follower already flies in headless SITL (arm, climb to 10 m, fly to the best stub-map sector, ARRIVED, `planner_enable` false holds it). This session makes **three followers** do it together, each holding a different peak of the stub map on 8x8.
+Continuing the multi-agent UAV ROS 2 rebuild: session 5. Three followers already fly in headless SITL and each hold a different stub peak (`swarm.launch.py`, T5). This session points the simulated camera straight down (T6, D30), because the search loop needs each drone to see the sector it hovers over.
 
 ## Read first
 
 - `CLAUDE.md` (Docker gotchas; always `bash -lc` / `bash -l`).
-- `docs/docker-notes.md` gotchas **29-34**. Two bear directly on this work:
-  - **33, the `/clock` lead (unconfirmed):** in 1 run with the sim and our nodes started together, ROS `/clock` never arrived and the planner's sim-time timer never fired; in 2 runs with the sim first it ran at ~900 Hz. The swarm launch should start project nodes after the sim is up and **check `/clock` is flowing** before relying on it. Try to confirm or kill the lead rather than just work around it.
-  - **34, the RTF cost:** `/clock` at ~900 Hz costs each `use_sim_time` Python node about 30-40% of a core (one sample, idle nodes). `stub_heatmap_publisher` uses sim time only for its stamp, so it could drop it. With 3 followers that is 6+ such nodes on a 6-core host, and gotcha 29 already shows RTF falling to ~0.25 with 3 iris and ~0.11 with 4. Measure before and after; this feeds T7 (D23).
-- `docs/planner-decisions.md`: "Implementation notes (session 2)" for what flew; D-entries for peers (D21, D25, D28), layers (D26) and datum (D7) if the launch touches them.
-- Facts that save time (CLAUDE.md, verified 2026-11-04): `multiagent.launch.py` hard-codes 4 different vehicles, so we need our own launch. Topics are `/iris_N/*` (Gazebo) and `/ap/vN/*` (autopilot, N = sysid). The command topic is `/ap/vN/cmd_gps_pose` with `frame_id "map"`; anything else is dropped silently, as is anything sent when not GUIDED and armed. `/ap/v1/*` services hang under CycloneDDS; `arm_takeoff` is the one process on Fast DDS.
-- The datum in `follower.launch.py` (lat -35.3632621, lon 149.1652374, alt 10.195) was measured for the single-iris runway spawn. Re-measure it from each `/iris_N/navsat` once three drones exist, since spawn points differ.
+- `docs/planner-decisions.md` **R25 / D30** for the evidence and the accepted scope: at 10 m the view axis is 52.2 deg off nadir and hits ground about 13 m from the drone, the horizon is in frame, and `leader_node.py:354` then throws away the frame's negative evidence. A correct `mount_quat` alone fixes the maths, not where the camera points.
+- `docs/probes/mount_check.py`: the marker test. It spawns coloured boxes, grabs one frame and compares centroids with the pixels predicted for a nadir mount and for the measured mount. It reads `/camera/image` and `/camera/camera_info`, which is the single-drone `iris_runway` topics. In the swarm they are `/iris_N/camera/*` and only exist with `camera:=true`.
+- `docs/docker-notes.md` gotchas 31-37, especially 35 (no `/clock` with namespaced drones) if you test in the swarm.
+- Facts that save time: `gazebo-iris-gimbal.parm` (upstream `ardupilot_gazebo` config, already in the SITL `defaults` list) sets `MNT1_TYPE 1`. A raw `/gimbal/cmd_*` publish left the joints unchanged (2026-11-04). ArduPilot mount params have not been tried.
 
 ## Task
 
-**T5 (P1): swarm launch.** `src/uav_planning/launch/` gets a launch that brings up N followers (default 3), each with its own namespace, sysid, altitude layer (10 + 2 x index m per the roadmap), `peers` string, and a shared datum, against a sim launched by our own file (not `multiagent.launch.py`). One shared stub map. Start nodes after the sim and gate on `/clock`.
+**T6 (P1), 2 h timebox: camera to nadir and expose `mount_quat`.**
 
-Verify (Nov 15): 3 followers each hold a **different** peak on the 8x8 stub map (default peaks (3,4), (6,1), (1,6), pairwise at least 2 apart), no two hold the same one for a sustained window, and killing one follower's goal broadcasts releases its sector for the others within `peer_timeout`. Record the numbers (time to all-ARRIVED, goal changes per drone, RTF) in `docs/planner-decisions.md` as "Implementation notes (session 4)". If three SITL instances will not run in real time on this machine, say so with the measured RTF and stop; the Nov 15 trigger is on the planner holding up, not on forcing a fix.
+1. Point the gimbal straight down through ArduPilot mount configuration. A lead to try first, untested: the mount's default mode and its neutral or retracted angles (`MNT1_DEFLT_MODE` and `MNT1_NEUTRAL_*` / `MNT1_RETRACT_*`, check the names against this ArduPilot version), set from a project `.parm` file appended to the SITL `defaults` list. The swarm launch already builds that list in `_sim_actions`; `iris_runway` would need its `defaults` arg overridden.
+2. Prove it with the marker test: the marker straight below the drone lands at the image centre and every image corner hits the ground.
+3. Expose `mount_quat` as a launch arg in `src/uav_mapping/launch/heatmap.launch.py`. `leader_node.py:354` stays as it is (D30).
+
+If nadir does not work within 2 h, stop and bring the options back to the user (D30's accepted scope). Record what was tried, with numbers, in `docs/planner-decisions.md` as "Implementation notes (session 5)", and add any new trap to `docs/docker-notes.md`.
 
 ## Environment
 
-- Host is Ubuntu 24.04. Docker data is on a USB ext4 partition, so the USB stays plugged in. `docker compose -f docker/docker-compose.yml up -d`; use `stop`, never `down`.
-- In the container, always `docker compose exec ros2 bash -lc '...'` and `source /usr/local/bin/entrypoint.sh` first; interactively, `exec ros2 bash -l`. Plain `bash -c` or `bash` drops MAVProxy from PATH and SITL hangs.
+- Host is Ubuntu 24.04. Docker data is on a USB ext4 partition, so the USB stays mounted (after a reboot, check it before `docker compose up -d`; on 2026-11-12 a reboot left it unmounted and Docker hung). Use `stop`, never `down`.
+- In the container, always `docker compose exec ros2 bash -lc '...'` and `source /usr/local/bin/entrypoint.sh` first; interactively, `exec ros2 bash -l`.
 - `pkill` leaves `arducopter`/`MicroXRCEAgent` behind; use `docker compose restart ros2` between sim runs.
 - `colcon build --symlink-install` copies `uav_planning`'s Python modules, so rebuild after every edit (gotcha 32).
-- Tests without a simulator: `python3 -m pytest src` (72 passed on a fresh clone, 2026-11-09).
+- Close Chrome before 3-drone runs: with it open, the host had under 1 GB of 7.1 GB available before the sim started.
+- Tests without a simulator: `python3 -m pytest src` (72 passed, 2026-11-12).
 - Commit after each working sub-task on `main`. Do not push without asking.
 
 ## Done means
 
-Three followers hold three different peaks in SITL with numbers recorded, any launch/test code committed, and `docs/next-session-prompt.md` rewritten for session 5 (T6, camera to nadir; check whether Sonnet or Opus fits). Say plainly which changes are plan-level and which are code.
+The camera looks straight down in SITL with the marker test as proof (or a clear "did not work in 2 h" with what was tried), `mount_quat` exposed, notes recorded, and `docs/next-session-prompt.md` rewritten for session 6 (T7, sim speed). Say plainly which changes are plan-level and which are code.
 
 ## Working agreements
 
-- The user has high-level ROS understanding, not deep. Explain a new concept in one paragraph before code (a launch with event handlers and conditions, `OnProcessStart`, and QoS for `/clock` are candidates).
+- The user has high-level ROS understanding, not deep. Explain a new concept in one paragraph before code (ArduPilot mount modes and how SITL loads default param files are candidates).
 - All design decisions are settled, so don't reopen them without new evidence.
-- Do not make the repo public, or push, without asking.
+- Do not push without asking.

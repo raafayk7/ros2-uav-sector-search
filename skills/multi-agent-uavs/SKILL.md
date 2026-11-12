@@ -39,7 +39,7 @@ In `<repo>/docs/`:
 
 - MAVROS as the primary bridge — use AP_DDS instead. Only fall back to MAVROS for specific commands AP_DDS doesn't expose yet.
 - MAVProxy in the runtime path — only for debugging.
-- `iq_sim` / Intelligent Quads launch files — superseded by `ardupilot_gz` (`robots/iris.launch.py` under our own swarm launch; `multiagent.launch.py` is hard-coded to 4 different vehicles, so it's only a template).
+- `iq_sim` / Intelligent Quads launch files — superseded by `ardupilot_gz` (`robots/robot.launch.py` under our own `uav_planning/launch/swarm.launch.py`; `multiagent.launch.py` is hard-coded to 4 different vehicles, so it's only a template).
 - `r0ch1n/ardupilot_gazebo_roscam` — superseded by ardupilot_gz.
 - Gazebo Classic 11 — EOL. Use new Gazebo (Harmonic).
 - Hand-rolled UDP broadcast between drones — DDS handles inter-drone discovery natively.
@@ -127,7 +127,7 @@ Topic naming convention:
 - Project-level topics (`/heatmap`) are unnamespaced
 - Per-drone project topics (`/iris_2/detections`) use the namespace as a prefix
 
-**Design status (2026-11-04):** the follower planner design is settled in `docs/planner-decisions.md`, with tasks T1-T8. T1-T4 are built: shared datum, ROS-free `uav_planning/core/planner.py` and `core/follower.py`, `follower_planner_node`, `arm_takeoff`, `stub_heatmap_publisher` and `follower.launch.py`. One follower has flown to ARRIVED in SITL (2026-11-08); T5 (swarm launch, 3 followers) is next. Read that before planner work. Note: `leader_node` has no flight code, so a sweep controller is still to build.
+**Design status (2026-11-12):** the follower planner design is settled in `docs/planner-decisions.md`, with tasks T1-T8. T1-T5 are built (T5: `swarm.launch.py`, 3 followers on 3 different peaks, 2026-11-12). T1-T4: shared datum, ROS-free `uav_planning/core/planner.py` and `core/follower.py`, `follower_planner_node`, `arm_takeoff`, `stub_heatmap_publisher` and `follower.launch.py`. One follower flew to ARRIVED in SITL on 2026-11-08 and three on 2026-11-12; T6 (camera to nadir) is next. Read that before planner work. Note: `leader_node` has no flight code, so a sweep controller is still to build.
 
 **Build status (2026-06-10):**
 - `localization_node` (`uav_localization`) — **done, verified in sim.** GPS + odometry → `/pose`, a `geometry_msgs/PoseStamped` in an ENU arena frame whose origin is latched at the first GPS fix, or set from the optional `datum_lat/lon/alt` params so a swarm shares one frame.
@@ -193,15 +193,17 @@ Single drone, headless:
 ros2 launch ardupilot_gz_bringup iris_runway.launch.py use_gz_sim_gui:=false rviz:=false
 ```
 
-`multiagent.launch.py` hard-codes 4 different vehicles with no launch arg, so N iris needs our own launch reusing `robots/iris.launch.py` (a working patch is in `docs/probes/rtf.sh`). Topics are `/iris_N/*` from Gazebo and `/ap/vN/*` from the autopilot, N = sysid. Real-time factor falls quickly: 0.46, 0.25 and 0.11 for 1, 3 and 4 iris.
+`multiagent.launch.py` hard-codes 4 different vehicles with no launch arg, so N iris uses our own launch, which reuses upstream's `robots/robot.launch.py` per drone. Topics are `/iris_N/*` from Gazebo and `/ap/vN/*` from the autopilot, N = sysid. Real-time factor falls quickly: 0.46, about 0.3 and 0.11 for 1, 3 and 4 iris.
 
-To launch the project's own nodes alongside:
+Sim plus N followers in one command (T5, flown 2026-11-12):
 
 ```bash
-ros2 launch uav_bringup swarm.launch.py num_followers:=3
+ros2 launch uav_planning swarm.launch.py                 # 3 iris + 3 followers
+ros2 launch uav_planning swarm.launch.py sim:=false      # followers against a running sim
+ros2 launch uav_planning swarm.launch.py camera:=true    # also bridge each camera
 ```
 
-(Once `uav_bringup` exists.)
+Drone i is `iris_{i+1}`, sysid i+1, spawned 5 m apart along east, layer 10 + 2 i m. **With namespaced drones upstream publishes no ROS `/clock`** (it lands on `/iris_N/clock`); the swarm launch bridges `/clock` once and gates the followers on `wait_for_clock`. Each `/clock` subscriber costs about 45% of a core, so only planners use sim time. Use `docker compose restart ros2` between runs.
 
 ### Talking to a drone manually
 

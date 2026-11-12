@@ -63,6 +63,14 @@ ros2 launch uav_planning follower.launch.py
 
 This starts localization, a stub heatmap, the arm-and-takeoff helper and the follower planner. The drone arms, climbs to 10 m, flies to the best sector of the stub map and reports `ARRIVED`. Publishing `false` to `planner_enable` makes it hold.
 
+Three followers, sim included, in one command (stop the single-drone sim first with `docker compose -f docker/docker-compose.yml restart ros2`):
+
+```bash
+ros2 launch uav_planning swarm.launch.py
+```
+
+Three iris spawn 5 m apart, climb to 10, 12 and 14 m, and each settles on a different peak of the stub map, about 100 s after launch on this machine.
+
 Tests (no simulator needed; ROS sourced for a few of them):
 
 ```bash
@@ -75,11 +83,16 @@ Verified in headless SITL with one iris (real-time factor about 0.46):
 
 - Arm, take off to the 10 m layer, fly to the best stub-map sector and report `ARRIVED` about 7 s after the planner picks it (warm sim), then hold within 0.1 m of the sector centre for 40 s. From a cold start the whole sequence takes under a minute.
 - `planner_enable` false mid-flight holds position.
+
+Verified with three iris and three followers (`swarm.launch.py`, real-time factor about 0.26-0.38), 2026-11-12, in 2 cold runs:
+
+- Each follower settles on a different peak of the stub map, all `ARRIVED` about 102 s after launch, with at most one goal change (a same-tick tie the higher sysid gives up).
+- When one follower goes completely silent, its peak is released about 5.6 sim seconds later and the others move up to the better peaks.
 - 72 tests pass: the planner library, the DGA/BLL baselines, a 200-seed coordination harness, the follower logic and the shared-datum localization.
 
 **Not done yet:**
 
-- **Peers.** Only one follower has flown. Several followers coordinating in simulation, and the swarm launch they need, are the next milestone.
+- **Scale.** Three followers have flown together; four or more have not, and the sim runs at roughly a third of real time with three.
 - **Leader sweep.** The leader's detection-to-heatmap node exists, but there is no sweep controller and the leader has not flown. Followers fly against a stub map.
 - **Perception.** Detections come from a fake publisher. A ground-truth detector comes first and YOLO is a stretch. The simulated camera sits on a gimbal 52° off nadir, which has to change first.
 - **Landing.** Precision landing (colour masking + PID in the original) is not rebuilt.

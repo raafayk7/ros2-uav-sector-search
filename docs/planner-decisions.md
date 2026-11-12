@@ -4,7 +4,7 @@ Review target (fixed): the follower planner section of `docs/roadmap.md`, scoped
 
 ## Decisions at a glance
 
-Status: decided. T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07. T3 (node) and T4 (arm helper, stub map) are built and flown as of 2026-11-08: one follower in headless SITL reaches the best stub sector and reports ARRIVED, and disabling holds it. Three followers have not flown (T5). Full reasoning is in the ledger below.
+Status: decided. T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07. T3 (node) and T4 (arm helper, stub map) are built and flown as of 2026-11-08: one follower in headless SITL reaches the best stub sector and reports ARRIVED, and disabling holds it. T5 (swarm launch) is built and flown as of 2026-11-12: three followers each hold a different stub peak. Full reasoning is in the ledger below.
 
 | Topic | Decision | Ref |
 |---|---|---|
@@ -1240,6 +1240,49 @@ Found and fixed this session: the repo's `.gitignore` pattern `core` (for SITL c
 
 Not done or not shown: re-enabling after a disable has not been run live. `arm_takeoff` was not run without Fast DDS, so the hang it guards against was not reproduced. Peers have not flown (T5). Starting the sim and our nodes together lost ROS `/clock` in 1 run; see `docs/docker-notes.md` gotchas 31-34 before writing the swarm launch.
 
+## Implementation notes (session 4, 2026-11-12)
+
+Built: T5. These are code facts and measurements, not new decisions.
+
+What the launch does (`ros2 launch uav_planning swarm.launch.py`, default 3 followers):
+
+- **Our own sim launch.** One headless `gz sim`, then per drone upstream's `robots/robot.launch.py` (spawn, SITL, bridge, `robot_state_publisher`). Drone i (0-based) is `iris_{i+1}`, sysid i+1, SITL instance i, spawned at Gazebo (5 i, 0) facing north, which is arena sector (i, 0). Layer 10 + 2 i m (D5); every drone lists all others as peers (D9). One MicroXRCEAgent serves all three SITLs. One stub map.
+- **One global `/clock` bridge.** Upstream's iris bridge config bridges `clock` as a relative topic, so with namespaces it becomes `/iris_N/clock` and **nothing publishes `/clock`**: measured with 3 iris, `ros2 topic hz /clock` saw no publisher. Every `use_sim_time` node would have frozen. The launch drops the per-drone clock and bridges `/clock` once.
+- **A trimmed per-drone bridge**, generated from upstream's config: no clock, no `gz/tf`, no camera unless `camera:=true` (T6 needs it). Its effect on RTF was not isolated.
+- **The `/clock` gate.** `wait_for_clock` exits 0 once sim time has advanced 2 s; only then does an `OnProcessExit` handler start the followers. If it times out (180 s wall), the launch shuts down with an error. `sim:=false` runs the followers against a sim that is already up.
+- **Sim time only where it is needed.** `localization_node` stamps poses with the navsat header (already sim time) and the stub stamps once, so neither subscribes to `/clock` any more; only the planners do.
+- **Datum unchanged, re-measured.** On the ground, `/iris_1/navsat` read exactly the launch default (-35.3632621, 149.1652374, 10.195); `iris_2` and `iris_3` read 0.0000550 and 0.0001100 deg further east, which is 4.99 m and 9.99 m. Gazebo x is east, and one datum serves all drones.
+- **`arm_timeout`** is a launch arg (swarm default 600 s wall), since at RTF about 0.3 the EKF takes longer in wall time to allow arming.
+
+Evidence (headless, 3 iris, 6 cores, 7.1 GB RAM; 72 tests pass):
+
+| | Run 1 | Run 2 |
+|---|---|---|
+| `/clock` flowing (gate) | +14.3 s wall | +13.0 s wall |
+| All 3 armed and took off | +53-55 s | +56 s |
+| All ARRIVED on distinct peaks, from launch | 103 s wall | 102 s wall |
+| Sectors (iris_1, iris_2, iris_3) | (3,4), (6,1), (1,6) | (3,4), (6,1), (1,6) |
+| Goal changes per drone | 0, 1, 0 | 0, 0, 0 |
+| Longest shared live goal | 2.5 s wall (one tick) | none |
+| Held after all ARRIVED | about 50 s, then the release test | 142 s, to the end of the watch |
+
+In run 1, iris_1 and iris_2 chose (3,4) on the same tick, and iris_2 yielded to the lower sysid on the next (D24). In run 2 the drones reached their layers at different times, decided one after another and never conflicted.
+
+**Peer release** (`docs/probes/peer_release.py`, run 1, all ARRIVED):
+
+- Killing only iris_1's planner, so its `goal_sector` stops, did **not** release (3,4): still blocked after 20 sim s (44 s wall). That is D25 as read in session 1: a peer with a fresh pose and no valid goal counts as arrived, so it blocks the zone it is parked in. The session-4 prompt expected a release here; the prompt was wrong, not the code.
+- Killing iris_1's `localization_node` as well released (3,4) after **5.64 sim s** (12.2 s wall): `peer_timeout` (5 s) plus at most one 1 Hz tick (D21). Then it cascaded: iris_2 and iris_3 both took (3,4) on one tick, iris_3 yielded the next tick and took (6,1). iris_2 ended on 90 %, iris_3 on 80 %, both ARRIVED; (1,6) at 70 % was left empty.
+
+**Speed and CPU** (`gz topic -e -t /stats`; `top` over 5 s):
+
+- RTF: upstream's own 3-iris setup, idle, none of our nodes: 0.30-0.33. The swarm launch on the ground with all nodes and the watcher: 0.26. Hovering (2 planners + watcher): 0.38. During startup the gate measured 0.19-0.20.
+- **Each `/clock` subscriber costs about 45 % of a core** (both planners and the watcher probe; one sample), against 3 % for `localization_node` without it. Taking sim time off localization and the stub saves about 1.8 cores. `/clock` arrives 1000 times per sim second, so its wall rate, and this cost, scale with RTF: a faster sim makes each planner more expensive. That bears on T7 (D23).
+- Other processes: `gz sim` 130 %, each arducopter and each `mavproxy.py` about 10 % (upstream runs MAVProxy for SITL instances 1 and up), each bridge 12 %, the `/clock` bridge 8 %.
+
+Lead from session 2 (docker-notes gotcha 33): in 3 of 3 cold starts with the sim and the gate started together, `/clock` flowed. The setup differs from that run (a dedicated `/clock` bridge here), so the lead is not reproduced rather than disproved; the gate stays as insurance.
+
+Not done or not shown: 2 runs only. The release was tested on iris_1 alone, and re-enabling after a disable is still not run live. The trimmed bridge's own effect on RTF was not measured. Peers were not tested at 4 drones.
+
 ## NOT in scope
 
 - Potential-field layer: altitude layers cover the sim (D5); revisit if a same-altitude flight is ever needed.
@@ -1331,7 +1374,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R9 (D15), R14 (D19)
   - Files: `src/uav_planning/uav_planning/`
   - Verify: arm helper exits after climb under Fast DDS; latched map received by a late subscriber
-- [ ] **T5 (P1, human: ~half day / CC: ~20min)** — uav_planning — swarm launch (the `mav*.parm` ignore was done early, 2026-11-09)
+- [x] **T5 (P1, human: ~half day / CC: ~20min)** — uav_planning — swarm launch (the `mav*.parm` ignore was done early, 2026-11-09; built and flown 2026-11-12, see session 4 notes)
   - Surfaced by: Scope finding 1, finding 4
   - Files: `src/uav_planning/launch/`
   - Verify: 3 followers each hold a different peak on 8x8 (Nov 15)
