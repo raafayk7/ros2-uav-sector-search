@@ -22,7 +22,12 @@ Launch args:
                      publishes /navsat and /odometry; the swarm uses /iris_N/*)
   datum_lat/lon/alt  shared world datum, the runway spawn point measured from
                      /navsat on 2026-11-08 (-35.3632621, 149.1652374, 10.195)
-  use_stub, start_enabled, use_sim_time
+  arm_timeout        wall seconds arm_takeoff keeps trying (default 180)
+  use_stub, start_enabled
+  use_sim_time       planner only. localization copies the navsat stamp and
+                     the stub map stamps once, so neither subscribes to
+                     /clock, which costs ~30-40% of a core per Python node at
+                     ~900 Hz (docker-notes gotcha 34)
 """
 
 from launch import LaunchDescription
@@ -52,6 +57,7 @@ def generate_launch_description():
         DeclareLaunchArgument('datum_lat', default_value='-35.3632621'),
         DeclareLaunchArgument('datum_lon', default_value='149.1652374'),
         DeclareLaunchArgument('datum_alt', default_value='10.195'),
+        DeclareLaunchArgument('arm_timeout', default_value='180.0'),
         DeclareLaunchArgument('use_stub', default_value='true'),
         DeclareLaunchArgument('start_enabled', default_value='true'),
         DeclareLaunchArgument('use_sim_time', default_value='true'),
@@ -62,7 +68,6 @@ def generate_launch_description():
             parameters=[{
                 'navsat_topic': LaunchConfiguration('navsat_topic'),
                 'odom_topic': LaunchConfiguration('odom_topic'),
-                'use_sim_time': use_sim_time,
                 **datum,
             }],
         ),
@@ -70,14 +75,14 @@ def generate_launch_description():
             package='uav_planning', executable='stub_heatmap_publisher',
             name='stub_heatmap_publisher', output='screen',
             condition=IfCondition(LaunchConfiguration('use_stub')),
-            parameters=[{'use_sim_time': use_sim_time}],
         ),
         Node(
             package='uav_planning', executable='arm_takeoff',
             name='arm_takeoff', namespace=robot, output='screen',
             # Fast DDS for this process only (D15, docker-notes gotcha 22).
             additional_env={'RMW_IMPLEMENTATION': 'rmw_fastrtps_cpp'},
-            parameters=[{'sysid': sysid, 'alt': layer}],
+            parameters=[{'sysid': sysid, 'alt': layer, 'timeout': ParameterValue(
+                LaunchConfiguration('arm_timeout'), value_type=float)}],
         ),
         Node(
             package='uav_planning', executable='follower_planner_node',
