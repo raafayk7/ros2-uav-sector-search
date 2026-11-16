@@ -187,6 +187,8 @@ colcon build --symlink-install --event-handlers console_direct+
 
 ### Running ArduPilot SITL + Gazebo + the swarm
 
+Before any sim launch, check the WinBoat Windows VM is stopped (`docker ps --filter name=WinBoat`). It must never run during sim work (about 3 GB RAM, docker-notes gotcha 42); if it is up, tell Raafay at once instead of measuring around it.
+
 Single drone, headless:
 
 ```bash

@@ -59,7 +59,7 @@ docker compose -f docker/docker-compose.yml exec ros2 bash -l   # -l: login shel
 - `/ap/v1/*` **services** (arm_motors, mode_switch, takeoff) hang under the container's default `rmw_cyclonedds_cpp`; export `RMW_IMPLEMENTATION=rmw_fastrtps_cpp` in the client shell. Topics work under both.
 - `pkill` leaves `arducopter`/`MicroXRCEAgent` behind; use `docker compose restart ros2` between sim runs.
 - Headless launch: `ros2 launch ardupilot_gz_bringup iris_runway.launch.py use_gz_sim_gui:=false rviz:=false`.
-- Before 3-4 drone runs, free RAM: the WinBoat Windows VM (`docker stop -t 120 WinBoat`) holds about 3 GB, more than Chrome (gotcha 42).
+- The WinBoat Windows VM must be stopped for all sim work (it holds about 3 GB, more than Chrome; gotcha 42). Before a sim launch check `docker ps --filter name=WinBoat`, and if it is running tell Raafay at once rather than measuring around it.
 
 First planner flight (2026-11-08): `ros2 launch uav_planning follower.launch.py` against a running `iris_runway` arms, climbs to 10 m, flies to the best stub-map sector and reports ARRIVED; `planner_enable` false holds it.
 

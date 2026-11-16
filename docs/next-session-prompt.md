@@ -45,7 +45,7 @@ Record what was built in `docs/planner-decisions.md` as "Implementation notes (s
 - Launch `iris_runway` from a fresh directory (`mkdir -p /tmp/sitl && cd /tmp/sitl`), not the repo root (gotcha 40).
 - `docker compose restart ros2` between sim runs; `pkill` leaves `arducopter`/`MicroXRCEAgent` behind.
 - `colcon build --symlink-install` copies `uav_planning`'s files, so rebuild after every edit (gotcha 32).
-- Keep the WinBoat VM stopped for 3-4 drone runs (gotcha 42); RAM was not the limit with it stopped.
+- The WinBoat VM must be stopped for all sim work, never measured with it running (gotcha 42). Before a sim launch, check `docker ps --filter name=WinBoat`; if it is running, tell the user at once. RAM was not the limit with it stopped.
 - `wait_for_clock` caught a silent ROS `/clock` in 2 of 4 swarm cold starts at the 2 ms step (0 of 3 at 1 ms; gotcha 33): if the launch shuts down with "no /clock", restart the container and run again. If it happens, first run `gz topic -e -t /clock` while the gate is still waiting, and record whether Gazebo's clock is moving.
 - Tests without a simulator: `python3 -m pytest src` (72 passed, 2026-11-16).
 - Commit after each working sub-task on `main`. Do not push without asking.
