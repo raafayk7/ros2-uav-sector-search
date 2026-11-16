@@ -1,0 +1,11 @@
+# Point the iris gimbal camera straight down (T6, D30).
+# List it after upstream's gazebo-iris-gimbal.parm (so these values win) but
+# BEFORE the dds_*.parm files: AP_Param re-applies late-registered params
+# (DDS_USE_NS among them) only if the LAST defaults file had one it could not
+# yet place. Put this file last and the drone's topics silently lose /ap/vN.
+# Upstream leaves MNT1_DEFLT_MODE at 3 (RC targeting), and nothing drives
+# RC 6-8 in SITL. Neutral mode holds the angles below in the earth frame.
+MNT1_DEFLT_MODE  1
+MNT1_NEUTRAL_X   0
+MNT1_NEUTRAL_Y   -90
+MNT1_NEUTRAL_Z   0

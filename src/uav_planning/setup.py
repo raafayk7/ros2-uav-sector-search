@@ -18,6 +18,7 @@ setup(
         # Installs package.xml alongside the package's share dir.
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch', glob('launch/*.launch.py')),
+        ('share/' + package_name + '/config', glob('config/*.parm')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

@@ -131,6 +131,20 @@ cam = np.array([p.x, p.y, p.z])
 yaw = math.degrees(math.atan2(world_R_body[1, 0], world_R_body[0, 0]))
 print('odom pos (%.2f, %.2f, %.2f), yaw %.1f deg' % (p.x, p.y, p.z, yaw))
 
+# Nadir checks (T6): view axis vs straight down, and every image corner's
+# ray must hit the ground (leader_node.py:354 drops frames where one misses).
+world_R_cam = world_R_body @ body_R_cam
+axis = world_R_cam[:, 2]
+print('view axis %.1f deg off nadir' % math.degrees(math.acos(-axis[2])))
+w, h = 2 * n.K[0, 2], 2 * n.K[1, 2]
+for u, v in ((0, 0), (w, 0), (w, h), (0, h)):
+    ray = world_R_cam @ np.array([(u - n.K[0, 2]) / n.K[0, 0], (v - n.K[1, 2]) / n.K[1, 1], 1.0])
+    if ray[2] >= 0:
+        print('corner (%.0f, %.0f) misses the ground' % (u, v))
+    else:
+        g = cam + ray * (-(p.z - 0.05) / ray[2])
+        print('corner (%.0f, %.0f) hits ground at (%.1f, %.1f)' % (u, v, g[0], g[1]))
+
 m = n.img
 arr = np.frombuffer(m.data, dtype=np.uint8).reshape(m.height, m.width, -1)
 print('image', m.width, m.height, m.encoding, 'mean', round(float(arr.mean()), 1))

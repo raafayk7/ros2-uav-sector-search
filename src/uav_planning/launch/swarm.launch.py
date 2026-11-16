@@ -17,6 +17,10 @@ vehicles. This reuses its per-vehicle building block, robots/robot.launch.py
   - Our nodes start only after wait_for_clock exits 0 (docker-notes gotcha
     33). If /clock never flows the launch shuts down with an error instead
     of leaving planners that never tick.
+  - config/gimbal_nadir.parm in each SITL's defaults, so the camera looks
+    straight down (T6, D30). It goes right after the gimbal file and before
+    the dds_*.parm files; last in the list, it silently drops DDS_USE_NS
+    (see the parm file).
 
 Drone i (0-based) is iris_{i+1}, sysid i+1, SITL instance i, spawned at
 x = i * spacing on the runway, altitude layer 10 + 2 i m (D5). Every drone
@@ -92,6 +96,20 @@ def _iris_sdf(robot_name: str) -> str:
     return out.name
 
 
+def _with_nadir(defaults: str) -> str:
+    """Insert gimbal_nadir.parm right after upstream's gimbal parm file, so
+    it overrides that file but a dds_*.parm file stays last."""
+    nadir = str(Path(get_package_share_directory('uav_planning'),
+                     'config', 'gimbal_nadir.parm'))
+    files = defaults.split(',')
+    gimbal = [i for i, f in enumerate(files)
+              if f.endswith('gazebo-iris-gimbal.parm')]
+    if not gimbal:
+        raise RuntimeError(f'no gazebo-iris-gimbal.parm in defaults: {defaults}')
+    files.insert(gimbal[0] + 1, nadir)
+    return ','.join(files)
+
+
 def _sim_actions(context, n):
     bringup = get_package_share_directory('ardupilot_gz_bringup')
     world = Path(get_package_share_directory('ardupilot_gz_gazebo'),
@@ -122,6 +140,7 @@ def _sim_actions(context, n):
     # iris.launch.py's defaults: copter + gimbal + DDS param files.
     base.update({k: v for k, v in _defaults(iris_lds, context).items()
                  if k in ('model', 'defaults', 'synthetic_clock', 'sim_address')})
+    base['defaults'] = _with_nadir(base['defaults'])
 
     for i in range(n):
         name = f'iris_{i + 1}'

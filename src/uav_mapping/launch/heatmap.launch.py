@@ -30,6 +30,12 @@ Key args
   det_u/det_v       stub detection pixel (default 320, 240)
   det_score         stub detection score (default 0.9)
   use_sim_time      use /clock           (default true)
+  mount_quat        camera mount in base_link, x,y,z,w (default nadir,
+                    [-0.7071, 0.7071, 0, 0], leader_node's own default).
+                    The iris gimbal is at nadir only with uav_planning's
+                    config/gimbal_nadir.parm in the SITL defaults (T6); with
+                    upstream's params it sits 52 deg off, measured
+                    [0.3269, 0.8365, 0.4187, -0.1346] (docker-notes 28).
 """
 
 from launch import LaunchDescription
@@ -66,6 +72,9 @@ def generate_launch_description():
         DeclareLaunchArgument('det_v', default_value='240.0'),
         DeclareLaunchArgument('det_score', default_value='0.9'),
         DeclareLaunchArgument('use_sim_time', default_value='true'),
+        DeclareLaunchArgument(
+            'mount_quat',
+            default_value='[-0.7071067811865476, 0.7071067811865476, 0.0, 0.0]'),
     ]
 
     leader = Node(
@@ -84,6 +93,7 @@ def generate_launch_description():
             'grid_height': lc('grid_height'),
             'origin_x': lc('origin_x'),
             'origin_y': lc('origin_y'),
+            'mount_quat': lc('mount_quat'),
             'use_sim_time': sim_time,
         }],
     )
