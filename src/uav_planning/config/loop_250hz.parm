@@ -1,0 +1,7 @@
+# 250 Hz autopilot main loop, for the 2 ms physics step (D37).
+# With a 2 ms Gazebo step the IMU samples at 500 Hz, and ArduCopter refuses to
+# arm unless the gyro rate is at least 1.8x SCHED_LOOP_RATE (default 400, so
+# 720 Hz): "Gyro 0 rate 500Hz < loop rate*1.8 720Hz". 250 Hz needs 450 Hz.
+# swarm.launch.py adds this file only when physics_step is 0.002. Like
+# gimbal_nadir.parm it must come before the dds_*.parm files (gotcha 39).
+SCHED_LOOP_RATE  250

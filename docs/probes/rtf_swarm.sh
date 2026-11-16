@@ -7,6 +7,8 @@
 #
 # Run inside the container under `bash -lc` (MAVProxy on PATH), one run per
 # container: `docker compose restart ros2` between runs (gotcha 23).
+# Measures the launch default, a 2 ms step (D37); pass physics_step:=0.001
+# for upstream timing.
 # Ready means: N "JSON received" lines and /ap/v1 .. /ap/vN topics listed.
 # Prints mean/min/max RTF over SAMPLES /stats messages, RAM and swap, the top
 # processes by CPU, and each drone's gimbal joint angles.

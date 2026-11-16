@@ -10,10 +10,9 @@ nocam: the gimbal without its camera sensor (and Gst/zoom plugins). Probe
   only: whether followers may drop the camera is a design question.
 lean: no joint_states and no imu in the per-drone ROS bridge. Gazebo publishes
   both every physics step, and a bridged topic must be serialized every step.
-step2: a copy of the runway world with a 2 ms physics step instead of 1 ms.
-  Gyro samples then come at 500 Hz, and arming fails ("Gyro 0 rate 500Hz <
-  loop rate*1.8"), so step2 also adds SCHED_LOOP_RATE 250 to every SITL's
-  defaults, before the dds_*.parm files (gotcha 39). Pass step2only to skip it.
+
+The 2 ms physics step this probe first tried (step2) is now swarm.launch.py's
+default (D37): pass physics_step:=0.001 to rtf_swarm.sh for upstream timing.
 
 Run inside the container. Copies go to /tmp; nothing installed is changed.
 """
@@ -26,7 +25,7 @@ from pathlib import Path
 from ament_index_python.packages import get_package_share_directory
 
 flags = set(sys.argv[1:])
-assert flags <= {'nomav', 'nocam', 'lean', 'step2', 'step2only'}, flags
+assert flags <= {'nomav', 'nocam', 'lean'}, flags
 out = Path('/tmp/rtf_variant')
 shutil.rmtree(out, ignore_errors=True)
 out.mkdir()
@@ -75,25 +74,6 @@ if 'lean' in flags:
     old = "            and not e['ros_topic_name'].startswith('gz/')"
     assert swarm.count(old) == 1
     swarm = swarm.replace(old, old + "\n            and e['ros_topic_name'] not in ('joint_states', 'imu')")
-
-if flags & {'step2', 'step2only'}:
-    world = Path(get_package_share_directory('ardupilot_gz_gazebo'),
-                 'worlds', 'runway.sdf').read_text()
-    old = '<max_step_size>0.001</max_step_size>'
-    assert world.count(old) == 1
-    (out / 'runway.sdf').write_text(
-        world.replace(old, '<max_step_size>0.002</max_step_size>'))
-    old = "'worlds', f'{WORLD}.sdf')"
-    assert swarm.count(old) == 1
-    swarm = swarm.replace(old, "'worlds', f'{WORLD}.sdf')\n    world = Path("
-                          f"'{out}/runway.sdf')")
-
-if 'step2' in flags:
-    (out / 'loop250.parm').write_text('SCHED_LOOP_RATE 250\n')
-    old = "files.insert(gimbal[0] + 1, nadir)"
-    assert swarm.count(old) == 1
-    swarm = swarm.replace(old, old + "\n    files.insert(gimbal[0] + 2, "
-                          f"'{out}/loop250.parm')")
 
 path = out / 'swarm_variant.launch.py'
 path.write_text(swarm)

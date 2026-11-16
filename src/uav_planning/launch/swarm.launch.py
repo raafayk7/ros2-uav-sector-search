@@ -21,6 +21,12 @@ vehicles. This reuses its per-vehicle building block, robots/robot.launch.py
     straight down (T6, D30). It goes right after the gimbal file and before
     the dds_*.parm files; last in the list, it silently drops DDS_USE_NS
     (see the parm file).
+  - A 2 ms physics step by default instead of the world's 1 ms (D37). One
+    Gazebo thread spends about 1 ms of CPU per drone per step, so halving the
+    steps per sim second doubles RTF (0.24 -> 0.48 at 4 idle iris, T7). The
+    IMU then samples at 500 Hz, too slow for ArduCopter's 400 Hz loop, so
+    config/loop_250hz.parm goes in with it. physics_step:=0.001 restores
+    upstream timing for any run where fidelity is in doubt.
 
 Drone i (0-based) is iris_{i+1}, sysid i+1, SITL instance i, spawned at
 x = i * spacing on the runway, altitude layer 10 + 2 i m (D5). Every drone
@@ -33,6 +39,8 @@ Launch args:
                   false brings up the sim alone, e.g. to measure RTF)
   camera          bridge each drone's camera (default false)
   spacing         spawn spacing along x, m (default 5.0)
+  physics_step    Gazebo max_step_size, s: 0.002 (default, with a 250 Hz
+                  autopilot loop) or 0.001 (upstream, 400 Hz loop)
   datum_lat/lon/alt   shared datum: navsat at the world origin, where
                   iris_1 spawns (see follower.launch.py)
   clock_timeout   wall seconds to wait for /clock (default 180)
@@ -56,6 +64,8 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 WORLD = 'runway'
+# physics step (s) -> extra SITL defaults file. Only these two are flown.
+STEP_PARMS = {'0.001': None, '0.002': 'loop_250hz.parm'}
 
 
 def _arg(context, name):
@@ -98,24 +108,46 @@ def _iris_sdf(robot_name: str) -> str:
     return out.name
 
 
-def _with_nadir(defaults: str) -> str:
-    """Insert gimbal_nadir.parm right after upstream's gimbal parm file, so
-    it overrides that file but a dds_*.parm file stays last."""
-    nadir = str(Path(get_package_share_directory('uav_planning'),
-                     'config', 'gimbal_nadir.parm'))
+def _world(step: str) -> Path:
+    """The runway world, copied with a new max_step_size unless it is 1 ms."""
+    world = Path(get_package_share_directory('ardupilot_gz_gazebo'),
+                 'worlds', f'{WORLD}.sdf')
+    if step == '0.001':
+        return world
+    sdf = world.read_text()
+    old = '<max_step_size>0.001</max_step_size>'
+    if sdf.count(old) != 1:
+        raise RuntimeError(f'expected one {old} in {world}')
+    # Same file name in a temp dir: the world name inside stays "runway".
+    out = Path(tempfile.mkdtemp()) / world.name
+    out.write_text(sdf.replace(old, f'<max_step_size>{step}</max_step_size>'))
+    return out
+
+
+def _with_ours(defaults: str, step: str) -> str:
+    """Insert gimbal_nadir.parm (and the loop-rate file for this physics
+    step) right after upstream's gimbal parm file, so they override it but a
+    dds_*.parm file stays last."""
+    config = Path(get_package_share_directory('uav_planning'), 'config')
+    ours = [str(config / 'gimbal_nadir.parm')]
+    if STEP_PARMS[step]:
+        ours.append(str(config / STEP_PARMS[step]))
     files = defaults.split(',')
     gimbal = [i for i, f in enumerate(files)
               if f.endswith('gazebo-iris-gimbal.parm')]
     if not gimbal:
         raise RuntimeError(f'no gazebo-iris-gimbal.parm in defaults: {defaults}')
-    files.insert(gimbal[0] + 1, nadir)
+    files[gimbal[0] + 1:gimbal[0] + 1] = ours
     return ','.join(files)
 
 
 def _sim_actions(context, n):
     bringup = get_package_share_directory('ardupilot_gz_bringup')
-    world = Path(get_package_share_directory('ardupilot_gz_gazebo'),
-                 'worlds', f'{WORLD}.sdf')
+    step = _arg(context, 'physics_step')
+    if step not in STEP_PARMS:
+        raise RuntimeError(f'physics_step must be one of {list(STEP_PARMS)}, '
+                           f'got {step}')
+    world = _world(step)
     spacing = float(_arg(context, 'spacing'))
     bridge_file = _bridge_config(_arg(context, 'camera').lower() == 'true')
 
@@ -142,7 +174,7 @@ def _sim_actions(context, n):
     # iris.launch.py's defaults: copter + gimbal + DDS param files.
     base.update({k: v for k, v in _defaults(iris_lds, context).items()
                  if k in ('model', 'defaults', 'synthetic_clock', 'sim_address')})
-    base['defaults'] = _with_nadir(base['defaults'])
+    base['defaults'] = _with_ours(base['defaults'], step)
 
     for i in range(n):
         name = f'iris_{i + 1}'
@@ -231,6 +263,7 @@ def generate_launch_description():
         DeclareLaunchArgument('followers', default_value='true'),
         DeclareLaunchArgument('camera', default_value='false'),
         DeclareLaunchArgument('spacing', default_value='5.0'),
+        DeclareLaunchArgument('physics_step', default_value='0.002'),
         DeclareLaunchArgument('datum_lat', default_value='-35.3632621'),
         DeclareLaunchArgument('datum_lon', default_value='149.1652374'),
         DeclareLaunchArgument('datum_alt', default_value='10.195'),
