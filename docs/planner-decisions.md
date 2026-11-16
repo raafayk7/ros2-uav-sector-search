@@ -1311,12 +1311,14 @@ The frame shows only the runway and the three markers: no horizon and no landing
 
 Swarm (`swarm.launch.py num_followers:=2`, Chrome open, about 1.3 GB RAM free, so 2 drones, not 3): every SITL's defaults list ended `..., gazebo-iris-gimbal.parm, gimbal_nadir.parm, dds_udp.parm, dds_use_ns.parm`; topics stayed `/ap/v1` and `/ap/v2`; both gimbals read 0.1, 90.0, 0.0 deg. T5 did not regress: both followers ARRIVED on (3,4) and (6,1), the session-4 sectors, 68 and 69 s wall after the first log line, with no goal changes.
 
+Then 3 drones, the default `swarm.launch.py`, with about 4.3 GB RAM free (a 3 GB Windows VM, the WinBoat container, stopped first; Chrome was not running): `/ap/v1`, `/ap/v2` and `/ap/v3` all present; all three gimbals read roll 0.0, pitch 90.0, yaw 0.0 deg. `/clock` flowed at +15.9 s wall (gate: sim/wall 0.19). All ARRIVED at 88, 90 and 94 s wall on (3,4), (6,1) and (1,6), the session-4 sectors; iris_2 and iris_3 chose (6,1) on one tick and iris_3 yielded the next (goal changes 0, 0, 1), as in session-4 run 3. Three `/stats` samples while hovering: RTF 0.37, 0.47 and 0.75 (too few and too spread to compare; T7 measures properly).
+
 **Two traps found on the way** (details in `docs/docker-notes.md` gotchas 39-40):
 
 1. **File order in the defaults list matters.** With `gimbal_nadir.parm` appended last, the mount params loaded but `DDS_USE_NS` stayed 0 and the topics came up as `/ap/*`, not `/ap/v1/*`, so `arm_takeoff` timed out. A control run without the file gave `/ap/v1`. Cause in `AP_Param.cpp`: `read_param_defaults_file` sets `done_all_default_params` per file (line 2398), so only the last file decides it; the second pass that applies params registered later, such as AP_DDS's (line 1722), runs only if that last file had a param not yet registered. `dds_use_ns.parm` last has one; ours does not. Fixed by putting ours before the `dds_*` files.
 2. **A saved eeprom beats every defaults file.** A value is applied from a defaults file only if it is not already in storage (`configured_in_storage()`). `iris_runway` writes `eeprom.bin` to the working directory, and the repo root holds one (gitignored). Any value saved there, `MNT1_*` included, silently overrides `gimbal_nadir.parm`. Today's runs used a fresh directory; the swarm uses per-instance directories.
 
-Not done or not shown: one hover test at 10 m in `iris_runway` and one 2-drone swarm check of joint angles, not the marker test in the swarm (no `camera:=true` run). Pointing while the drone translates or banks was not measured; earth-frame stabilization is from the source. Not run at 3 or 4 drones.
+Not done or not shown: one hover test at 10 m in `iris_runway`, and joint angles (not the marker test) in the 2- and 3-drone swarms (no `camera:=true` run). Pointing while the drone translates or banks was not measured; earth-frame stabilization is from the source. Not run at 4 drones.
 
 ## NOT in scope
 

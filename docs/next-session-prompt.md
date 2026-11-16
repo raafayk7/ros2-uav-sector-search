@@ -4,7 +4,7 @@ Paste the block below to open the next session. Replace this file after each ses
 
 ## Where the plan stands
 
-T6 is done (2026-11-16): `uav_planning/config/gimbal_nadir.parm` holds the gimbal at nadir. In the marker test the marker below the drone landed 1 px from the image centre, all four corners hit the ground, and the swarm launch loads the file for every drone. The repo is public as `raafayk7/ros2-uav-sector-search`, so do not commit private notes or career content.
+T6 is done (2026-11-16): `uav_planning/config/gimbal_nadir.parm` holds the gimbal at nadir. In the marker test the marker below the drone landed 1 px from the image centre, all four corners hit the ground, and the swarm launch loads the file for every drone (3 drones checked: all gimbals at nadir, all followers ARRIVED on the session-4 peaks at 88-94 s wall). The repo is public as `raafayk7/ros2-uav-sector-search`, so do not commit private notes or career content.
 
 What is left before the Nov 20 checkpoint and Nov 24 (build order from `docs/roadmap.md`): sim speed (T7, 2 h timebox), ground-truth detector, sweep controller, `belief_map_node` + footprints, the Nov 20 search loop (T8), then the mission state machine. That is more than four days hold at 12-15 h a week, so Nov 20 is likely to slip a little and the state machine may slip past Nov 24 (already expected in the roadmap).
 
@@ -47,7 +47,7 @@ Record what was tried, with numbers, in `docs/planner-decisions.md` as "Implemen
 - Launch `iris_runway` from a fresh directory (`mkdir -p /tmp/sitl && cd /tmp/sitl`), not the repo root: the root has an old `eeprom.bin` whose saved params override defaults files (gotcha 40).
 - `pkill` leaves `arducopter`/`MicroXRCEAgent` behind; use `docker compose restart ros2` between sim runs.
 - `colcon build --symlink-install` copies `uav_planning`'s files, so rebuild after every edit (gotcha 32).
-- Close Chrome before 3-4 drone runs: on 2026-11-16 the host had 1.3 GB of 7.1 GB available with it open, so session 5 checked the swarm with 2 drones only. Free RAM is itself one of the D23 candidates, so measure with and without.
+- Free RAM before 3-4 drone runs. On 2026-11-16 the memory hog was not Chrome but the WinBoat Windows VM (`docker stop WinBoat`, about 3 GB); with it stopped, 4.3 GB was free. Free RAM is itself one of the D23 candidates, so measure with and without.
 - Tests without a simulator: `python3 -m pytest src` (72 passed, 2026-11-16).
 - Commit after each working sub-task on `main`. Do not push without asking.
 
