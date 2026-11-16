@@ -17,7 +17,7 @@ What is left before the Nov 20 checkpoint and Nov 24 (build order from `docs/roa
 | 5 (done 2026-11-16) | Camera to nadir, `mount_quat` exposed, marker test passes | T6 | Opus | Untried method, live evidence; found two silent param traps | ~1.5 h |
 | **6 (this prompt)** | Sim speed timebox: re-measure 1 and 4 iris, try the D23 candidates | T7 | **Opus** | Diagnosis across Gazebo, SITL and DDS, with measurements that can mislead | ~2 h |
 | 7 | Ground-truth detector (Gazebo target poses + noise, every frame including empty) | part of T8 | Sonnet | Specified in the roadmap; mostly a node and tests, once noise values are picked | ~3 h |
-| 8+ | Sweep controller, `belief_map_node` + footprints, Nov 20 search loop | T8 | Opus | Integration across nodes in live SITL | ~4-6 h |
+| 8+ | Sweep controller, `belief_map_node` + footprints, Nov 20 search loop; marker test during sideways flight before trusting footprints | T8 | Opus | Integration across nodes in live SITL | ~4-6 h |
 
 ---
 
@@ -27,15 +27,15 @@ Continuing the multi-agent UAV ROS 2 rebuild: session 6. Three followers fly in 
 
 - `CLAUDE.md` (Docker gotchas; always `bash -lc` / `bash -l`).
 - `docs/planner-decisions.md` **R18 / D23** for the accepted scope, and the session 4 notes ("Speed and CPU") for the numbers so far: 3 iris idle about 0.30, swarm on the ground 0.26, hovering 0.38; `gz sim` 130 %, each `/clock` subscriber about 45 % of a core.
-- `docs/docker-notes.md` gotchas 29 (RTF numbers, 1 and 4 iris unconfirmed), 34-35 (`/clock` cost and namespacing), 39-41 (new from session 5: keep a `dds_*.parm` file last in SITL's defaults, a saved `eeprom.bin` beats defaults files, backgrounded launches ignore Ctrl-C).
+- `docs/docker-notes.md` gotchas 29 (RTF numbers, 1 and 4 iris unconfirmed), 34-35 (`/clock` cost and namespacing), 39-42 (new from session 5: keep a `dds_*.parm` file last in SITL's defaults, a saved `eeprom.bin` beats defaults files, backgrounded launches ignore Ctrl-C, the WinBoat VM holds about 3 GB).
 - `docs/probes/rtf.sh` (the earlier measurement script) and `wait_for_clock` (it prints sim/wall).
 
 ## Task
 
 **T7 (P2), 2 h timebox: measure and try to raise sim speed.**
 
-1. Re-measure RTF (`gz topic -e -t /stats`) at 1 and 4 iris with a working readiness check (every SITL shows "JSON received" and `/ap/vN` topics exist) before sampling. Record free RAM and swap at the same time.
-2. Try the D23 candidates one at a time and measure each: no MAVProxy for SITL instances (upstream runs it for instances 1 and up), more free RAM (Chrome closed), and a camera-free follower model. **Before trying the camera-free model, check it against the plan:** D18 and the ground-truth detector rely on followers observing what they hover over. If footprints only need the known intrinsics and the mount, a camera-free model may be fine, but that is a design question for the user, not something to decide in the timebox.
+1. Re-measure RTF (`gz topic -e -t /stats`) at 1 and 4 iris with a working readiness check (every SITL shows "JSON received" and `/ap/vN` topics exist) before sampling. Record free RAM and swap at the same time. In the 4-iris run, also read every drone's gimbal joints (`gz topic -e -n 1 -t /world/runway/model/iris_N/joint_state`; expect roll 0, pitch 90, yaw 0 deg): T6 was checked at 1, 2 and 3 drones only. This is a carried-over check, not part of the speed timebox.
+2. Try the D23 candidates one at a time and measure each: no MAVProxy for SITL instances (upstream runs it for instances 1 and up), more free RAM (WinBoat VM stopped, gotcha 42), and a camera-free follower model. **Before trying the camera-free model, check it against the plan:** D18 and the ground-truth detector rely on followers observing what they hover over. If footprints only need the known intrinsics and the mount, a camera-free model may be fine, but that is a design question for the user, not something to decide in the timebox.
 3. If still slow at the end of the timebox, stop and bring back D23's fallback choice: fewer drones in Gazebo, or longer runs cut for video.
 
 Record what was tried, with numbers, in `docs/planner-decisions.md` as "Implementation notes (session 6)", and add any new trap to `docs/docker-notes.md`.
@@ -53,7 +53,7 @@ Record what was tried, with numbers, in `docs/planner-decisions.md` as "Implemen
 
 ## Done means
 
-RTF re-measured at 1 and 4 iris with readiness confirmed, each D23 candidate tried and measured (or a clear reason it wasn't), notes recorded, and `docs/next-session-prompt.md` rewritten for session 7 (ground-truth detector). Say plainly which changes are plan-level and which are code.
+RTF re-measured at 1 and 4 iris with readiness confirmed, gimbals read at 4 iris, each D23 candidate tried and measured (or a clear reason it wasn't), notes recorded, and `docs/next-session-prompt.md` rewritten for session 7 (ground-truth detector). Say plainly which changes are plan-level and which are code.
 
 ## Working agreements
 
