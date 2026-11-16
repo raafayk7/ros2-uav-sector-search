@@ -127,7 +127,7 @@ Topic naming convention:
 - Project-level topics (`/heatmap`) are unnamespaced
 - Per-drone project topics (`/iris_2/detections`) use the namespace as a prefix
 
-**Design status (2026-11-16):** the follower planner design is settled in `docs/planner-decisions.md`, with tasks T1-T8. T1-T6 are built (T5: `swarm.launch.py`, 3 followers on 3 different peaks, 2026-11-12; T6: camera at nadir via `uav_planning/config/gimbal_nadir.parm`, 2026-11-16). T1-T4: shared datum, ROS-free `uav_planning/core/planner.py` and `core/follower.py`, `follower_planner_node`, `arm_takeoff`, `stub_heatmap_publisher` and `follower.launch.py`. One follower flew to ARRIVED in SITL on 2026-11-08 and three on 2026-11-12; T7 (sim speed) is next. Read that before planner work. Note: `leader_node` has no flight code, so a sweep controller is still to build.
+**Design status (2026-11-16):** the follower planner design is settled in `docs/planner-decisions.md`, with tasks T1-T8. T1-T6 are built (T5: `swarm.launch.py`, 3 followers on 3 different peaks, 2026-11-12; T6: camera at nadir via `uav_planning/config/gimbal_nadir.parm`, 2026-11-16). T1-T4: shared datum, ROS-free `uav_planning/core/planner.py` and `core/follower.py`, `follower_planner_node`, `arm_takeoff`, `stub_heatmap_publisher` and `follower.launch.py`. One follower flew to ARRIVED in SITL on 2026-11-08 and three on 2026-11-12; T7 (sim speed) ran 2026-11-16: a 2 ms physics step doubles RTF, adoption open (D37); the ground-truth detector is next. Read that before planner work. Note: `leader_node` has no flight code, so a sweep controller is still to build.
 
 **Build status (2026-06-10):**
 - `localization_node` (`uav_localization`) — **done, verified in sim.** GPS + odometry → `/pose`, a `geometry_msgs/PoseStamped` in an ENU arena frame whose origin is latched at the first GPS fix, or set from the optional `datum_lat/lon/alt` params so a swarm shares one frame.
@@ -193,7 +193,7 @@ Single drone, headless:
 ros2 launch ardupilot_gz_bringup iris_runway.launch.py use_gz_sim_gui:=false rviz:=false
 ```
 
-`multiagent.launch.py` hard-codes 4 different vehicles with no launch arg, so N iris uses our own launch, which reuses upstream's `robots/robot.launch.py` per drone. Topics are `/iris_N/*` from Gazebo and `/ap/vN/*` from the autopilot, N = sysid. Real-time factor falls quickly: 0.46, about 0.3 and 0.11 for 1, 3 and 4 iris.
+`multiagent.launch.py` hard-codes 4 different vehicles with no launch arg, so N iris uses our own launch, which reuses upstream's `robots/robot.launch.py` per drone. Topics are `/iris_N/*` from Gazebo and `/ap/vN/*` from the autopilot, N = sysid. Real-time factor falls about as 1/N: 0.96 and 0.24 idle for 1 and 4 iris (T7, 2026-11-16), because Gazebo's main thread spends about 1 ms per drone per 1 ms physics step. MAVProxy, cameras and RAM are not the limit; a 2 ms step with `SCHED_LOOP_RATE 250` doubles it (adoption open, D37). See `docs/docker-notes.md` gotchas 43-44.
 
 Sim plus N followers in one command (T5, flown 2026-11-12):
 

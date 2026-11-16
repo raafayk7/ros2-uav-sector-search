@@ -28,7 +28,7 @@ Status: decided. T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/
 | Mission end | Sweep done and all unsuppressed sectors under 0.5 for 30 s, or timeout; decided by the mission state machine | D14 |
 | Milestone map | New stub publisher, 8x8 at 5 m, multiple peaks | D19 |
 | Camera | Required before footprints: gimbal to nadir, proven with the marker test, 2 h timebox | D30 |
-| Sim speed | 2 h timebox after Nov 15, before Nov 24 | D23 |
+| Sim speed | 2 h timebox after Nov 15, before Nov 24 (ran 2026-11-16: Gazebo's main thread is the limit; a 2 ms step doubles RTF, adoption open) | D23, D37 |
 | Checkpoint | Around Nov 20, one follower completes a whole search loop | D33 |
 | Layout | One package, `uav_planning`, with `core/planner.py` | D6 |
 
@@ -1320,6 +1320,55 @@ Then 3 drones, the default `swarm.launch.py`, with about 4.3 GB RAM free (a 3 GB
 
 Not done or not shown: one hover test at 10 m in `iris_runway`, and joint angles (not the marker test) in the 2- and 3-drone swarms (no `camera:=true` run). Pointing while the drone translates or banks was not measured; earth-frame stabilization is from the source (now a T8 verify step, before footprints are trusted). Not run at 4 drones (now in the session-6 prompt: T7 brings up 4 iris anyway).
 
+## Implementation notes (session 6, 2026-11-16)
+
+Ran: T7, the D23 timebox (about 2 h). These are measurements and one launch arg, not new decisions. One result needs a decision (D37 below).
+
+What changed in code: `swarm.launch.py` gained `followers` (default true; `false` brings up the sim alone). Two probes: `docs/probes/rtf_swarm.sh N` (sim only, idle on the ground; samples only once every SITL shows "JSON received" and `/ap/v1` .. `/ap/vN` are listed; 40 `/stats` samples; RAM, `top`, gimbal joints) and `docs/probes/rtf_variant.py` (writes a patched copy of `swarm.launch.py` to `/tmp` for each candidate; nothing installed changes).
+
+**What real-time factor is and why SITL follows it.** RTF is sim seconds per wall second. Gazebo steps physics in fixed 1 ms steps, and each iris's ArduPilot plugin runs in lock-step: every step it sends the drone's state to that drone's SITL and waits for its motor outputs before the next step. So the autopilot's clock runs exactly as fast as Gazebo's: flight stays correct at any RTF, and only wall time grows. RTF is set by how long one step takes in wall time.
+
+Readiness confirmed in every run below. Host: 6 cores, 7.1 GB RAM, WinBoat already stopped at session start (gotcha 42), swap steady at 747 MB in every run (never grew).
+
+| Run (idle on the ground, sim only) | RTF mean (min-max) | Free / available RAM | Notes |
+|---|---|---|---|
+| 1 iris, as is | 0.959 (0.42-1.12) | 1.47 / 2.97 GB | ready at +9 s; `gz sim` 134 % |
+| 4 iris, as is | 0.238 (0.055-0.283) | 0.76 / 2.26 GB | ready at +14 s; `gz sim` 134 %; all 4 gimbals roll 0.1, pitch 90.0, yaw 0.0 deg |
+| 4 iris, no MAVProxy | 0.255 (0.186-0.278) | 1.01 / 2.54 GB | 0 `mavproxy.py`; SERIAL0 `tcp:0` so SITL does not wait (gotcha 31) |
+| 4 iris, no camera sensor | 0.263 (0.105-0.285) | 0.95 / 2.48 GB | no camera topics in Gazebo; `gz sim` 120 % |
+| 4 iris, no `joint_states` or `imu` in the bridge | 0.250 (0.092-0.296) | 0.71 / 2.24 GB | both are published every step |
+| 4 iris, 2 ms physics step | 0.479 (0.182-0.559) | 0.72 / 2.25 GB | arming then fails, see below |
+
+The old numbers (Nov 4: 0.46 and 0.11) came from `rtf.sh`, which uses upstream's full bridge (camera, `gz/tf`, clock) and had no working readiness check. Today's are about twice as high. The cause of the difference was not isolated (no `camera:=true` run).
+
+**Where the time goes.** At 4 iris, `top -H` shows Gazebo's main thread at 81.5 % of a core and every other Gazebo thread under 6 %, with total CPU about 215 % of 600 %. So the machine is not short of cores: one thread is. That thread spends about 0.85 ms of CPU per drone per physics step (physics, the per-drone plugins and sensors), and RTF follows about 1 / (N x 1 ms): 0.96, 0.25 for 1 and 4. That is why the three D23 candidates move RTF by 10 % or less: none of them runs on that thread. Profiling the thread was not possible (no `CAP_SYS_PTRACE` in the container; host `perf` needs root).
+
+D23 candidates:
+
+- **No MAVProxy:** +7 %, inside the run-to-run spread. Not worth a patched upstream launch. The suppressed P3 finding about MAVProxy can close: it is off the critical path.
+- **More free RAM:** not measured with WinBoat running. Swap use stayed at 747 MB and did not grow in any run, and the bottleneck is one CPU thread, so RAM is not the limit at 4 iris with the VM stopped. Starting the 3 GB VM would leave about 0 free at 4 iris, which would add swapping; keep it stopped (gotcha 42).
+- **Camera-free follower:** +10 % idle, inside the spread. Checked against the plan first: the roadmap's ground-truth detector already uses "no camera rendering", but `leader_node` reads intrinsics from `/camera/camera_info`, which the camera sensor publishes, and the YOLO stretch and `landing_node` need images. Since it buys no speed, the design question does not need answering. Keep the camera.
+- **Not a D23 candidate, tried because the per-step cost pointed at it: a 2 ms physics step.** Half the steps per sim second, so twice the RTF (0.479 at 4 iris). With nothing else changed, every drone refused to arm for 240 s: `Arm: Gyro 0 rate 500Hz < loop rate*1.8 720Hz` and `Main loop slow (333Hz < 400Hz)`. ArduCopter runs its main loop at 400 Hz and wants IMU samples at 1.8 x that; a 2 ms step gives 500 Hz. Adding `SCHED_LOOP_RATE 250` (500 >= 450) before the `dds_*.parm` files fixed it.
+
+Flights with the 2 ms step and a 250 Hz loop (full `swarm.launch.py` patched by `rtf_variant.py step2`, `swarm_watch.py`):
+
+| | 3 followers | 4 followers |
+|---|---|---|
+| `/clock` gate | +7.2 s wall, sim/wall 0.61 | run 1: 0 messages in 180 s, gate shut the launch down; run 2: +8.0 s, 0.35 |
+| All ARRIVED on distinct sectors | 57 s wall from launch (1 ms: 88-103 s) | run 2: 49 s after the watcher started, which was 30 s after launch |
+| Sectors | (3,4), (6,1), (1,6), the session-4 ones | (3,4), (6,1), (1,6), (3,0) |
+| Goal changes | 0, 0, 0 | 0, 1, 1, 1 (lower-sysid yields, D24; 6 s with a shared goal) |
+| Hover height | exactly 10.0, 12.0, 14.0 m | exactly 10, 12, 14, 16 m |
+| RTF while hovering | 0.72-0.74 (1 ms, session 4: 0.38) | 0.52-0.55 |
+
+Run 1 at 4 followers is the gotcha-33 symptom (ROS `/clock` silent while all 4 SITLs had "JSON received"), the first time under `swarm.launch.py`; Gazebo's own `/clock` was not checked in that run. In run 2 it was publishing. The gate did its job.
+
+A leader plus 3 is 4 drones: at hover RTF 0.53 a 5 sim-minute mission is about 9.5 wall minutes, against about 13 at 0.38 and 20 at 0.25 with the 1 ms step.
+
+Not done or not shown: one flight per configuration (two at 4, one of which never started). Only takeoff, a straight transit and hover were flown at 2 ms / 250 Hz; not shown: fast manoeuvres, wind, long runs, precision landing, or camera pointing during sideways flight. The step did not change sensor rates below 500 Hz (navsat, odometry, camera 10 Hz). Each `/clock` subscriber costs more as RTF rises (session 4), not re-measured. Not measured: 1 ms with followers at 4 drones, so the hover comparison at 4 is against the idle number.
+
+**D37 (open, for the user):** adopt the 2 ms step with `SCHED_LOOP_RATE 250` as the swarm default, or keep 1 ms and take D23's fallback (fewer drones in Gazebo, or longer runs cut for video). Not decided in the timebox.
+
 ## NOT in scope
 
 - Potential-field layer: altitude layers cover the sim (D5); revisit if a same-altitude flight is ever needed.
@@ -1419,7 +1468,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R25 (D30)
   - Files: a project mount params file, `src/uav_mapping/launch/heatmap.launch.py`
   - Verify: marker test places the below-drone marker at image centre
-- [ ] **T7 (P2, human: ~2h / CC: ~30min)** — sim — speed timebox
+- [x] **T7 (P2, human: ~2h / CC: ~30min)** — sim — speed timebox (done 2026-11-16, see session 6 notes; the fix it found waits on D37)
   - Surfaced by: R18 (D23)
   - Files: none expected, launch settings if a fix is found
   - Verify: re-measured RTF at 1 and 4 iris with a working readiness check
@@ -1433,7 +1482,9 @@ Effort assumes features at about 30x and tests at about 50x human-to-CC time, ad
 
 ## Unresolved decisions
 
-None. N in the D32 confirmation rule and the D14 thresholds are provisional values by decision, not open questions.
+- **D37 (2026-11-16, T7):** make the 2 ms physics step with `SCHED_LOOP_RATE 250` the swarm default, or keep 1 ms and take D23's fallback. Evidence in the session 6 notes.
+
+Otherwise none. N in the D32 confirmation rule and the D14 thresholds are provisional values by decision, not open questions.
 
 ## Completion summary
 
@@ -1454,7 +1505,7 @@ None. N in the D32 confirmation rule and the D14 thresholds are provisional valu
 ## Suppressed findings
 
 - [P3] (confidence: 4/10) `docker/Dockerfile:62` says CycloneDDS is recommended for AP_DDS, yet services hang under it. Possibly a version-specific issue; not investigated.
-- [P3] (confidence: 4/10) Three `mavproxy.py` processes run in the SITL launch at about 9% CPU each, against the "no MAVProxy in the runtime path" rule. Considered in the D23 timebox.
+- [P3] (confidence: 4/10) Three `mavproxy.py` processes run in the SITL launch at about 9% CPU each, against the "no MAVProxy in the runtime path" rule. Measured in the D23 timebox (session 6): removing them raised RTF by about 7 %, inside the spread. Left as upstream ships it.
 - [P3] (confidence: 3/10) `localization_node.py:159` (`up = alt - self._alt0`): z = 0 sits 0.19 m above ground with the first-fix latch; the shared datum may remove this. Negligible at 10 m.
 
 ## GSTACK REVIEW REPORT
