@@ -141,7 +141,7 @@ Verified on the rebuilt image during the planner review. Full evidence is in `do
 25. **Two namespaces, not one.** Gazebo bridge topics are `/iris_N/*`, autopilot topics and services are `/ap/vN/*` with N = sysid. Nothing is at `/iris_N/ap/...`. `ros2 topic list` right after launch can miss `/ap/` entirely while discovery settles, so don't conclude anything from one early listing.
 26. **`/ap/vN/goal_lla` is output, not a command.** `AP_DDS_Topic_Table.h` has it as a `DataWriter`. It echoes the accepted target. The command is `/ap/vN/cmd_gps_pose` (`ardupilot_msgs/GlobalPosition`, BEST_EFFORT + VOLATILE).
 27. **`cmd_gps_pose` fails silently in two ways.** `AP_DDS_ExternalControl.cpp` drops it unless `header.frame_id` is exactly `"map"`, and `ready_for_external_control` drops it unless GUIDED and armed. Neither replies, and the subscriber count still shows 1. Use `FRAME_GLOBAL_REL_ALT`: Gazebo navsat altitude reads 10.2 where the autopilot reads 584.2. One message is enough to fly the whole way (tested under CycloneDDS only), so stopping publication doesn't stop a flight.
-28. **The iris camera is on a gimbal, not fixed.** The bridge's `/camera/*` comes from `pitch_link` on `iris_with_gimbal`. It sits 52 deg off nadir, with the horizon and the drone's own leg in frame, and stays there when armed and flying (joints -120, -30, 135 deg). Measured `mount_quat` [0.3269, 0.8365, 0.4187, -0.1346] matched spawned markers to 0-4 px; the nadir default missed by 205-265 px. Publishing to `/gimbal/cmd_*` over `gz topic` left the joints unchanged. Setting it through ArduPilot mount params hasn't been tried.
+28. **The iris camera is on a gimbal, not fixed.** The bridge's `/camera/*` comes from `pitch_link` on `iris_with_gimbal`. It sits 52 deg off nadir, with the horizon and the drone's own leg in frame, and stays there when armed and flying (joints -120, -30, 135 deg). Measured `mount_quat` [0.3269, 0.8365, 0.4187, -0.1346] matched spawned markers to 0-4 px; the nadir default missed by 205-265 px. Publishing to `/gimbal/cmd_*` over `gz topic` left the joints unchanged. **Fixed 2026-11-16 (T6)** with ArduPilot mount params, `uav_planning/config/gimbal_nadir.parm`: see gotchas 39-40.
 29. **Real-time factor falls fast.** Headless, idle: 1 iris 0.46, 3 iris about 0.25, 4 iris 0.11 (the 1 and 4 runs had no confirmed readiness), on 6 cores and 7.1 GB RAM with swap in use. Cause not established.
 30. **Each extra SITL instance writes `mav_N_1.parm` in the repo root.** All of them are gitignored since 2026-11-09 (`mav*.parm`).
 
@@ -158,6 +158,22 @@ Verified on the rebuilt image during the planner review. Full evidence is in `do
 36. **Do not wrap upstream's `robot.launch.py` in a scoped `GroupAction`.** It reads `use_gz_tf` in an `OnProcessStart` handler that fires after the group has dropped its launch configurations, and the launch dies with "launch configuration 'use_gz_tf' does not exist". Upstream's own `multiagent.launch.py` does not scope; pass every argument explicitly instead.
 37. **Use a new `PythonLaunchDescriptionSource` for every include of the same file.** A source caches the parsed file, so a launch file that creates its `Node`s at parse time (like `follower.launch.py`) hands every include the same objects, and launch fails with "ExecuteLocal action ... executed more than once". Files that build nodes inside an `OpaqueFunction` (like upstream's `robot.launch.py`) are not affected.
 38. **After a host reboot, check the USB data partition before starting Docker.** On 2026-11-12 the daemon (`data-root` `/mnt/docker-data/docker`) came up while the partition was not mounted (only the `/mnt/usb` autofs placeholder), and `docker compose ps` hung past 120 s. Once the USB was mounted, `docker compose up -d` worked. Check with `mount | grep docker-data` first.
+
+## 2026-11-16 camera to nadir notes
+
+39. **A defaults file listed last can silently drop `DDS_USE_NS`.** SITL's `--defaults` takes a comma list, and later files override earlier ones. But `AP_Param` decides whether to run its second pass, the one that applies params registered late such as AP_DDS's, from the last file alone (`done_all_default_params`, set per file). Upstream's list ends with `dds_use_ns.parm`, which triggers that pass. Append a file whose params are all known at boot (like our mount params) and `DDS_USE_NS` stays 0: topics come up as `/ap/*` instead of `/ap/v1/*`, and `arm_takeoff` times out "waiting for /ap/v1/mode_switch". **Keep a `dds_*.parm` file last.** Single-drone nadir run, from a fresh directory (gotcha 40):
+
+    ```bash
+    S=$(ros2 pkg prefix ardupilot_sitl)/share/ardupilot_sitl/config/default_params
+    G=$(ros2 pkg prefix ardupilot_gazebo)/share/ardupilot_gazebo/config
+    N=$(ros2 pkg prefix uav_planning)/share/uav_planning/config/gimbal_nadir.parm
+    ros2 launch ardupilot_gz_bringup iris_runway.launch.py use_gz_sim_gui:=false rviz:=false \
+      defaults:=$S/copter.parm,$G/gazebo-iris-gimbal.parm,$N,$S/dds_udp.parm,$S/dds_use_ns.parm
+    ```
+
+    `swarm.launch.py` builds this order itself.
+40. **A saved `eeprom.bin` beats every defaults file.** A defaults value is applied only if the param is not already in storage. `iris_runway` writes `eeprom.bin` (and `mav.parm`, `logs/`, `terrain/`) into the working directory, so launching from the repo root reuses the old one there (gitignored). Anything ever saved to it, such as a `param set MNT1_...` in MAVProxy, silently overrides our `.parm` files. Launch from a fresh directory (`mkdir -p /tmp/sitl && cd /tmp/sitl`) or delete the old eeprom. The swarm uses per-instance directories.
+41. **In a non-interactive `bash -lc`, a backgrounded `ros2 launch ... &` ignores Ctrl-C.** Background jobs in a non-interactive shell start with SIGINT ignored, so `kill -INT` does nothing and the launch keeps running. Use `timeout -s INT <secs> ros2 launch ...` or `docker compose restart ros2`.
 
 ## Bringing the stack up and down
 

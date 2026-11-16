@@ -163,8 +163,9 @@ picture of the system:
   spikes (97% next to 3%), so stepping to the best neighbour finds nothing. Each
   follower now picks the best open sector anywhere and flies straight there. The
   thesis algorithms stay as measured baselines.
-- **The camera isn't pointing down.** It sits on a gimbal, 52° off vertical, so
-  getting it to nadir is a required task before footprint work.
+- **The camera needed pointing down.** It sits on a gimbal that upstream
+  leaves 52° off vertical. Since 2026-11-16 an ArduPilot mount param file
+  (`uav_planning/config/gimbal_nadir.parm`) holds it straight down.
 - **Commands reach the autopilot on `/ap/vN/cmd_gps_pose`**, and it silently
   ignores anything without `frame_id: "map"`.
 

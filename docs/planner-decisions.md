@@ -1285,6 +1285,39 @@ Lead from session 2 (docker-notes gotcha 33): in 3 of 3 cold starts with the sim
 
 Not done or not shown: 3 runs only. The release was tested on iris_1 alone, and re-enabling after a disable is still not run live. The trimmed bridge's own effect on RTF was not measured. Peers were not tested at 4 drones.
 
+## Implementation notes (session 5, 2026-11-16)
+
+Built: T6, inside the timebox (about 1 h of the 2). These are code facts and measurements, not new decisions; D30's scope is unchanged.
+
+What changed:
+
+- **`src/uav_planning/config/gimbal_nadir.parm`**: `MNT1_DEFLT_MODE 1` (Neutral) and `MNT1_NEUTRAL_X/Y/Z 0, -90, 0`. Upstream's `gazebo-iris-gimbal.parm` sets `MNT1_TYPE 1` (servo gimbal) but leaves the mode at its default 3, RC targeting, and nothing drives RC 6-8 in SITL. Neutral holds the angles in the earth frame (AP_Mount_Servo stabilizes), so the camera points down even when the drone tilts. Param names checked against `/opt/ardupilot/libraries/AP_Mount/AP_Mount_Params.cpp` in this build.
+- **`swarm.launch.py`** inserts that file into every SITL's defaults, right after `gazebo-iris-gimbal.parm` (`_with_nadir`). Single drone: override `iris_runway`'s `defaults` with the same order (command in `docs/docker-notes.md` gotcha 39).
+- **`heatmap.launch.py`** exposes `mount_quat` (default nadir, `[-0.7071, 0.7071, 0, 0]`, `leader_node`'s own default). Default and an override both reach the node as a float array (`ros2 param get`). `leader_node.py:354` is unchanged (D30).
+- **`docs/probes/mount_check.py`** now also prints the view axis's angle from nadir and where each image corner's ray meets the ground.
+
+Evidence (headless `iris_runway`, hovering at 10.19 m, yaw 90 deg):
+
+| | Nov 4, upstream params | Today, `gimbal_nadir.parm` |
+|---|---|---|
+| Gimbal joints roll, pitch, yaw | -30, 135, -120 deg | 0.1, 90.0, 0.0 deg |
+| View axis from nadir | 52.2 deg | 0.0 deg |
+| Marker below the drone (green) | far from centre | (319, 240), 1 px from centre (320, 240) |
+| Nadir-mount prediction error, 3 markers | 205-265 px | 1-4 px |
+| Image corners on the ground | at least one misses (horizon in frame) | all 4: footprint about 31.6 x 23.7 m |
+| Measured `mount_quat` | [0.3269, 0.8365, 0.4187, -0.1346] | [-0.7068, 0.7074, 0.0003, 0.0003] = the nadir default |
+
+The frame shows only the runway and the three markers: no horizon and no landing leg.
+
+Swarm (`swarm.launch.py num_followers:=2`, Chrome open, about 1.3 GB RAM free, so 2 drones, not 3): every SITL's defaults list ended `..., gazebo-iris-gimbal.parm, gimbal_nadir.parm, dds_udp.parm, dds_use_ns.parm`; topics stayed `/ap/v1` and `/ap/v2`; both gimbals read 0.1, 90.0, 0.0 deg. T5 did not regress: both followers ARRIVED on (3,4) and (6,1), the session-4 sectors, 68 and 69 s wall after the first log line, with no goal changes.
+
+**Two traps found on the way** (details in `docs/docker-notes.md` gotchas 39-40):
+
+1. **File order in the defaults list matters.** With `gimbal_nadir.parm` appended last, the mount params loaded but `DDS_USE_NS` stayed 0 and the topics came up as `/ap/*`, not `/ap/v1/*`, so `arm_takeoff` timed out. A control run without the file gave `/ap/v1`. Cause in `AP_Param.cpp`: `read_param_defaults_file` sets `done_all_default_params` per file (line 2398), so only the last file decides it; the second pass that applies params registered later, such as AP_DDS's (line 1722), runs only if that last file had a param not yet registered. `dds_use_ns.parm` last has one; ours does not. Fixed by putting ours before the `dds_*` files.
+2. **A saved eeprom beats every defaults file.** A value is applied from a defaults file only if it is not already in storage (`configured_in_storage()`). `iris_runway` writes `eeprom.bin` to the working directory, and the repo root holds one (gitignored). Any value saved there, `MNT1_*` included, silently overrides `gimbal_nadir.parm`. Today's runs used a fresh directory; the swarm uses per-instance directories.
+
+Not done or not shown: one hover test at 10 m in `iris_runway` and one 2-drone swarm check of joint angles, not the marker test in the swarm (no `camera:=true` run). Pointing while the drone translates or banks was not measured; earth-frame stabilization is from the source. Not run at 3 or 4 drones.
+
 ## NOT in scope
 
 - Potential-field layer: altitude layers cover the sim (D5); revisit if a same-altitude flight is ever needed.
@@ -1380,7 +1413,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: Scope finding 1, finding 4
   - Files: `src/uav_planning/launch/`
   - Verify: 3 followers each hold a different peak on 8x8 (Nov 15)
-- [ ] **T6 (P1, human: ~2h / CC: ~30min)** — sim — camera to nadir and expose `mount_quat`
+- [x] **T6 (P1, human: ~2h / CC: ~30min)** — sim — camera to nadir and expose `mount_quat` (done 2026-11-16, see session 5 notes)
   - Surfaced by: R25 (D30)
   - Files: a project mount params file, `src/uav_mapping/launch/heatmap.launch.py`
   - Verify: marker test places the below-drone marker at image centre
