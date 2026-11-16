@@ -29,6 +29,8 @@ lists all others as peers, and all share one datum (D7). One stub map.
 Launch args:
   num_followers   default 3
   sim             start Gazebo + SITL here (default true)
+  followers       start the followers once /clock flows (default true;
+                  false brings up the sim alone, e.g. to measure RTF)
   camera          bridge each drone's camera (default false)
   spacing         spawn spacing along x, m (default 5.0)
   datum_lat/lon/alt   shared datum: navsat at the world origin, where
@@ -201,6 +203,8 @@ def _follower_actions(context, n):
 def _launch(context):
     n = int(_arg(context, 'num_followers'))
     actions = _sim_actions(context, n) if _arg(context, 'sim').lower() == 'true' else []
+    if _arg(context, 'followers').lower() != 'true':
+        return actions
 
     gate = Node(
         package='uav_planning', executable='wait_for_clock',
@@ -224,6 +228,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('num_followers', default_value='3'),
         DeclareLaunchArgument('sim', default_value='true'),
+        DeclareLaunchArgument('followers', default_value='true'),
         DeclareLaunchArgument('camera', default_value='false'),
         DeclareLaunchArgument('spacing', default_value='5.0'),
         DeclareLaunchArgument('datum_lat', default_value='-35.3632621'),
