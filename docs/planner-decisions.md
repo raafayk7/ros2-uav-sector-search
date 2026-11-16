@@ -28,7 +28,7 @@ Status: decided. T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/
 | Mission end | Sweep done and all unsuppressed sectors under 0.5 for 30 s, or timeout; decided by the mission state machine | D14 |
 | Milestone map | New stub publisher, 8x8 at 5 m, multiple peaks | D19 |
 | Camera | Required before footprints: gimbal to nadir, proven with the marker test, 2 h timebox | D30 |
-| Sim speed | 2 h timebox after Nov 15, before Nov 24 (ran 2026-11-16: Gazebo's main thread is the limit; a 2 ms step doubles RTF, adoption open) | D23, D37 |
+| Sim speed | 2 h timebox after Nov 15, before Nov 24 (ran 2026-11-16: Gazebo's main thread is the limit; a 2 ms step doubles RTF and is the swarm default) | D23, D37 |
 | Checkpoint | Around Nov 20, one follower completes a whole search loop | D33 |
 | Layout | One package, `uav_planning`, with `core/planner.py` | D6 |
 
@@ -1367,7 +1367,22 @@ A leader plus 3 is 4 drones: at hover RTF 0.53 a 5 sim-minute mission is about 9
 
 Not done or not shown: one flight per configuration (two at 4, one of which never started). Only takeoff, a straight transit and hover were flown at 2 ms / 250 Hz; not shown: fast manoeuvres, wind, long runs, precision landing, or camera pointing during sideways flight. The step did not change sensor rates below 500 Hz (navsat, odometry, camera 10 Hz). Each `/clock` subscriber costs more as RTF rises (session 4), not re-measured. Not measured: 1 ms with followers at 4 drones, so the hover comparison at 4 is against the idle number.
 
-**D37 (open, for the user):** adopt the 2 ms step with `SCHED_LOOP_RATE 250` as the swarm default, or keep 1 ms and take D23's fallback (fewer drones in Gazebo, or longer runs cut for video). Not decided in the timebox.
+**D37 (decided 2026-11-16 by the user: adopt):** the 2 ms step with `SCHED_LOOP_RATE 250` is the swarm default; `physics_step:=0.001` keeps upstream timing for any run where fidelity is in doubt. D23's fallback is not needed for now. Applied the same day, see "D37 applied" below.
+
+**D37 applied (2026-11-16, code).** `swarm.launch.py` has a `physics_step` arg, default `0.002`. For 0.002 it writes a copy of the runway world with `max_step_size` 0.002 (same file name, so the world is still `runway`) and adds `uav_planning/config/loop_250hz.parm` (`SCHED_LOOP_RATE 250`) right after `gimbal_nadir.parm`, before the `dds_*.parm` files (gotcha 39). `0.001` uses upstream's world and loop rate unchanged. Any other value fails at launch: only these two have flown, and a different step needs a different loop rate (the gyro rate is 1/step and must be at least 1.8 x the loop rate). The `step2` flag left `docs/probes/rtf_variant.py`, so `rtf_swarm.sh` now measures 2 ms unless given `physics_step:=0.001`.
+
+Flight check, 3 followers, installed launch with no args (`swarm_watch.py 3 240`), 2 cold starts:
+
+| | Run 1 | Run 2 |
+|---|---|---|
+| `/clock` gate | 0 messages in 180 s, launch shut down (gotcha 33) | passed at +10 s wall, sim/wall 0.42; Gazebo `/clock` 792 messages in 3 s, ROS `/clock` 266 Hz |
+| All ARRIVED on distinct sectors | — | about 48 s after launch (session 6 probe: 57 s; 1 ms: 88-103 s) |
+| Sectors, goal changes | — | (3,4), (6,1), (1,6); 0, 0, 0 |
+| Hover height, RTF | — | 10, 12, 14 m exactly; RTF 0.77-0.88 |
+
+Run 1 confirmed the parm order (`...gimbal_nadir.parm,loop_250hz.parm,dds_udp.parm,dds_use_ns.parm`) and that Gazebo loaded the copied world. Its gate failure is the second at 2 ms: across swarm cold starts with followers, ROS `/clock` stayed silent in 2 of 4 at 2 ms and 0 of 3 at 1 ms (session 4). That is too few runs to blame the step, and in neither failure was Gazebo's own `/clock` checked. The cost is one wasted cold start (about 4 wall minutes), and the gate fails loudly, so the recipe stays: restart the container and launch again. Next failure: check `gz topic -e -t /clock` while it is still waiting (gotcha 33).
+
+Not shown at 2 ms / 250 Hz, unchanged from session 6: fast manoeuvres, wind, long runs, precision landing, camera pointing during sideways flight (a T8 verify step; run it at both steps if it fails).
 
 ## NOT in scope
 
@@ -1468,7 +1483,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R25 (D30)
   - Files: a project mount params file, `src/uav_mapping/launch/heatmap.launch.py`
   - Verify: marker test places the below-drone marker at image centre
-- [x] **T7 (P2, human: ~2h / CC: ~30min)** — sim — speed timebox (done 2026-11-16, see session 6 notes; the fix it found waits on D37)
+- [x] **T7 (P2, human: ~2h / CC: ~30min)** — sim — speed timebox (done 2026-11-16, see session 6 notes; its fix is the swarm default, D37)
   - Surfaced by: R18 (D23)
   - Files: none expected, launch settings if a fix is found
   - Verify: re-measured RTF at 1 and 4 iris with a working readiness check
@@ -1482,9 +1497,7 @@ Effort assumes features at about 30x and tests at about 50x human-to-CC time, ad
 
 ## Unresolved decisions
 
-- **D37 (2026-11-16, T7):** make the 2 ms physics step with `SCHED_LOOP_RATE 250` the swarm default, or keep 1 ms and take D23's fallback. Evidence in the session 6 notes.
-
-Otherwise none. N in the D32 confirmation rule and the D14 thresholds are provisional values by decision, not open questions.
+None (D37, the last open one, was decided 2026-11-16). N in the D32 confirmation rule and the D14 thresholds are provisional values by decision, not open questions.
 
 ## Completion summary
 
