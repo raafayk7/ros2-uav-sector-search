@@ -4,7 +4,7 @@ Review target (fixed): the follower planner section of `docs/roadmap.md`, scoped
 
 ## Decisions at a glance
 
-Status: decided. T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07. T3 (node) and T4 (arm helper, stub map) are built and flown as of 2026-11-08: one follower in headless SITL reaches the best stub sector and reports ARRIVED, and disabling holds it. T5 (swarm launch) is built and flown as of 2026-11-12: three followers each hold a different stub peak. Full reasoning is in the ledger below.
+Status: decided. The leader's sweep controller is built and flown as of 2026-11-17 (session 8, D39). T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07. T3 (node) and T4 (arm helper, stub map) are built and flown as of 2026-11-08: one follower in headless SITL reaches the best stub sector and reports ARRIVED, and disabling holds it. T5 (swarm launch) is built and flown as of 2026-11-12: three followers each hold a different stub peak. Full reasoning is in the ledger below.
 
 | Topic | Decision | Ref |
 |---|---|---|
@@ -30,6 +30,7 @@ Status: decided. T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/
 | Camera | Required before footprints: gimbal to nadir, proven with the marker test, 2 h timebox | D30 |
 | Sim speed | 2 h timebox after Nov 15, before Nov 24 (ran 2026-11-16: Gazebo's main thread is the limit; a 2 ms step doubles RTF and is the swarm default) | D23, D37 |
 | Checkpoint | Around Nov 20, one follower completes a whole search loop | D33 |
+| Leader sweep | Arena 8x8 at 5 m (40 x 40 m); 5 m/s (`WP_SPD`); lane spacing from the footprint's short side x 0.8, so coverage holds at any heading; complete = last waypoint reached; never reads detections | D39 |
 | Layout | One package, `uav_planning`, with `core/planner.py` | D6 |
 
 ## Original plan (unchanged copy)
@@ -1429,6 +1430,76 @@ Over 320 frames the detector counted 16 false alarms (5.0 %) and 209 true detect
 
 **Plan-level versus code.** Plan-level: D38 (noise values), the 2 Hz frame rate as a knob, roadmap and TODOS wording. Code: everything under `uav_perception`, the `stub` launch arg, the probe.
 
+## Implementation notes (session 8, 2026-11-17)
+
+Ran: the leader's sweep controller and the T8 verify-first checks (about 2.5 h). One decision by the user; the rest is code and measurements.
+
+**D39 (decided 2026-11-17 by the user: the three recommended options).** Leader sweep:
+
+| Choice | Value | Reason |
+|---|---|---|
+| Arena | 8x8 sectors at 5 m (40 x 40 m), corner origin at home; `leader_node` and `heatmap.launch.py` defaults changed from 4x4 to match | Same grid as the followers' stub map, so leader and follower maps agree. With the sim lens (fx 205.47, gotcha 47) the 8 m footprint is 24.9 x 18.7 m, so the old 20 x 20 m arena is covered by a hover and a sweep there tests almost nothing (2 lanes under this spacing). |
+| Speed | 5 m/s, set as `WP_SPD` by `arm_takeoff wp_speed:=5` (ArduPilot's default is 10) | Each cell stays in view about 3.7 s, about 7 detector frames at 2 Hz. 10 m/s halves that and tilts the drone harder. |
+| Lane spacing | Short footprint side x `overlap` 0.8, half-width 7.48 m at 8 m: 3 lanes at x = 8.33, 20.0, 31.67 | A circle of that radius fits inside the footprint at any heading, so coverage does not depend on ArduPilot's yaw. The long side would give 2 lanes but rely on the drone facing its lane. |
+
+Defaults set with D39 and not separately decided: lanes run north (`lane_axis` north or east); lanes run between the first and last cell-centre rows; the sweep starts at the lane end nearer the drone; one waypoint at a time on `cmd_gps_pose` (D8), resent at 2 Hz; next waypoint within 1.0 m horizontally and at layer; no sideways command before the 8 m layer (D26); `sweep_status` WAITING / SWEEPING / COMPLETE, latched (TRANSIENT_LOCAL), with COMPLETE meaning the last waypoint was reached; after that nothing is sent, so ArduPilot holds. Whether coverage was complete is read from the map (no unknown cells), not claimed by the sweep. The node has no detections subscription: the coverage guarantee holds by construction. `lane_order` ("2,0,1") is a parameter for the prior-biased order later. A design number I gave the user before coding was wrong: I said the 20 x 20 m arena takes one pass; under D39 spacing it takes 2, since the centre span (15 m) just exceeds one strip (2 x 7.48 m). The unit test caught it.
+
+**What was built (code).**
+
+- `uav_planning/core/sweep.py`, ROS-free: footprint half-extents from K and image size, lane half-width, evenly spaced lanes, boustrophedon waypoints (each lane entered at the end nearer the previous point), path length, and `sweep_tick` (WAITING no-plan / no-pose / climbing, SWEEPING flying / advanced, COMPLETE). 55 tests in `test/test_sweep.py`, among them a coverage check that every cell centre falls inside the footprint somewhere on the path at headings 0-180 deg on four grids. `python3 -m pytest src`: 145 passed (90 before).
+- `sweep_node`: plans once from the first `camera_info` and pose, ticks at 2 Hz on wall time (no `/clock` subscriber), warns if no waypoint is reached for 60 s.
+- `arm_takeoff`: optional `wp_speed`, set through `/ap/vN/set_parameters` before GUIDED (AP_DDS saves it; gotcha 52).
+- `launch/sweep.launch.py`: localization, `arm_takeoff` at 8 m and 5 m/s, `sweep_node`.
+- `docs/probes/sweep_live_check.py`: spawns three coloured `target_*` boxes and measures pointing, detection error and the final map during a sweep.
+
+**Live runs (1 iris, headless, 2 ms step, `swarm.launch.py num_followers:=1 followers:=false camera:=true`, detector and `leader_node` with `stub:=false`).** Run 1: `sweep_node` started by hand after a launch-file bug (gotcha 51). Run 2: same bug, discarded. Run 3: cold, everything from `sweep.launch.py`. Targets at (8, 12), (21, 27) and (33, 6), one per lane, in cells (1, 2), (4, 5), (6, 1).
+
+| | Run 1 | Run 3 |
+|---|---|---|
+| SWEEPING to COMPLETE (wall) | 40.0 s | 39.5 s (137 m, 3.5 m/s average with stops) |
+| Waypoints reached | 6/6, within 0.1-1.0 m | 6/6 |
+| Cruise speed seen | 4.7-5.1 m/s | 5.0 m/s max |
+| Cruise heading (pose yaw) | not logged | 90 deg on north lanes, -90 on south lanes, 0 on cross moves: ArduPilot faces each waypoint (`WP_YAW_BEHAVIOR` default) |
+
+**1. Pointing in motion (the T6 verify-first step): passed.** Marker centroid in each camera frame against the nadir prediction from odometry interpolated at the frame's own stamp (odometry every 20 ms):
+
+| Frames | Run 1 | Run 3 |
+|---|---|---|
+| Hover (< 0.5 m/s) | n 5, median 3.9 px, max 4.5 | not valid: the bin held 23 frames on the ground (z 0.2 m) where something coloured was in view; the probe now drops frames below 5 m |
+| Accelerating (0.5-3 m/s) | n 37, median 3.3, max 6.4 | n 42, median 4.5, max 6.8 |
+| Cruise (> 3 m/s) | n 141, median 3.1, p90 5.9, max 7.0 | n 150, median 3.3, p90 5.9, max 7.0 |
+| Body tilt 8 deg or more | n 74, median 4.0, max 6.4 | n 85, median 4.1, max 6.8 |
+
+7 px at 8 m is about 0.27 m on the ground (2 deg of pointing), against 5 m cells, so the gimbal holds nadir in translation at 5 m/s. Since it passed at the 2 ms step, the 1 ms rerun that T8 asked for on failure was not needed.
+
+**2. Moving-drone detection lag: no misses from lag at 5 m/s.** Every `/detections` box with score at least 0.5, projected with the latest `/pose` as `leader_node` does. Run 3 split hits from false alarms (over 3 m from every target): cruise hits n 32, median 0.2 m, max 0.7 m, with 4 false alarms; hover and accelerating hits median 0.2-0.3 m. Run 1, unsplit, also had a median of 0.3 m. Why so small: the detector and `leader_node` both use the latest `/pose`, so the pose a box was made with and the pose it is projected with are a few ms apart and the lag cancels. A real camera (YOLO) would not cancel: its image belongs to its own stamp.
+
+**3. The map after the sweep: complete coverage.**
+
+| | Run 1 | Run 3 |
+|---|---|---|
+| Target cells | 96, 96, 97 | 97, 96, 97 |
+| Empty cells unknown | 0 of 61 | 0 of 61 |
+| Empty cells above 50 | 0 | 0 |
+| Empty cells median / max | 3 / 28 | 3 / 35 |
+
+The higher empty values (10-35) sit in columns 0 and 7. Their centres are 5.8 m from a lane and only one lane sees them, so they get about half the negative frames of the middle columns, and one false alarm moves them further. All stay below D14's 0.5.
+
+**Not shown, with scope and home** (session 8's scope was one leader sweeping alone):
+
+| Gap | Home |
+|---|---|
+| The leader alongside followers: `swarm.launch.py` has no leader role, and the Nov 20 loop needs a leader at 8 m and a follower at 10 m in one sim | T8 session 9, with `belief_map_node` |
+| Edge columns end at 10-35, not 3 (one lane, fewer frames) | T8 session 9: R29 evidence per frame and D32's N in `belief_map_node`'s update |
+| Lag with a real camera (image at its own stamp) | YOLO stretch (`perception_node`): project with the pose at the image stamp |
+| Speeds above 5 m/s, wind, the 1 ms step | not needed unless D39's speed changes |
+| `WP_SPD` persisting in a reused instance directory (gotcha 52) | read from source only; every documented run uses a fresh directory |
+| Pausing or re-tasking the sweep (no enable topic) | mission state machine, session 10+, if it needs one |
+| Prior-biased lane order (`lane_order` exists, nothing sets it) | language prior, after the go/no-go |
+| Sweep time vs timeout (roadmap open question) | lane flight takes about area / (14.96 m x 5 m/s), 40 s here; a 15-minute timeout binds only near 250 m a side. Recorded in the roadmap; the eval decides the arena |
+
+**Plan-level versus code.** Plan-level: D39 (arena, speed, spacing), the defaults listed with it, the roadmap and T8 wording. Code: `core/sweep.py`, `sweep_node`, `sweep.launch.py`, `arm_takeoff`'s `wp_speed`, the 8x8 default in `leader_node` and `heatmap.launch.py`, the probe.
+
 ## NOT in scope
 
 - Potential-field layer: altitude layers cover the sim (D5); revisit if a same-altitude flight is ever needed.
@@ -1532,17 +1603,17 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R18 (D23)
   - Files: none expected, launch settings if a fix is found
   - Verify: re-measured RTF at 1 and 4 iris with a working readiness check
-- [ ] **T8 (P1, human: ~half day / CC: ~30min)** — integration — Nov 20 search checkpoint, with sweep controller and detector in the D33 order (detector built 2026-11-17, session 7; sweep controller, `belief_map_node` and footprints remain; carried into it from session 7: per-drone detector wiring and the `gz` query cost with several detectors, and detector pose lag while the drone moves)
+- [ ] **T8 (P1, human: ~half day / CC: ~30min)** — integration — Nov 20 search checkpoint, with sweep controller and detector in the D33 order (detector built 2026-11-17, session 7; sweep controller built and flown 2026-11-17, session 8, D39; `belief_map_node`, footprints and a leader role in the swarm launch remain; carried into it from session 7: per-drone detector wiring and the `gz` query cost with several detectors; detector pose lag while moving was checked in session 8: no misses at 5 m/s)
   - Surfaced by: R28 (D33), R27 (D32)
   - Files: to be set by that work
   - Verify: one follower completes observe, update, depart, find
-  - Verify first (carried from T6): run `docs/probes/mount_check.py` while the drone flies sideways at sweep speed, and check the marker error stays near the hover result (1-4 px). The gimbal's earth-frame hold while banking is only read from ArduPilot source; footprints taken in motion land in the wrong place silently if it fails.
+  - [x] Verify first (carried from T6): marker error while the drone flies sideways at sweep speed stays near the hover result. Done 2026-11-17 with `docs/probes/sweep_live_check.py`: cruise at 5 m/s median 3.1-3.3 px, max 7.0, in two runs (session 8 notes).
 
 Effort assumes features at about 30x and tests at about 50x human-to-CC time, adjusted down for ROS integration.
 
 ## Unresolved decisions
 
-None (D37, the last open one, was decided 2026-11-16). N in the D32 confirmation rule and the D14 thresholds are provisional values by decision, not open questions.
+None (D39, the sweep, was decided 2026-11-17). N in the D32 confirmation rule and the D14 thresholds are provisional values by decision, not open questions.
 
 ## Completion summary
 
