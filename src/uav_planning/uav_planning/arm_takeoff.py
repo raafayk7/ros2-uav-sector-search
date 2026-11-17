@@ -1,5 +1,10 @@
 """arm_takeoff: GUIDED, arm, take off to a layer through /ap/vN/*, then exit.
 
+With ``wp_speed`` > 0 it first sets the autopilot's horizontal waypoint speed
+(``WP_SPD``, m/s; ArduPilot's default is 10) through /ap/vN/set_parameters.
+The leader uses this for its 5 m/s sweep (D39). AP_DDS saves the value, so it
+persists in that SITL instance's eeprom.bin (docker-notes gotcha 40).
+
 One per drone, run once at mission start (D15). It exists so that
 follower_planner_node never calls a service: /ap/vN/* services hang under the
 container's default CycloneDDS, so this process alone runs on Fast DDS. The
@@ -22,6 +27,8 @@ from rclpy.qos import qos_profile_sensor_data
 
 from ardupilot_msgs.srv import ArmMotors, ModeSwitch, Takeoff
 from geometry_msgs.msg import PoseStamped
+from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue
+from rcl_interfaces.srv import SetParameters
 
 COPTER_GUIDED = 4  # https://mavlink.io/en/messages/ardupilotmega.html#COPTER_MODE
 
@@ -35,6 +42,7 @@ class ArmTakeoff(Node):
         self.declare_parameter('tolerance', 0.5)   # D26 layer tolerance
         self.declare_parameter('timeout', 180.0)   # wall seconds, whole run
         self.declare_parameter('retry_period', 2.0)
+        self.declare_parameter('wp_speed', 0.0)    # m/s; 0 leaves WP_SPD alone
 
         g = self.get_parameter
         n = int(g('sysid').value)
@@ -42,6 +50,7 @@ class ArmTakeoff(Node):
         self.tolerance = float(g('tolerance').value)
         self.deadline = time.monotonic() + float(g('timeout').value)
         self.retry = float(g('retry_period').value)
+        self.wp_speed = float(g('wp_speed').value)
 
         rmw = os.environ.get('RMW_IMPLEMENTATION', '')
         if rmw != 'rmw_fastrtps_cpp':
@@ -52,6 +61,7 @@ class ArmTakeoff(Node):
         self.mode = self.create_client(ModeSwitch, f'/ap/v{n}/mode_switch')
         self.arm = self.create_client(ArmMotors, f'/ap/v{n}/arm_motors')
         self.takeoff = self.create_client(Takeoff, f'/ap/v{n}/experimental/takeoff')
+        self.params = self.create_client(SetParameters, f'/ap/v{n}/set_parameters')
         # Height above the EKF origin (home), ENU z up. Sensor QoS accepts
         # whatever AP_DDS offers.
         self.z = None
@@ -89,6 +99,14 @@ class ArmTakeoff(Node):
             rclpy.spin_once(self, timeout_sec=0.1)
 
     def run(self) -> bool:
+        if self.wp_speed > 0 and not self._call_until(
+                self.params, SetParameters.Request(parameters=[Parameter(
+                    name='WP_SPD', value=ParameterValue(
+                        type=ParameterType.PARAMETER_DOUBLE,
+                        double_value=self.wp_speed))]),
+                lambda r: r.results and all(x.successful for x in r.results),
+                f'WP_SPD {self.wp_speed} m/s'):
+            return False
         if not self._call_until(
                 self.mode, ModeSwitch.Request(mode=COPTER_GUIDED),
                 lambda r: r.status and r.curr_mode == COPTER_GUIDED, 'GUIDED'):

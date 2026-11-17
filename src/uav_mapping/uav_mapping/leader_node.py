@@ -24,10 +24,12 @@ DESIGN DECISIONS (settled with Raafay this session)
 
 * Geometry (thesis-matched, all launch params):
     - resolution = 5.0 m/cell      (thesis 5 m markers ~ 1 marker per sector)
-    - grid_width = grid_height = 4  (4 x 4 over the 20 x 20 m thesis arena)
+    - grid_width = grid_height = 8  (8 x 8, a 40 x 40 m arena, D39; the
+      thesis arena was 4 x 4 = 20 x 20 m, which the sim's wide lens covers
+      from one hover)
     - origin = (0, 0) by default    (CORNER placement: home at cell [0,0]'s
       corner, grid extends +x/+y, matching the thesis leader that takes off
-      from a corner and sweeps). Centered-on-home is origin:=(-10, -10).
+      from a corner and sweeps). Centered-on-home is origin:=(-20, -20).
   Changing resolution / grid_width / grid_height reshapes the grid with no
   code change.
 
@@ -165,11 +167,11 @@ class LeaderNode(Node):
 
         # ---- Grid geometry (thesis-matched defaults; all reshape-safe).
         self.declare_parameter('resolution', 5.0)      # m per cell
-        self.declare_parameter('grid_width', 4)        # cells (x / East)
-        self.declare_parameter('grid_height', 4)       # cells (y / North)
+        self.declare_parameter('grid_width', 8)        # cells (x / East, D39)
+        self.declare_parameter('grid_height', 8)       # cells (y / North, D39)
         # OccupancyGrid origin = world (x, y) of cell [0,0]'s lower-left corner.
         # Default (0, 0) = CORNER placement (home at the corner, thesis-style).
-        # Centered-on-home: origin_x:=-10.0 origin_y:=-10.0 for a 20x20 m grid.
+        # Centered-on-home: origin_x:=-20.0 origin_y:=-20.0 for a 40x40 m grid.
         self.declare_parameter('origin_x', 0.0)
         self.declare_parameter('origin_y', 0.0)
 

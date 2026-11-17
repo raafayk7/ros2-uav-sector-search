@@ -35,8 +35,9 @@ WAITING = 'WAITING'
 SWEEPING = 'SWEEPING'
 COMPLETE = 'COMPLETE'
 
-# Lanes along y run North-South (spaced in x); along x, East-West.
-LANE_AXES = ('y', 'x')
+# Lane direction: 'north' lanes run North-South (spaced in x), 'east' lanes
+# East-West. Not 'y'/'x': ROS's parameter YAML parser reads a bare y as true.
+LANE_AXES = ('north', 'east')
 
 Point = Tuple[float, float]
 
@@ -85,14 +86,14 @@ def _centre_span(origin: float, cells: int, resolution: float) -> Tuple[float, f
     return origin + 0.5 * resolution, origin + (cells - 0.5) * resolution
 
 
-def lanes(grid: GridSpec, half_width: float, axis: str = 'y') -> List[Tuple[Point, Point]]:
+def lanes(grid: GridSpec, half_width: float, axis: str = 'north') -> List[Tuple[Point, Point]]:
     """Each lane as its two end points, in lane-index order (West to East for
-    axis 'y', South to North for axis 'x')."""
+    'north' lanes, South to North for 'east' lanes)."""
     if axis not in LANE_AXES:
         raise ValueError(f"axis must be one of {LANE_AXES}, got {axis!r}")
     xs = _centre_span(grid.origin_x, grid.width, grid.resolution)
     ys = _centre_span(grid.origin_y, grid.height, grid.resolution)
-    if axis == 'y':
+    if axis == 'north':
         return [((x, ys[0]), (x, ys[1])) for x in lane_positions(*xs, half_width)]
     return [((xs[0], y), (xs[1], y)) for y in lane_positions(*ys, half_width)]
 
@@ -102,7 +103,7 @@ def _dist(a: Point, b: Point) -> float:
 
 
 def plan_sweep(grid: GridSpec, half_width: float, start: Point,
-               axis: str = 'y',
+               axis: str = 'north',
                lane_order: Optional[Sequence[int]] = None) -> List[Point]:
     """The sweep's waypoints, two per lane.
 

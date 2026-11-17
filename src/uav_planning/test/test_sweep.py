@@ -75,15 +75,15 @@ def test_lanes_run_between_the_end_cell_centres():
         assert (a[1], b[1]) == (2.5, 37.5)
 
 
-def test_lanes_along_x_run_east_west():
-    ls = lanes(ARENA, HW, axis='x')
+def test_east_lanes_run_east_west():
+    ls = lanes(ARENA, HW, axis='east')
     assert len(ls) == 3
     assert all(a[0] == 2.5 and b[0] == 37.5 and a[1] == b[1] for a, b in ls)
 
 
 def test_unknown_axis_is_rejected():
     with pytest.raises(ValueError):
-        lanes(ARENA, HW, axis='z')
+        lanes(ARENA, HW, axis='y')
 
 
 def test_offset_origin_shifts_the_lanes():

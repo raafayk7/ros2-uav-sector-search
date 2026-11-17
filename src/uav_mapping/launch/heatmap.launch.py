@@ -22,10 +22,10 @@ Key args
   heatmap_topic     output map           (default /heatmap, project-level)
   arena_frame       frame_id on /heatmap (default arena)
   resolution        m per cell           (default 5.0  -- thesis sector size)
-  grid_width        cells in x/East      (default 4)
-  grid_height       cells in y/North     (default 4)
+  grid_width        cells in x/East      (default 8, D39)
+  grid_height       cells in y/North     (default 8, D39)
   origin_x/origin_y grid corner in world (default 0,0 -- CORNER placement,
-                                          thesis-style; -10,-10 = centered)
+                                          thesis-style; -20,-20 = centered)
   stub              start the fake detection stub (default true; false when
                     uav_perception's ground_truth_detector publishes /detections,
                     or both fight over the topic)
@@ -67,8 +67,8 @@ def generate_launch_description():
         DeclareLaunchArgument('heatmap_topic', default_value='/heatmap'),
         DeclareLaunchArgument('arena_frame', default_value='arena'),
         DeclareLaunchArgument('resolution', default_value='5.0'),
-        DeclareLaunchArgument('grid_width', default_value='4'),
-        DeclareLaunchArgument('grid_height', default_value='4'),
+        DeclareLaunchArgument('grid_width', default_value='8'),
+        DeclareLaunchArgument('grid_height', default_value='8'),
         DeclareLaunchArgument('origin_x', default_value='0.0'),
         DeclareLaunchArgument('origin_y', default_value='0.0'),
         DeclareLaunchArgument('stub', default_value='true'),
