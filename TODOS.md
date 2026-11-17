@@ -8,11 +8,11 @@
 
 **Why:** One false detection held in view for about 5 frames reaches 97% and would pull followers. The D32 confirmation rule (N consecutive frames) has the same exposure.
 
-**Context:** `src/uav_mapping/uav_mapping/leader_node.py:374` adds a full update per frame. Observed live on 2026-11-04: hit cell at 97 and swept cells at 3 within seconds. Decide when writing `belief_map_node`'s update step, using the ground-truth detector's noise settings. See R29 in `docs/planner-decisions.md`.
+**Context:** Detector noise is now set (session 7, D38: miss 0.20, false alarm 0.05 per frame, 2 Hz frames), so this can be decided. `src/uav_mapping/uav_mapping/leader_node.py:374` adds a full update per frame. Observed live on 2026-11-04: hit cell at 97 and swept cells at 3 within seconds. Decide when writing `belief_map_node`'s update step, using the ground-truth detector's noise settings. See R29 in `docs/planner-decisions.md`.
 
 **Effort:** S
 **Priority:** P2
-**Depends on:** ground-truth detector noise settings
+**Depends on:** `belief_map_node` design (detector noise settings exist since 2026-11-17)
 
 ### Empty frames must reach the map
 
@@ -20,7 +20,7 @@
 
 **Why:** `leader_node` lowers sectors only inside its detections callback. A quiet detector means sectors never drop, followers park on stale values, and nothing reports an error.
 
-**Context:** `src/uav_mapping/uav_mapping/leader_node.py:332` and `:378`. `fake_detection_publisher` always publishes, so current runs cannot show this. Apply when writing the ground-truth detector. See R30 in `docs/planner-decisions.md`.
+**Context:** `src/uav_mapping/uav_mapping/leader_node.py:332` and `:378`. `fake_detection_publisher` always publishes, so current runs cannot show this. Applied in `ground_truth_detector` (2026-11-17, publishes empty arrays, checked live); still binds any future detector, YOLO included, until footprints replace this path. See R30 in `docs/planner-decisions.md`.
 
 **Effort:** S
 **Priority:** P2

@@ -15,6 +15,7 @@ Throwaway scripts behind the numbers in `docs/planner-decisions.md`. They are ev
 | `follower_watch.py ROBOT SYSID [SECS]` | Pose, `planner_status` and `goal_sector` once a second; the evidence for the first flight and the disable hold (2026-11-08) | T3, T4 |
 | `swarm_watch.py [N] [SECS]` | Status, goal sector and height for N followers once a second; summary of first all-ARRIVED, goal changes and shared goals (2026-11-12) | T5 |
 | `peer_release.py [ROBOT]` | Kills one follower's planner, then its localization, and times the sector release in sim seconds (2026-11-12) | T5, D21, D25 |
+| `detector_live_check.py [x,y ...]` | Prints `/heatmap` next to which cells the camera covers and which hold a target (give the target positions as `x,y` args); run inside the container with a hovering drone, `ground_truth_detector` and `leader_node` up (2026-11-17) | session 7 |
 | `cmd_gps_pose_probe.py` | One `cmd_gps_pose` flies a drone and `goal_lla` echoes it. Needs a 3-iris swarm, with `iris_2` in GUIDED and airborne | R2 |
 
 Limits: pure Python, no flight dynamics, equal peaks only (see `TODOS.md`).

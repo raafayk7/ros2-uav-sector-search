@@ -26,6 +26,9 @@ Key args
   grid_height       cells in y/North     (default 4)
   origin_x/origin_y grid corner in world (default 0,0 -- CORNER placement,
                                           thesis-style; -10,-10 = centered)
+  stub              start the fake detection stub (default true; false when
+                    uav_perception's ground_truth_detector publishes /detections,
+                    or both fight over the topic)
   standalone        stub emits camera_info too (default false)
   det_u/det_v       stub detection pixel (default 320, 240)
   det_score         stub detection score (default 0.9)
@@ -40,6 +43,7 @@ Key args
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
@@ -67,6 +71,7 @@ def generate_launch_description():
         DeclareLaunchArgument('grid_height', default_value='4'),
         DeclareLaunchArgument('origin_x', default_value='0.0'),
         DeclareLaunchArgument('origin_y', default_value='0.0'),
+        DeclareLaunchArgument('stub', default_value='true'),
         DeclareLaunchArgument('standalone', default_value='false'),
         DeclareLaunchArgument('det_u', default_value='320.0'),
         DeclareLaunchArgument('det_v', default_value='240.0'),
@@ -103,6 +108,7 @@ def generate_launch_description():
         executable='fake_detection_publisher',
         name='fake_detection_publisher',
         output='screen',
+        condition=IfCondition(lc('stub')),
         parameters=[{
             'detections_topic': lc('detections_topic'),
             'camera_info_topic': lc('camera_info_topic'),

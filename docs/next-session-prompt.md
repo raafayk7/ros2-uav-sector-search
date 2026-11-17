@@ -1,61 +1,60 @@
-# Next-session prompt: ground-truth detector (session 7)
+# Next-session prompt: sweep controller (session 8)
 
 Paste the block below to open the next session. Replace this file after each session.
 
 ## Where the plan stands
 
-T7 is done (2026-11-16, the D23 timebox). With readiness confirmed, idle RTF is 0.96 at 1 iris and 0.24 at 4. The limit is Gazebo's main thread, at about 1 ms of CPU per drone per 1 ms physics step. MAVProxy, the camera and RAM each changed RTF by 10 % or less, so the camera stays. A 2 ms physics step with `SCHED_LOOP_RATE 250` doubled RTF and flew 3 and 4 followers to ARRIVED (hover RTF 0.72 and 0.53). The user adopted it (D37), and it is now `swarm.launch.py`'s default (`physics_step`, 0.002; `physics_step:=0.001` for upstream timing). Flight check: 3 followers ARRIVED about 48 s after launch on (3,4), (6,1), (1,6), hover RTF 0.77-0.88. The 4-iris gimbal check passed: all four at roll 0.1, pitch 90.0, yaw 0.0 deg.
+Session 7 is done (2026-11-17). The ground-truth detector exists: package `uav_perception`, node `ground_truth_detector`, ROS-free core with 18 tests (`python3 -m pytest src`: 90 passed). It reads `target_*` model poses from Gazebo, projects them into the drone's camera, applies the noise the user agreed (D38: miss 0.20, false alarm 0.05 per frame, 5 px, 2 Hz frames), and publishes `/detections` on every frame, empty ones included. Checked live with one hovering iris against `leader_node`: the cell holding a target went to 97, covered empty cells to 3, uncovered cells stayed unknown, and removing the target dropped its cell from 97 to 3 in about 35 s. The sim camera is 640x480, fx 205.47, 10 Hz (a 31 x 23 m footprint at 10 m), not the lens the stub assumed.
 
-What is left before the Nov 20 checkpoint and Nov 24 (build order from `docs/roadmap.md`): ground-truth detector, sweep controller, `belief_map_node` + footprints, the Nov 20 search loop (T8), then the mission state machine. At 12-15 h a week, Nov 20 is likely to slip by a few days, and the state machine may slip past Nov 24 (already expected in the roadmap).
+What is left before the Nov 20 checkpoint and Nov 24 (build order from `docs/roadmap.md`): sweep controller, `belief_map_node` + footprints, the Nov 20 search loop (T8), then the mission state machine. At 12-15 h a week, Nov 20 is likely to slip by a few days, and the state machine may slip past Nov 24 (already expected in the roadmap).
 
 | Session | Work | Tasks | Model | Why that model | Time |
 |---|---|---|---|---|---|
-| 1-5 (done 2026-11-07 to 11-16) | Datum, library, node, first flight, swarm, camera at nadir | T1-T6 | mixed | see git history | ~12.5 h |
-| 6 (done 2026-11-16) | Sim speed timebox: Gazebo's main thread is the limit; 2 ms step doubles RTF, adopted as the default (D37) | T7 | Opus | Diagnosis across Gazebo, SITL and DDS | ~2.5 h |
-| **7 (this prompt)** | Ground-truth detector (Gazebo target poses + noise, every frame including empty) | part of T8 | **Sonnet** | Specified in the roadmap; a node and tests, once the user picks noise values | ~2.5 h |
-| 8 | Sweep controller for the leader; marker test during sideways flight before footprints are trusted | T8 | Opus | Live flight, and the pointing check can fail silently | ~3 h |
-| 9 | `belief_map_node` + footprints, Nov 20 search loop | T8 | Opus | Integration across nodes in live SITL | ~3-4 h |
+| 1-6 (done 2026-11-07 to 11-16) | Datum, library, node, first flight, swarm, nadir camera, sim speed | T1-T7 | mixed | see git history | ~15 h |
+| 7 (done 2026-11-17) | Ground-truth detector, noise agreed (D38), checked live against `leader_node` | part of T8 | Sonnet | Specified in the roadmap; a node and tests | ~2.5 h |
+| **8 (this prompt)** | Sweep controller for the leader; marker test during sideways flight before footprints are trusted | T8 | **Opus** | Live flight, and the pointing check can fail silently | ~3 h |
+| 9 | `belief_map_node` + footprints, Nov 20 search loop; decide R29 (repeated frames) and D32's N here | T8 | Opus | Integration across nodes in live SITL | ~3-4 h |
 | 10+ | Mission state machine (Nov 24, may slip) | — | Opus | End-to-end debugging | ~4 h |
 
 ---
 
-Continuing the multi-agent UAV ROS 2 rebuild: session 7. Three followers fly in headless SITL and each hold a different stub peak (`swarm.launch.py`, T5). Every camera points straight down (T6). Sim speed is understood (T7): Gazebo's main thread is the limit, and the swarm launch now uses a 2 ms physics step, which doubles RTF (D37). This session builds the ground-truth detector, the primary perception path for the Nov 30 go/no-go.
+Continuing the multi-agent UAV ROS 2 rebuild: session 8. Three followers fly in headless SITL (`swarm.launch.py`), every camera points straight down, sim speed is understood (2 ms step, D37), and the ground-truth detector feeds `leader_node` (session 7). This session builds the leader's boustrophedon sweep controller: the first flight code the leader has, since `leader_node` only maps.
 
 ## Read first
 
 - `CLAUDE.md` (Docker gotchas; always `bash -lc` / `bash -l`).
-- `docs/planner-decisions.md`: **session 6 notes** (including "D37 applied"); R29/R30 (D34, D35) for the two detector-related TODOs.
-- `TODOS.md`, "Belief map": **empty frames must reach the map** (apply it in this node) and **repeated frames over-count evidence** (needs this node's noise settings).
-- `docs/roadmap.md`, Perception row: ground-truth detector = Gazebo target poses + noise, misses, false positives, footprint check, publishing on every frame including empty ones.
-- `src/uav_mapping/uav_mapping/leader_node.py` and `fake_detection_publisher` for the `Detection2DArray` contract the detector must match (frame, stamp, pixel coordinates, camera_info).
-- `docs/docker-notes.md` gotchas 39-45.
+- `docs/roadmap.md`: Leader row (sweep controller, lane order biased by prior later), the t = 0 and coverage-guarantee lines (the leader always completes the full sweep), and the Nov 24 build order.
+- `docs/planner-decisions.md`: **session 7 notes** (detector, D38, what was not shown), session 6 notes (D37), R28/D33 (the checkpoint) and the T8 task with its "verify first" step.
+- `src/uav_planning/uav_planning/follower_planner_node.py`, `arm_takeoff.py`, `core/follower.py`: the flight pattern to reuse (`/ap/vN/cmd_gps_pose`, `frame_id "map"`, `FRAME_GLOBAL_REL_ALT`, only when GUIDED and armed; docker-notes 27).
+- `docs/docker-notes.md` gotchas 39-50 (new: 47 real camera K and footprint, 48 `heatmap.launch.py stub:=false`, 49 the `pkill -f` trap, 50 spawning and removing targets).
+- `docs/probes/mount_check.py` and `docs/probes/detector_live_check.py`.
 
 ## Task
 
-1. **Pick noise values with the user before coding.** Miss rate, false-positive rate, pixel noise. These are architecture inputs: the D32 confirmation N and the repeated-frames TODO both depend on them. Offer a default set with reasons; don't decide alone.
-2. **Build the detector node** (package per the roadmap). Inputs: target poses from Gazebo (choose how: a `ros_gz_bridge` pose topic or `/world/runway/pose/info`), the drone's pose, `camera_info` and the nadir mount. Project each target into the image, keep those inside the frame (the footprint check), apply noise, and publish a `Detection2DArray` **on every frame, including empty ones**. Pure projection and noise logic in a ROS-free module with unit tests, as in `uav_planning/core`.
-3. **Check it live against `leader_node`**: spawn the markers as in `docs/probes/mount_check.py`, hover over them, and confirm the heatmap raises the marker's sectors and lowers the covered empty ones.
+1. **Design the sweep with the user before coding** (architecture, the part they are learning): lane spacing from the 31 x 23 m footprint at the flight altitude (is the 20 x 20 m arena covered in one lane at 10 m? at what altitude and speed does a sweep take long enough to matter?), where the leader starts (corner, home), how it commands waypoints (`cmd_gps_pose` one waypoint at a time, with arrival tolerance), and what "sweep complete" means for the state machine. Offer a default with reasons.
+2. **Build it**: pure lane-generation and waypoint-advance logic in a ROS-free module with unit tests (as in `uav_planning/core`), plus a thin node. A leader at its own altitude layer (D5); the sweep must not stop for detections (coverage guarantee).
+3. **Verify first (carried from T6):** run `docs/probes/mount_check.py` while the drone flies sideways at sweep speed and check the marker error stays near the hover result (1-4 px). The gimbal's earth-stabilised pointing may not hold in translation. If it fails, do it at both physics steps (D37) and tell the user before building on footprints.
+4. **Check live**: one leader sweeps the arena with `target_*` markers spawned (docker-notes 50), the detector and `leader_node` running (`stub:=false`); the heatmap should end with target cells high, swept empty cells low, and nothing left unknown if coverage is complete.
 
-Record what was built in `docs/planner-decisions.md` as "Implementation notes (session 7)", and add any new trap to `docs/docker-notes.md`.
+Record what was built in `docs/planner-decisions.md` as "Implementation notes (session 8)", add any new trap to `docs/docker-notes.md`, and rewrite this file for session 9.
 
 ## Environment
 
 - Host is Ubuntu 24.04. Docker data is on a USB ext4 partition: check `mount | grep docker-data` before `docker compose up -d`. Use `stop`, never `down`.
-- In the container, always `docker compose exec ros2 bash -lc '...'` and `source /usr/local/bin/entrypoint.sh` first; interactively, `exec ros2 bash -l`.
-- Launch `iris_runway` from a fresh directory (`mkdir -p /tmp/sitl && cd /tmp/sitl`), not the repo root (gotcha 40).
+- **After a reboot WinBoat may have started itself (gotcha 46):** `docker ps --filter name=WinBoat`; if it is up, `docker stop -t 120 WinBoat` and tell the user. It must be stopped for all sim work.
+- In the container, always `docker compose exec ros2 bash -lc '...'` and `source /usr/local/bin/entrypoint.sh` first; interactively, `exec ros2 bash -l`. Do not put `pkill -f NAME` in a `bash -lc` string that contains NAME (gotcha 49): use a script file.
+- Single-iris sim for the live work: `mkdir -p /tmp/sim1 && cd /tmp/sim1 && ros2 launch uav_planning swarm.launch.py num_followers:=1 followers:=false camera:=true`, then `uav_localization localization_node` (namespace `/iris_1`, shared datum), `arm_takeoff` on Fast DDS, `uav_perception detector.launch.py pose_topic:=/iris_1/pose camera_info_topic:=/iris_1/camera/camera_info`, and `heatmap.launch.py pose_topic:=/iris_1/pose camera_info_topic:=/iris_1/camera/camera_info stub:=false use_sim_time:=false`. It reached hover about 40 s after launch.
 - `docker compose restart ros2` between sim runs; `pkill` leaves `arducopter`/`MicroXRCEAgent` behind.
-- `colcon build --symlink-install` copies `uav_planning`'s files, so rebuild after every edit (gotcha 32).
-- The WinBoat VM must be stopped for all sim work, never measured with it running (gotcha 42). Before a sim launch, check `docker ps --filter name=WinBoat`; if it is running, tell the user at once. RAM was not the limit with it stopped.
-- `wait_for_clock` caught a silent ROS `/clock` in 2 of 4 swarm cold starts at the 2 ms step (0 of 3 at 1 ms; gotcha 33): if the launch shuts down with "no /clock", restart the container and run again. If it happens, first run `gz topic -e -t /clock` while the gate is still waiting, and record whether Gazebo's clock is moving.
-- Tests without a simulator: `python3 -m pytest src` (72 passed, 2026-11-16).
+- `colcon build --symlink-install` copies `uav_planning`'s files, so rebuild after every edit (gotcha 32); new packages need a build too.
+- `wait_for_clock` caught a silent ROS `/clock` in 2 of 4 swarm cold starts at the 2 ms step (gotcha 33): if the launch shuts down with "no /clock", restart the container and run again.
 - Commit after each working sub-task on `main`. Do not push without asking.
 
 ## Done means
 
-Noise values agreed with the user, the detector built with unit tests, publishing on empty frames, checked live against `leader_node`, notes recorded, and `docs/next-session-prompt.md` rewritten for session 8 (sweep controller). Say plainly which changes are plan-level and which are code.
+Sweep design agreed with the user, the sweep controller built with unit tests, the sideways-flight marker check done and its result recorded, a live sweep checked against the heatmap, notes recorded, and this file rewritten for session 9 (`belief_map_node` + footprints). Say plainly which changes are plan-level and which are code.
 
 ## Working agreements
 
-- The user has high-level ROS understanding, not deep. Explain a new concept in one paragraph before code (for example, how a ground-truth detector stands in for YOLO, and why empty frames are evidence).
-- All design decisions are settled except the noise values, so don't reopen others without new evidence.
+- The user has high-level ROS understanding, not deep. Explain a new concept in one paragraph before code (for example, why a sweep is lanes at a spacing set by the camera footprint, and why the leader must not stop for a detection).
+- Settled decisions stay settled (stack, D37, D38); don't reopen them without new evidence. The frame rate (2 Hz) and D32's N are knobs for session 9.
 - Do not push without asking.

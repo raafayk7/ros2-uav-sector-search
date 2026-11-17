@@ -94,7 +94,7 @@ Verified with three iris and three followers (`swarm.launch.py`, real-time facto
 
 - **Scale.** Three followers have flown together; four or more have not, and the sim runs at roughly a third of real time with three.
 - **Leader sweep.** The leader's detection-to-heatmap node exists, but there is no sweep controller and the leader has not flown. Followers fly against a stub map.
-- **Perception.** Detections come from a fake publisher. A ground-truth detector comes first and YOLO is a stretch. The simulated camera now points straight down (an ArduPilot mount param file, checked with spawned markers).
+- **Perception.** A ground-truth detector (`uav_perception`: Gazebo target poses with misses, false alarms and pixel noise, checked live against the heatmap) now stands in for YOLO, which is a stretch; the old fake publisher stays for tests. The simulated camera now points straight down (an ArduPilot mount param file, checked with spawned markers).
 - **Landing.** Precision landing (colour masking + PID in the original) is not rebuilt.
 - **Re-enabling after a disable** has not been run live.
 

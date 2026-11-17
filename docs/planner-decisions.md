@@ -1384,6 +1384,43 @@ Run 1 confirmed the parm order (`...gimbal_nadir.parm,loop_250hz.parm,dds_udp.pa
 
 Not shown at 2 ms / 250 Hz, unchanged from session 6: fast manoeuvres, wind, long runs, precision landing, camera pointing during sideways flight (a T8 verify step; run it at both steps if it fails).
 
+## Implementation notes (session 7, 2026-11-17)
+
+Ran: the ground-truth detector, the first piece of T8 (about 2.5 h). One decision was made by the user; the rest is code and measurements.
+
+**D38 (decided 2026-11-17 by the user: use the proposed defaults).** Detector noise, all ROS parameters of `ground_truth_detector`:
+
+| Parameter | Value | Reason |
+|---|---|---|
+| `p_miss` | 0.20 per visible target per frame | Three consecutive hits then take about 4.8 frames on average (0.8^3 = 0.51 per attempt), so the D32 rule is actually exercised. At 0.10 it hardly matters; at 0.30 it takes 6.4 frames. |
+| `p_false` | 0.05 per frame, one box at a uniformly random pixel, score 0.30-0.70 | Independent per frame, so a false alarm rarely repeats in one sector. A false alarm that stays on one spot (a misleading landmark) is the separate roadmap item, not modelled. |
+| `pixel_sigma` | 5 px Gaussian | About 10 cm on the ground at 10 m with the sim's lens (2.1 cm/px at fx 468; see gotcha 47 for the real fx). Sectors are metres wide. |
+| `hit_score` | uniform 0.60-0.95 | Above `leader_node`'s `min_detection_score` 0.25. A score of 0.9 adds 0.76 of evidence per frame, so a cell clamps in about 5 frames (R29). |
+| N for D32 | 3 consecutive frames | Still provisional until `belief_map_node` exists. |
+| `frame_rate` | 2 Hz (wall time) | Not discussed with the user. The sim camera runs at 10 Hz. At 2 Hz one cell clamps in about 2.5 s of continuous view. It is a knob, and R29 decides what it should be. |
+
+**What was built (code).** New package `uav_perception`:
+
+- `core/projection.py`, `core/noise.py`, `core/scene.py`: ROS-free. A ground point projects to a pixel with the inverse of `leader_node`'s geometry (same frames, same nadir mount, checked against its matrix in a test). `frame_detections` applies the footprint check on the true pixel, then miss, pixel noise and false alarm, with a seeded numpy generator. `scene.py` parses Gazebo's `scene/info` text.
+- `ground_truth_detector` node: reads target poses by running `gz service .../scene/info` every 5 s in its own thread (the container has no `gz` Python bindings, and a `pose/info` bridge would add a per-step subscriber, see gotcha 36), keeps models named `target_*`, and publishes a `Detection2DArray` on `/detections` every frame, **including empty ones** (TODOS "Empty frames must reach the map", done for this detector). A frame is a 2 Hz timer tick, not an image, so no camera has to render. Pose is the latest `/pose`, not the pose at the frame's stamp.
+- `launch/detector.launch.py`; `uav_mapping/launch/heatmap.launch.py` got `stub:=false` (it always started the fake publisher, which fought the detector, gotcha 48).
+- Tests: 18 in `uav_perception/test/test_core.py` (projection, footprint, miss and false-alarm rates over 20 000 frames, seed repeatability, scene parsing on a fixture trimmed from the real output). `python3 -m pytest src`: 90 passed (72 before).
+
+**Live check (1 iris, hover at 10 m, headless, `docs/probes/detector_live_check.py`).** Target at (3, 8) in the covered cell (col 0, row 1), another at (17, 17) outside the footprint, seed 1, about 60 s:
+
+| Cell | Expected | Seen |
+|---|---|---|
+| Covered, holds a target | rises | 97 |
+| Covered, empty (9 cells) | falls | 3 |
+| Not covered, including the cell with the far target | unknown | -1 |
+| After removing the target, about 35 s | falls (empty frames reach the map) | 97 to 3 |
+
+Over 320 frames the detector counted 16 false alarms (5.0 %) and 209 true detections in about 270 frames with the target present (about 77 %, against 80 % expected; the exact frame count at removal was not logged). The 20 000-frame unit test is the real rate check. The detector process used about 4 % of a core; the `gz` child it starts every 5 s was not measured.
+
+**Not shown:** more than one drone (the node's topics default to global names, so a swarm needs one per drone with namespaced `pose_topic`, `camera_info_topic` and `detections_topic`); the drone moving (pose lag against the frame's stamp); targets spawned after launch beyond one rescan (they appear within 5 s); the repeated-frames fix (R29) and the D32 rule, which are `belief_map_node`'s.
+
+**Plan-level versus code.** Plan-level: D38 (noise values), the 2 Hz frame rate as a knob, roadmap and TODOS wording. Code: everything under `uav_perception`, the `stub` launch arg, the probe.
+
 ## NOT in scope
 
 - Potential-field layer: altitude layers cover the sim (D5); revisit if a same-altitude flight is ever needed.
@@ -1487,7 +1524,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R18 (D23)
   - Files: none expected, launch settings if a fix is found
   - Verify: re-measured RTF at 1 and 4 iris with a working readiness check
-- [ ] **T8 (P1, human: ~half day / CC: ~30min)** — integration — Nov 20 search checkpoint, with sweep controller and detector in the D33 order
+- [ ] **T8 (P1, human: ~half day / CC: ~30min)** — integration — Nov 20 search checkpoint, with sweep controller and detector in the D33 order (detector built 2026-11-17, session 7; sweep controller, `belief_map_node` and footprints remain)
   - Surfaced by: R28 (D33), R27 (D32)
   - Files: to be set by that work
   - Verify: one follower completes observe, update, depart, find
