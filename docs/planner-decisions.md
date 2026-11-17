@@ -1402,7 +1402,7 @@ Ran: the ground-truth detector, the first piece of T8 (about 2.5 h). One decisio
 **What was built (code).** New package `uav_perception`:
 
 - `core/projection.py`, `core/noise.py`, `core/scene.py`: ROS-free. A ground point projects to a pixel with the inverse of `leader_node`'s geometry (same frames, same nadir mount, checked against its matrix in a test). `frame_detections` applies the footprint check on the true pixel, then miss, pixel noise and false alarm, with a seeded numpy generator. `scene.py` parses Gazebo's `scene/info` text.
-- `ground_truth_detector` node: reads target poses by running `gz service .../scene/info` every 5 s in its own thread (the container has no `gz` Python bindings, and a `pose/info` bridge would add a per-step subscriber, see gotcha 36), keeps models named `target_*`, and publishes a `Detection2DArray` on `/detections` every frame, **including empty ones** (TODOS "Empty frames must reach the map", done for this detector). A frame is a 2 Hz timer tick, not an image, so no camera has to render. Pose is the latest `/pose`, not the pose at the frame's stamp.
+- `ground_truth_detector` node: reads target poses by running `gz service .../scene/info` every 5 s in its own thread (the container has no `gz` Python bindings, and a `pose/info` bridge would add a per-step subscriber; compare gotcha 34, where one `/clock` subscriber costs about 40 % of a core), keeps models named `target_*`, and publishes a `Detection2DArray` on `/detections` every frame, **including empty ones** (TODOS "Empty frames must reach the map", done for this detector). A frame is a 2 Hz timer tick, not an image, so no camera has to render. Pose is the latest `/pose`, not the pose at the frame's stamp.
 - `launch/detector.launch.py`; `uav_mapping/launch/heatmap.launch.py` got `stub:=false` (it always started the fake publisher, which fought the detector, gotcha 48).
 - Tests: 18 in `uav_perception/test/test_core.py` (projection, footprint, miss and false-alarm rates over 20 000 frames, seed repeatability, scene parsing on a fixture trimmed from the real output). `python3 -m pytest src`: 90 passed (72 before).
 
@@ -1417,7 +1417,15 @@ Ran: the ground-truth detector, the first piece of T8 (about 2.5 h). One decisio
 
 Over 320 frames the detector counted 16 false alarms (5.0 %) and 209 true detections in about 270 frames with the target present (about 77 %, against 80 % expected; the exact frame count at removal was not logged). The 20 000-frame unit test is the real rate check. The detector process used about 4 % of a core; the `gz` child it starts every 5 s was not measured.
 
-**Not shown:** more than one drone (the node's topics default to global names, so a swarm needs one per drone with namespaced `pose_topic`, `camera_info_topic` and `detections_topic`); the drone moving (pose lag against the frame's stamp); targets spawned after launch beyond one rescan (they appear within 5 s); the repeated-frames fix (R29) and the D32 rule, which are `belief_map_node`'s.
+**Not shown, with scope and home** (none was in session 7's scope, which was one detector checked against `leader_node` in a hover):
+
+| Gap | Home |
+|---|---|
+| More than one drone: the node's topics default to global names, so each drone needs its own detector with namespaced `pose_topic`, `camera_info_topic` and `detections_topic` (follower detectors are what the D32 confirmation rule reads) | T8 session 9, with `belief_map_node` |
+| `gz service` query cost with 3-4 detectors running (one process every 5 s each; one detector's own CPU was about 4 % of a core) | T8 session 9: measure RTF with the detectors up |
+| Drone moving: the detector uses the latest `/pose`, not the pose at the frame's stamp | T8 session 8: sweep run, compare the heatmap's target cell against the real marker while the drone translates |
+| Repeated-frames over-counting (R29) and D32's N | T8 session 9, decided in `belief_map_node`'s update step |
+| Targets spawned after launch beyond one rescan | not a gap: they appear within 5 s (checked by removal, not by a late spawn) |
 
 **Plan-level versus code.** Plan-level: D38 (noise values), the 2 Hz frame rate as a knob, roadmap and TODOS wording. Code: everything under `uav_perception`, the `stub` launch arg, the probe.
 
@@ -1524,7 +1532,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R18 (D23)
   - Files: none expected, launch settings if a fix is found
   - Verify: re-measured RTF at 1 and 4 iris with a working readiness check
-- [ ] **T8 (P1, human: ~half day / CC: ~30min)** — integration — Nov 20 search checkpoint, with sweep controller and detector in the D33 order (detector built 2026-11-17, session 7; sweep controller, `belief_map_node` and footprints remain)
+- [ ] **T8 (P1, human: ~half day / CC: ~30min)** — integration — Nov 20 search checkpoint, with sweep controller and detector in the D33 order (detector built 2026-11-17, session 7; sweep controller, `belief_map_node` and footprints remain; carried into it from session 7: per-drone detector wiring and the `gz` query cost with several detectors, and detector pose lag while the drone moves)
   - Surfaced by: R28 (D33), R27 (D32)
   - Files: to be set by that work
   - Verify: one follower completes observe, update, depart, find

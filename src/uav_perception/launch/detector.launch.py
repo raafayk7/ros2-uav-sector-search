@@ -10,7 +10,7 @@ Against a running sim the targets are the Gazebo models named target_*
 are the session 7 defaults; seed:=N makes a run repeatable.
 
 It uses wall time (use_sim_time false): a /clock subscriber costs about 45 %
-of a core in a swarm (docker-notes 36), and a frame here is a timer tick.
+of a core in a swarm (docker-notes 34), and a frame here is a timer tick.
 """
 
 from launch import LaunchDescription

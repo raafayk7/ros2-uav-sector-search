@@ -13,7 +13,7 @@ What is left before the Nov 20 checkpoint and Nov 24 (build order from `docs/roa
 | 1-6 (done 2026-11-07 to 11-16) | Datum, library, node, first flight, swarm, nadir camera, sim speed | T1-T7 | mixed | see git history | ~15 h |
 | 7 (done 2026-11-17) | Ground-truth detector, noise agreed (D38), checked live against `leader_node` | part of T8 | Sonnet | Specified in the roadmap; a node and tests | ~2.5 h |
 | **8 (this prompt)** | Sweep controller for the leader; marker test during sideways flight before footprints are trusted | T8 | **Opus** | Live flight, and the pointing check can fail silently | ~3 h |
-| 9 | `belief_map_node` + footprints, Nov 20 search loop; decide R29 (repeated frames) and D32's N here | T8 | Opus | Integration across nodes in live SITL | ~3-4 h |
+| 9 | `belief_map_node` + footprints, Nov 20 search loop; decide R29 (repeated frames) and D32's N here; one detector per drone (follower detectors) and the `gz` query cost with 3-4 of them | T8 | Opus | Integration across nodes in live SITL | ~3-4 h |
 | 10+ | Mission state machine (Nov 24, may slip) | — | Opus | End-to-end debugging | ~4 h |
 
 ---
@@ -34,7 +34,8 @@ Continuing the multi-agent UAV ROS 2 rebuild: session 8. Three followers fly in 
 1. **Design the sweep with the user before coding** (architecture, the part they are learning): lane spacing from the 31 x 23 m footprint at the flight altitude (is the 20 x 20 m arena covered in one lane at 10 m? at what altitude and speed does a sweep take long enough to matter?), where the leader starts (corner, home), how it commands waypoints (`cmd_gps_pose` one waypoint at a time, with arrival tolerance), and what "sweep complete" means for the state machine. Offer a default with reasons.
 2. **Build it**: pure lane-generation and waypoint-advance logic in a ROS-free module with unit tests (as in `uav_planning/core`), plus a thin node. A leader at its own altitude layer (D5); the sweep must not stop for detections (coverage guarantee).
 3. **Verify first (carried from T6):** run `docs/probes/mount_check.py` while the drone flies sideways at sweep speed and check the marker error stays near the hover result (1-4 px). The gimbal's earth-stabilised pointing may not hold in translation. If it fails, do it at both physics steps (D37) and tell the user before building on footprints.
-4. **Check live**: one leader sweeps the arena with `target_*` markers spawned (docker-notes 50), the detector and `leader_node` running (`stub:=false`); the heatmap should end with target cells high, swept empty cells low, and nothing left unknown if coverage is complete.
+4. **Moving-drone check (carried from session 7):** the detector projects with the latest `/pose`, not the pose at the frame's stamp. While the leader sweeps, compare the heatmap cell of a known marker with the marker's real cell and note any lag-induced misses at sweep speed.
+5. **Check live**: one leader sweeps the arena with `target_*` markers spawned (docker-notes 50), the detector and `leader_node` running (`stub:=false`); the heatmap should end with target cells high, swept empty cells low, and nothing left unknown if coverage is complete.
 
 Record what was built in `docs/planner-decisions.md` as "Implementation notes (session 8)", add any new trap to `docs/docker-notes.md`, and rewrite this file for session 9.
 
