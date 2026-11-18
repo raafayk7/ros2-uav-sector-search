@@ -4,7 +4,7 @@ Review target (fixed): the follower planner section of `docs/roadmap.md`, scoped
 
 ## Decisions at a glance
 
-Status: decided. The leader's sweep controller is built and flown as of 2026-11-17 (session 8, D39). T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07. T3 (node) and T4 (arm helper, stub map) are built and flown as of 2026-11-08: one follower in headless SITL reaches the best stub sector and reports ARRIVED, and disabling holds it. T5 (swarm launch) is built and flown as of 2026-11-12: three followers each hold a different stub peak. Full reasoning is in the ledger below.
+Status: decided. `belief_map_node` and a leader role in the swarm launch are built as of 2026-11-18 (session 9, D40), and one follower completed the Nov 20 search loop in two cold runs. The leader's sweep controller is built and flown as of 2026-11-17 (session 8, D39). T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07. T3 (node) and T4 (arm helper, stub map) are built and flown as of 2026-11-08: one follower in headless SITL reaches the best stub sector and reports ARRIVED, and disabling holds it. T5 (swarm launch) is built and flown as of 2026-11-12: three followers each hold a different stub peak. Full reasoning is in the ledger below.
 
 | Topic | Decision | Ref |
 |---|---|---|
@@ -24,13 +24,15 @@ Status: decided. The leader's sweep controller is built and flown as of 2026-11-
 | Arming | Separate `arm_takeoff` helper on Fast DDS; planner stays on CycloneDDS | D15 |
 | Unknown cells | Count as 0.5; ties go to nearest, then lowest index; flat map holds | D18 |
 | Map meaning | Each cell is an independent probability of containing a target | D31 |
-| Found target | Follower within arrival radius sees it in its sector for N frames; `belief_map_node` lowers that sector | D13, D32 |
+| Found target | Follower within arrival radius (2.0 m) and above 5 m sees it in its sector on 3 consecutive frames of its own detector; `belief_map_node` publishes that sector as 0 from then on and lists it on `/confirmed_sectors` | D13, D32, D40 |
+| Belief map | One `belief_map_node` fuses every drone's detections + pose (it computes footprints itself); per drone, cell and look, evidence is capped at +-0.85 log-odds, a new look after 1 s out of view or every 4 s | D40 |
 | Mission end | Sweep done and all unsuppressed sectors under 0.5 for 30 s, or timeout; decided by the mission state machine | D14 |
 | Milestone map | New stub publisher, 8x8 at 5 m, multiple peaks | D19 |
 | Camera | Required before footprints: gimbal to nadir, proven with the marker test, 2 h timebox | D30 |
 | Sim speed | 2 h timebox after Nov 15, before Nov 24 (ran 2026-11-16: Gazebo's main thread is the limit; a 2 ms step doubles RTF and is the swarm default) | D23, D37 |
 | Checkpoint | Around Nov 20, one follower completes a whole search loop | D33 |
 | Leader sweep | Arena 8x8 at 5 m (40 x 40 m); 5 m/s (`WP_SPD`); lane spacing from the footprint's short side x 0.8, so coverage holds at any heading; complete = last waypoint reached; never reads detections | D39 |
+| Leader in the swarm | `swarm.launch.py leader:=true`: iris_1 leads from the arena corner at 8 m; followers iris_2.. spawn 5 m south of the arena, list only each other as peers; one detector per drone | D40 |
 | Layout | One package, `uav_planning`, with `core/planner.py` | D6 |
 
 ## Original plan (unchanged copy)
@@ -1500,13 +1502,78 @@ The higher empty values (10-35) sit in columns 0 and 7. Their centres are 5.8 m 
 
 **Plan-level versus code.** Plan-level: D39 (arena, speed, spacing), the defaults listed with it, the roadmap and T8 wording. Code: `core/sweep.py`, `sweep_node`, `sweep.launch.py`, `arm_takeoff`'s `wp_speed`, the 8x8 default in `leader_node` and `heatmap.launch.py`, the probe.
 
+## Implementation notes (session 9, 2026-11-18)
+
+Ran: belief map design with the user, `belief_map_node`, the leader role in the swarm launch, and two live runs of leader + 1 follower (about 2.5 h). One decision by the user (D40); the rest is code and measurements.
+
+**D40 (decided 2026-11-18 by the user: the four recommended options).** Belief map and leader role:
+
+| Choice | Value | Reason |
+|---|---|---|
+| Node and topics | One `belief_map_node` (`uav_mapping`) subscribes to every drone's `/<robot>/detections` and `/<robot>/pose` and computes each footprint itself; `camera_info` is optional (sim-camera defaults until one arrives). Each `Detection2DArray`, published on every frame (R30), is one frame. It replaces `leader_node` in launches; `leader_node` stays unchanged as the verified one-drone reference | No new message type and no extra per-drone process, and the map needs the camera model anyway to project pixel detections. **Plan change:** R30's separate footprint topic is dropped, so "every detector publishes every frame" is now permanent (TODOS) |
+| R29, frame weight | Look cap: frames add as in `leader_node` (+score x 0.85 per hit, -0.20 per empty frame), but per drone and cell one look changes the cell by at most +-0.85 log-odds (one full-score hit). A look ends after 1 s out of view or after 4 s, so a hover is a new look every 4 s. Looks from different drones add | The probe below: the map no longer depends on frame rate, and a false positive held in view needs 4 looks (about 12.5 s) instead of 2 s to reach the clamp |
+| D32's N and D13 | N = 3 consecutive frames of a follower's own detector with a detection in its sector, the follower within 2.0 m of the sector centre and at least 5 m up; the leader never confirms. A confirmed sector publishes as 0 on `/heatmap` from then on, the posterior underneath keeps updating, and `/confirmed_sectors` (latched `PoseArray` of centres) lists them | Offline, over a target: median 1.5 s to confirm (p90 4.5 s). False confirmations with D38 noise: about 3e-5 per hour of hover (12 per hour at N = 1, 0.02 at N = 2), which leaves margin for a correlated detector. Followers need no suppression code; the mission (D14) and the eval read the list |
+| Leader in the swarm | `swarm.launch.py leader:=true`: iris_1, sysid 1, leads from the world origin (arena corner and datum) with `sweep.launch.py` (8 m, 5 m/s). Followers are iris_2.., sysid 2.., layers 10 + 2 k for follower k, spawned at x = 5 (k + 1), y = -5, outside the arena. Followers list only each other as peers. One ground-truth detector per drone in `/iris_N`; the belief map replaces the stub. `leader:=false`, the default, is the T5 launch unchanged | On the arena edge a climbing follower would pass within 1.5 m of the leader's first leg at 8 m. A peer with no goal counts as parked where it is (`peer_arrived`), so listing the leader would block wherever it flies. A drone off the grid holds nothing and moves in once at its layer (docker-notes 56) |
+
+**The probe behind the R29 choice** (`docs/probes/r29_probe.py`, offline). It replays the session-8 sweep: D39 lanes, 5 m/s, 1.5 s at each waypoint, climb and a 5 s end hover, D38 noise, 20 seeds, 2 frames per second. With the per-frame rule it reproduces session 8 (targets 97, empties median 4, edge columns up to 20; live: 3, and 28-35). Edge columns are 0 and 7.
+
+| Rule | Targets | Empties, cols 1-6 | Edge cols | Empty max | Follower hovering on an empty sector with prior 0.85: s to < 0.5 |
+|---|---|---|---|---|---|
+| Per frame (`leader_node`) | 97 | 4 | 14 | 20 | 4.5 |
+| Rate limit, 1 Hz per cell | 97 | 14 | 27 | 31 | 8.5 |
+| Weight 0.25 per frame | 90 | 31 | 39 | 41 | 17.5 |
+| **Look cap +-0.85 (chosen)** | 91 | 13 | 24 | 30 | 8.5 |
+
+At 4 frames per sim second (a 2 Hz wall-clock detector at RTF 0.5) the per-frame rule drives every empty cell to 3, and at 1 frame per second its edge columns end at 35. The look cap gives the same map at 2 and 4. So **session 8's edge columns (10-35) were a frame-count effect.** Under any rule that counts views honestly, a cell seen in one lane stays higher than one seen in two; only more looks, such as follower footprints, lower it. The ground-truth detector draws fresh noise each frame, so for it the per-frame rule is statistically right. The cap is insurance for YOLO and for a false positive that stays in one place, and neither is modelled.
+
+**What was built (code).**
+
+- `uav_mapping/core/geometry.py`: footprint geometry lifted from `leader_node` (same maths and frames). `core/belief.py`: `BeliefMap`, with the per-frame update, the look cap (applied to increments, so drones add), D32 streaks per drone, D13 suppression and OccupancyGrid output. 33 tests in `uav_mapping/test/test_belief.py`, plus a `conftest.py`. `python3 -m pytest src`: 178 passed (145 before).
+- `belief_map_node`: on wall time, like the detectors, so a look spans the same number of frames at any RTF and adds no `/clock` subscriber. Parameters: `robots`, `confirmers`, topic templates with `{robot}`, the grid, the mount, default intrinsics and every D40 value. It logs a `CONFIRMED` line per find and frame counts every 30 s.
+- `swarm.launch.py`: `leader`, `follower_y`, `detector_seed`. Bridge configs per role: the leader bridges `camera_info` only (the sweep plans from it), followers no camera; `camera:=true` bridges both everywhere.
+- `ground_truth_detector` and `belief_map_node` exit cleanly on SIGTERM. Before, a launch shutdown logged "process has died" with a traceback.
+- `docs/probes/belief_live_check.py`, `r29_probe.py`, `rtf_windows.sh`.
+
+**Live runs.** Leader + 1 follower, headless, 2 ms step, `swarm.launch.py leader:=true num_followers:=1`, each cold from a fresh directory, with the session-8 targets at (8, 12), (21, 27) and (33, 6) in cells (1, 2), (4, 5) and (6, 1). Times are wall seconds from the logs; ARRIVED comes from a 1 Hz status, so it is good to about 1 s.
+
+| | Run 1 (`detector_seed:=1`) | Run 2 (`detector_seed:=7`) |
+|---|---|---|
+| `/clock` gate | 12.9 s | 8.8 s |
+| Sweep, SWEEPING to COMPLETE | 49.0 s | 41.5 s |
+| Follower's goals | (3, 1), then (1, 2) once the leader's first lane saw it | (3, 0), then (1, 2) |
+| Confirmed, s after SWEEPING | (1, 2) 11.1, (4, 5) 21.6, (6, 1) 29.1 | 10.4, 17.9, 26.4 |
+| ARRIVED to confirmed | 0.7, 4.8, 0.2 s | 0.9, 1.9, 1.7 s |
+| Posterior at confirmation | 0.97, 0.97, 0.82 | 0.96, 0.94, 0.93 |
+| False confirmations | 0 | 0 |
+| Map at the end | 64 of 64 known; empties 3 (one at 5); targets 0 | same, every empty at 3 |
+| Frames counted by the map | 783 per drone, equal | 295 per drone, equal |
+| RTF (`/stats` field, 10 s samples) | median 0.94 (0.66-1.25) | median 1.00 |
+
+**Both runs met D33's checkpoint.** The follower's own frames reached the map, the map updated, it left each confirmed sector and flew to the next, and it found all three targets before the leader finished its sweep. That is the Nov 20 checkpoint, two days early, with the limits below. After the finds it moved between empty cells every 10-80 s. The cause was not checked: D16 lets it move when another cell beats its own by more than 0.02, and one false alarm can do that among cells at 3. Every unsuppressed cell ended at 3-5, but the probe did not log when the last one fell below 0.5, so D14's end timing is not measured.
+
+**Detector cost (session 7 gap).** Both drones hovering after run 1, three 30 s windows each (`rtf_windows.sh`, docker-notes 54): detectors stopped 0.99, 0.99, 0.99; both running 0.95, 0.95, 0.95. So about 2 % RTF per detector at 2 drones. CPU: each detector 3.0-3.8 % of a core, `belief_map_node` 6.6 %. The cost was not split between a detector's Python and its `gz service` query every 5 s.
+
+**Not shown, with scope and home** (session 9's scope was leader + 1 follower):
+
+| Gap | Home |
+|---|---|
+| Leader + 3 followers (4 drones, 4 detectors): RTF, and whether three followers split three targets without crowding one | session 10, before the Nov 30 go/no-go |
+| A target near a sector edge: boxes split between two sectors break the 3-frame streak, and the follower may first hover over the wrong sector (its own negative looks should move it on) | session 10: one target 0.3 m inside a sector edge |
+| D14's end timing (sweep complete and every unsuppressed sector under 0.5 for 30 s) | mission state machine, session 10 |
+| A false confirmation, and the cap's value against a correlated detector (none happened; with D38 one is about 3e-5 per hour) | YOLO stretch (`perception_node`) |
+| The footprint uses the full body attitude while the gimbal holds nadir, so it is off by about altitude x tilt in hard accelerations (1 m at 8 m and 8 deg). Detector and map agree, so nothing is missed | YOLO stretch, with the pose at the image stamp |
+| A find ends in a hover, not a landing | `landing_node`, after the state machine |
+| The leader-only map under the cap, live (both runs also had follower footprints; offline only: cols 1-6 at 13, edge at 24) | not needed unless the leader flies alone again |
+
+**Plan-level versus code.** Plan-level: D40 (four choices), dropping R30's footprint topic, N = 3, T8 checked off, the roadmap rows and TODOS. Code: `uav_mapping/core`, its tests, `belief_map_node`, the `swarm.launch.py` leader role, the SIGTERM fix, the probes.
+
 ## NOT in scope
 
 - Potential-field layer: altitude layers cover the sim (D5); revisit if a same-altitude flight is ever needed.
 - BLL flying at runtime: library and eval sim only (D4).
 - Gazebo-based statistics: the 2D sim supplies them, per the roadmap.
 - `landing_node`: handoff interface only (D12).
-- Mission state machine and `belief_map_node`: Nov 24, with decisions recorded here.
+- Mission state machine: Nov 24 (may slip), with decisions recorded here. (`belief_map_node` was built 2026-11-18, D40.)
 - Partial-footprint handling at `leader_node.py:354`: moot once the camera is at nadir (D30).
 - Updating the `multi-agent-uavs` skill's stale topic examples and `docs/stack-overview.md`: separate doc pass, not decided here.
 
@@ -1603,7 +1670,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R18 (D23)
   - Files: none expected, launch settings if a fix is found
   - Verify: re-measured RTF at 1 and 4 iris with a working readiness check
-- [ ] **T8 (P1, human: ~half day / CC: ~30min)** — integration — Nov 20 search checkpoint, with sweep controller and detector in the D33 order (detector built 2026-11-17, session 7; sweep controller built and flown 2026-11-17, session 8, D39; `belief_map_node`, footprints and a leader role in the swarm launch remain; carried into it from session 7: per-drone detector wiring and the `gz` query cost with several detectors; detector pose lag while moving was checked in session 8: no misses at 5 m/s)
+- [x] **T8 (P1, human: ~half day / CC: ~30min)** — integration — Nov 20 search checkpoint (met 2026-11-18 in two cold runs: one follower confirmed all three targets before the leader's sweep ended, see session 9 notes), with sweep controller and detector in the D33 order (detector built 2026-11-17, session 7; sweep controller built and flown 2026-11-17, session 8, D39; `belief_map_node`, footprints and a leader role in the swarm launch remain; carried into it from session 7: per-drone detector wiring and the `gz` query cost with several detectors; detector pose lag while moving was checked in session 8: no misses at 5 m/s)
   - Surfaced by: R28 (D33), R27 (D32)
   - Files: to be set by that work
   - Verify: one follower completes observe, update, depart, find
@@ -1613,7 +1680,7 @@ Effort assumes features at about 30x and tests at about 50x human-to-CC time, ad
 
 ## Unresolved decisions
 
-None (D39, the sweep, was decided 2026-11-17). N in the D32 confirmation rule and the D14 thresholds are provisional values by decision, not open questions.
+None (D40, the belief map, was decided 2026-11-18). D40 set D32's N to 3 (untested against a correlated detector); the D14 thresholds remain provisional values by decision, not open questions.
 
 ## Completion summary
 

@@ -16,6 +16,9 @@ Throwaway scripts behind the numbers in `docs/planner-decisions.md`. They are ev
 | `swarm_watch.py [N] [SECS]` | Status, goal sector and height for N followers once a second; summary of first all-ARRIVED, goal changes and shared goals (2026-11-12) | T5 |
 | `peer_release.py [ROBOT]` | Kills one follower's planner, then its localization, and times the sector release in sim seconds (2026-11-12) | T5, D21, D25 |
 | `detector_live_check.py [x,y ...]` | Prints `/heatmap` next to which cells the camera covers and which hold a target (give the target positions as `x,y` args); run inside the container with a hovering drone, `ground_truth_detector` and `leader_node` up (2026-11-17) | session 7 |
+| `r29_probe.py` | Offline replay of the session-8 sweep with D38 noise: frames and looks per cell, then the map under per-frame, 1 Hz, weighted and look-cap rules, at 1, 2 and 4 frames/s; hover clearing times and D32 confirmation times and false rates (2026-11-18) | R29, D40 |
+| `belief_live_check.py [SECS] [N]` | Spawns the session-8 targets, logs sweep status, follower status and goal, confirmations and known cells once a second, then the final map and RTF; run in the container after `swarm.launch.py leader:=true` (2026-11-18) | session 9, T8 |
+| `rtf_windows.sh LABEL` | RTF from three 30 s `/stats` windows (sim time over real time), the reliable way (docker-notes 54) (2026-11-18) | session 9 |
 | `cmd_gps_pose_probe.py` | One `cmd_gps_pose` flies a drone and `goal_lla` echoes it. Needs a 3-iris swarm, with `iris_2` in GUIDED and airborne | R2 |
 
 Limits: pure Python, no flight dynamics, equal peaks only (see `TODOS.md`).
