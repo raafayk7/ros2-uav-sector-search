@@ -14,9 +14,10 @@ What is left: the Nov 24 mission state machine and the Nov 30 go/no-go (leader +
 | 9 (done 2026-11-18) | D40 belief map, leader role, two live runs | Nov 20 (met) | Opus | Architecture plus a new node across drones | ~2.5 h |
 | **10 (this prompt)** | Leader + 3 followers live (RTF, 3 targets, crowding), a target near a sector edge; then design the mission state machine with the user and build its ROS-free core | Nov 24 | **Opus** | Live debugging at 4 drones, and architecture the user is learning | ~3-4 h |
 | 11 | Mission node live end to end from one command, leader + 3 followers, D14 end rule measured | Nov 24 (likely Nov 22-24) | Opus | End-to-end integration in SITL | ~3 h |
-| 12 | Go/no-go dress run and video v1 (Gazebo GUI capture) | Nov 30 | Sonnet if 11 lands clean, else Opus | Mostly running and recording | ~2 h |
+| 12 | Literature check on the narrowed contribution claim (roadmap "Contribution claim"): closest prior work, whether the claim holds, rewording if needed, written to `docs/literature-check.md`. No sim | before the LLM layer (Dec 10) and any README claim | Opus | Judging novelty against papers, not just collecting them | ~1.5-2 h |
+| 13 | Go/no-go dress run and video v1 (Gazebo GUI capture) | Nov 30 | Sonnet if 11 lands clean, else Opus | Mostly running and recording | ~2 h |
 
-At 12-15 h a week, sessions 10-11 fit before Nov 24 and session 12 before Nov 30, with slack for one bad sim day.
+At 12-15 h a week, sessions 10-11 fit before Nov 24 and sessions 12-13 before Nov 30, with slack for one bad sim day. Session 12 needs no sim, so it can swap with 13 if a sim day goes badly.
 
 ---
 
