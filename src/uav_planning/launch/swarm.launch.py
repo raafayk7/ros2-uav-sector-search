@@ -1,7 +1,9 @@
-"""N iris in one headless Gazebo, then N followers once /clock flows (T5).
+"""N iris in one headless Gazebo, then N followers once /clock flows (T5),
+optionally led by a sweeping leader with a belief map (session 9, D40).
 
   ros2 launch uav_planning swarm.launch.py              # sim + 3 followers
   ros2 launch uav_planning swarm.launch.py sim:=false   # followers only
+  ros2 launch uav_planning swarm.launch.py leader:=true num_followers:=1
 
 Why our own sim launch: upstream multiagent.launch.py hard-codes 4 different
 vehicles. This reuses its per-vehicle building block, robots/robot.launch.py
@@ -28,12 +30,30 @@ vehicles. This reuses its per-vehicle building block, robots/robot.launch.py
     config/loop_250hz.parm goes in with it. physics_step:=0.001 restores
     upstream timing for any run where fidelity is in doubt.
 
-Drone i (0-based) is iris_{i+1}, sysid i+1, SITL instance i, spawned at
-x = i * spacing on the runway, altitude layer 10 + 2 i m (D5). Every drone
-lists all others as peers, and all share one datum (D7). One stub map.
+Without a leader (default, the T5 launch): drone i (0-based) is iris_{i+1},
+sysid i+1, SITL instance i, spawned at x = i * spacing on the runway,
+altitude layer 10 + 2 i m (D5). Every drone lists all others as peers, and
+all share one datum (D7). One stub map.
+
+With leader:=true (D40): iris_1, sysid 1, is the leader. It spawns at the
+world origin, which is the arena corner and the datum, and runs
+sweep.launch.py (8 m layer, 5 m/s, D39). Followers are iris_2.., sysid 2..,
+layers 10 + 2 k m for follower k = 0, 1, ..., spawned at x = (k + 1) *
+spacing on a line follower_y m from the arena edge (default 5 m south), so
+no follower climbs through the leader's 8 m layer near its path. Followers
+list only each other as peers: the planner counts a peer with no goal as
+parked where it is, so the leader would block wherever it flew. Every drone
+gets a ground-truth detector in its namespace, and belief_map_node fuses them
+all into /heatmap in place of the stub. The leader bridges camera_info (the
+sweep plans from it); the followers' detectors and the map use the sim-camera
+defaults, so they bridge no camera unless camera:=true.
 
 Launch args:
-  num_followers   default 3
+  num_followers   default 3 (the leader is extra)
+  leader          add the leader, detectors and belief map (default false)
+  follower_y      followers' spawn y with a leader, m (default -5.0)
+  detector_seed   ground-truth detector seed, drone i gets seed + i
+                  (default -1: random)
   sim             start Gazebo + SITL here (default true)
   followers       start the followers once /clock flows (default true;
                   false brings up the sim alone, e.g. to measure RTF)
@@ -50,6 +70,7 @@ Launch args:
 
 import tempfile
 from pathlib import Path
+from typing import NamedTuple
 
 import yaml
 from ament_index_python.packages import get_package_share_directory
@@ -79,17 +100,42 @@ def _defaults(source, context):
             for a in ld.get_launch_arguments()}
 
 
-def _bridge_config(camera: bool) -> str:
-    """Upstream's iris bridge config minus clock, gz/tf and (optionally)
-    camera, written to a temp file. robot.launch.py fills in the
-    {{ robot_name }} and {{ world_name }} placeholders."""
+class Drone(NamedTuple):
+    name: str
+    sysid: int
+    role: str         # 'leader' or 'follower'
+    index: int        # follower index k (layer 10 + 2 k); 0 for the leader
+    x: float          # spawn, Gazebo world = arena frame
+    y: float
+
+
+def _drones(context):
+    n = int(_arg(context, 'num_followers'))
+    spacing = float(_arg(context, 'spacing'))
+    if _arg(context, 'leader').lower() != 'true':
+        return [Drone(f'iris_{i + 1}', i + 1, 'follower', i, i * spacing, 0.0)
+                for i in range(n)]
+    y = float(_arg(context, 'follower_y'))
+    return [Drone('iris_1', 1, 'leader', 0, 0.0, 0.0)] + [
+        Drone(f'iris_{k + 2}', k + 2, 'follower', k, (k + 1) * spacing, y)
+        for k in range(n)]
+
+
+def _bridge_config(camera: str) -> str:
+    """Upstream's iris bridge config minus clock, gz/tf and camera topics,
+    written to a temp file. camera: 'none', 'info' (camera_info only) or
+    'all'. robot.launch.py fills in the {{ robot_name }} and
+    {{ world_name }} placeholders."""
     src = Path(get_package_share_directory('ardupilot_gz_bringup'),
                'config', 'iris_bridge.yaml')
     entries = yaml.safe_load(src.read_text())
+    cams = {'none': (), 'info': ('camera/camera_info',),
+            'all': ('camera/camera_info', 'camera/image')}[camera]
     keep = [e for e in entries
             if e['ros_topic_name'] != 'clock'
             and not e['ros_topic_name'].startswith('gz/')
-            and (camera or not e['ros_topic_name'].startswith('camera/'))]
+            and (not e['ros_topic_name'].startswith('camera/')
+                 or e['ros_topic_name'] in cams)]
     out = tempfile.NamedTemporaryFile('w', delete=False, suffix='.yaml')
     yaml.safe_dump(keep, out, sort_keys=False)
     out.close()
@@ -141,15 +187,18 @@ def _with_ours(defaults: str, step: str) -> str:
     return ','.join(files)
 
 
-def _sim_actions(context, n):
+def _sim_actions(context, drones):
     bringup = get_package_share_directory('ardupilot_gz_bringup')
     step = _arg(context, 'physics_step')
     if step not in STEP_PARMS:
         raise RuntimeError(f'physics_step must be one of {list(STEP_PARMS)}, '
                            f'got {step}')
     world = _world(step)
-    spacing = float(_arg(context, 'spacing'))
-    bridge_file = _bridge_config(_arg(context, 'camera').lower() == 'true')
+    camera = _arg(context, 'camera').lower() == 'true'
+    bridge_files = {
+        'follower': _bridge_config('all' if camera else 'none'),
+        'leader': _bridge_config('all' if camera else 'info'),
+    }
 
     actions = [
         IncludeLaunchDescription(
@@ -176,21 +225,21 @@ def _sim_actions(context, n):
                  if k in ('model', 'defaults', 'synthetic_clock', 'sim_address')})
     base['defaults'] = _with_ours(base['defaults'], step)
 
-    for i in range(n):
-        name = f'iris_{i + 1}'
+    for i, drone in enumerate(drones):
+        name = drone.name
         drone_args = dict(base)
         drone_args.update({
             'namespace': name,
             'robot_name': name,
             'world_name': WORLD,
             'sdf_file': _iris_sdf(name),
-            'bridge_config_file': bridge_file,
+            'bridge_config_file': bridge_files[drone.role],
             'command': 'arducopter',
             'use_gz_tf': 'false',
-            'x': str(i * spacing), 'y': '0.0', 'z': '0.195',
+            'x': str(drone.x), 'y': str(drone.y), 'z': '0.195',
             'R': '0', 'P': '0', 'Y': '1.5708',
             'instance': str(i),
-            'sysid': str(i + 1),
+            'sysid': str(drone.sysid),
             'use_instance_dir': 'True',
             # One MicroXRCEAgent serves every SITL; AP_DDS namespaces by sysid.
             'use_dds_agent': 'True' if i == 0 else 'False',
@@ -204,13 +253,15 @@ def _sim_actions(context, n):
     return actions
 
 
-def _follower_actions(context, n):
+def _follower_actions(context, drones):
     follower_file = str(Path(get_package_share_directory('uav_planning'),
                              'launch', 'follower.launch.py'))
-    names = [(f'iris_{i + 1}', i + 1) for i in range(n)]
+    followers = [d for d in drones if d.role == 'follower']
+    stub = len(followers) == len(drones)     # no leader: T5's stub map
     actions = []
-    for i, (name, sysid) in enumerate(names):
-        peers = ','.join(f'{p}:{s}' for p, s in names if p != name)
+    for d in followers:
+        name, sysid, i = d.name, d.sysid, d.index
+        peers = ','.join(f'{p.name}:{p.sysid}' for p in followers if p != d)
         # A fresh source per drone: a source caches its parsed file, and
         # follower.launch.py builds its Nodes at parse time, so a shared
         # source would hand every drone the same Node objects. Unscoped like
@@ -226,15 +277,55 @@ def _follower_actions(context, n):
                 'datum_lat': _arg(context, 'datum_lat'),
                 'datum_lon': _arg(context, 'datum_lon'),
                 'datum_alt': _arg(context, 'datum_alt'),
-                'use_stub': 'true' if i == 0 else 'false',
+                'use_stub': 'true' if stub and i == 0 else 'false',
                 'arm_timeout': _arg(context, 'arm_timeout'),
             }.items()))
     return actions
 
 
+def _leader_actions(context, drones):
+    """The leader's sweep, a detector per drone and the belief map (D40)."""
+    share = get_package_share_directory('uav_planning')
+    leader = drones[0]
+    actions = [IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(str(Path(share, 'launch', 'sweep.launch.py'))),
+        launch_arguments={
+            'robot': leader.name,
+            'sysid': str(leader.sysid),
+            'navsat_topic': f'/{leader.name}/navsat',
+            'odom_topic': f'/{leader.name}/odometry',
+            'datum_lat': _arg(context, 'datum_lat'),
+            'datum_lon': _arg(context, 'datum_lon'),
+            'datum_alt': _arg(context, 'datum_alt'),
+            'arm_timeout': _arg(context, 'arm_timeout'),
+        }.items())]
+    seed = int(_arg(context, 'detector_seed'))
+    for i, d in enumerate(drones):
+        actions.append(Node(
+            package='uav_perception', executable='ground_truth_detector',
+            name='ground_truth_detector', namespace=d.name, output='screen',
+            parameters=[{
+                'pose_topic': f'/{d.name}/pose',
+                'detections_topic': f'/{d.name}/detections',
+                'camera_info_topic': f'/{d.name}/camera/camera_info',
+                'seed': seed + i if seed >= 0 else -1,
+                'use_sim_time': False,
+            }]))
+    actions.append(Node(
+        package='uav_mapping', executable='belief_map_node',
+        name='belief_map_node', output='screen',
+        parameters=[{
+            'robots': ','.join(d.name for d in drones),
+            'confirmers': ','.join(d.name for d in drones if d.role == 'follower'),
+            'use_sim_time': False,
+        }]))
+    return actions
+
+
 def _launch(context):
-    n = int(_arg(context, 'num_followers'))
-    actions = _sim_actions(context, n) if _arg(context, 'sim').lower() == 'true' else []
+    drones = _drones(context)
+    n = len(drones)
+    actions = _sim_actions(context, drones) if _arg(context, 'sim').lower() == 'true' else []
     if _arg(context, 'followers').lower() != 'true':
         return actions
 
@@ -248,8 +339,10 @@ def _launch(context):
         if event.returncode != 0:
             return [LogInfo(msg='/clock never flowed; not starting followers'),
                     Shutdown(reason='no /clock')]
-        return [LogInfo(msg=f'/clock flowing; starting {n} followers')] + \
-            _follower_actions(context, n)
+        started = _follower_actions(context, drones)
+        if drones[0].role == 'leader':
+            started = _leader_actions(context, drones) + started
+        return [LogInfo(msg=f'/clock flowing; starting {n} drones\' nodes')] + started
 
     actions += [gate, RegisterEventHandler(
         OnProcessExit(target_action=gate, on_exit=on_gate_exit))]
@@ -259,6 +352,9 @@ def _launch(context):
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('num_followers', default_value='3'),
+        DeclareLaunchArgument('leader', default_value='false'),
+        DeclareLaunchArgument('follower_y', default_value='-5.0'),
+        DeclareLaunchArgument('detector_seed', default_value='-1'),
         DeclareLaunchArgument('sim', default_value='true'),
         DeclareLaunchArgument('followers', default_value='true'),
         DeclareLaunchArgument('camera', default_value='false'),
