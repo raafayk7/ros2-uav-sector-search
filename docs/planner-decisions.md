@@ -4,7 +4,7 @@ Review target (fixed): the follower planner section of `docs/roadmap.md`, scoped
 
 ## Decisions at a glance
 
-Status: decided. The mission state machine is designed (D41) and its ROS-free core is built and tested as of 2026-11-20 (session 10); a leader and 3 followers found all 3 targets in two cold runs. `belief_map_node` and a leader role in the swarm launch are built as of 2026-11-18 (session 9, D40), and one follower completed the Nov 20 search loop in two cold runs. The leader's sweep controller is built and flown as of 2026-11-17 (session 8, D39). T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07. T3 (node) and T4 (arm helper, stub map) are built and flown as of 2026-11-08: one follower in headless SITL reaches the best stub sector and reports ARRIVED, and disabling holds it. T5 (swarm launch) is built and flown as of 2026-11-12: three followers each hold a different stub peak. Full reasoning is in the ledger below.
+Status: decided. `mission_node` is built and flew one whole mission to DONE from one command on 2026-11-20 (session 11), plus one TIMED_OUT run. The mission state machine was designed (D41) and its ROS-free core built and tested the same day (session 10); a leader and 3 followers found all 3 targets in two cold runs. `belief_map_node` and a leader role in the swarm launch are built as of 2026-11-18 (session 9, D40), and one follower completed the Nov 20 search loop in two cold runs. The leader's sweep controller is built and flown as of 2026-11-17 (session 8, D39). T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07. T3 (node) and T4 (arm helper, stub map) are built and flown as of 2026-11-08: one follower in headless SITL reaches the best stub sector and reports ARRIVED, and disabling holds it. T5 (swarm launch) is built and flown as of 2026-11-12: three followers each hold a different stub peak. Full reasoning is in the ledger below.
 
 | Topic | Decision | Ref |
 |---|---|---|
@@ -1626,6 +1626,53 @@ Ran: leader + 3 followers live, twice (the second with a target near a sector ed
 
 **Plan-level versus code.** Plan-level: D41 (where, start, end action, clock and timeout, plus the stated defaults for states, outputs and `/confirmed_finds`), the decisions table row, the roadmap's Mission row. Code: `core/mission.py` and its tests, `/confirmed_finds`, the probe changes, docker-notes 57-58.
 
+## Implementation notes (session 11, 2026-11-20)
+
+Ran: `mission_node`, the swarm-launch wiring, one full mission from one command, one TIMED_OUT run (about 1.5 h). No decisions changed; everything below is code and measurements.
+
+**What was built (code).**
+
+- `uav_planning/mission_node.py`: a thin wrapper, like `sweep_node`. Wall-clock 1 Hz timer calling `Mission.tick`; subscribes the leader's latched `sweep_status`, latched `/heatmap` and `/confirmed_finds`, and each follower's `planner_status` and `goal_sector`. Sends `planner_enable` to every follower each tick, latched `/mission_state` (JSON `{state, reason}`, on change, and the end reason is kept after the end) and, once at the end, latched `/mission_report` (`Mission.report()` as JSON). Logs one line per state change and per find. Parameters: `followers`, `leader`, `threshold`, `hold`, `timeout`, and topic templates with `{robot}`.
+- `core/mission.py` gained the node's three ROS-free helpers: `parse_names`, `parse_finds` (the belief map's JSON) and `SimClock` (the newest `goal_sector` stamp, carried forward by wall time).
+- `swarm.launch.py`: with `leader:=true`, `mission:=true` (default) starts `mission_node` and passes `start_enabled:=false` to every planner; `mission:=false` is the session-10 behaviour. `mission_threshold`, `mission_hold` and `mission_timeout` expose the D14 and D41 values (named with a `mission_` prefix so they do not read as `clock_timeout` or `arm_timeout`).
+- Tests: 9 new (helpers, and two node tests that construct `MissionNode` under rclpy to check parameter parsing, no sim). `python3 -m pytest src`: 207 passed.
+
+**Run 1: DONE from one command.** Cold, `swarm.launch.py leader:=true num_followers:=3 detector_seed:=1`, targets from `belief_live_check.py 400 3`. Times are wall seconds after t0 (the mission entering SEARCHING), from `/mission_report`:
+
+| Event | Wall s | Note |
+|---|---|---|
+| WAITING -> SEARCHING, all 3 planners enabled in the same millisecond | 0 | 2 s after `mission_node` started, before any drone armed. Planners were HOLDING (disabled) until then |
+| Sweep SWEEPING | 54.0 | arming and climb take the first 54 s |
+| (6, 1) by iris_3 | 67.0 | 13 s into the sweep |
+| (1, 2) by iris_2 | 73.0 | 19 s |
+| (4, 5) by iris_2 | 86.0 | 32 s; iris_4 found nothing |
+| Sweep COMPLETE | 129.0 | sweep 75 s, as in session 10 (68-76 s) |
+| DONE ("quiet for 30 s") | 160.0 | 31.3 s after COMPLETE in the launch log stamps: the 30 s hold plus up to one 1 Hz tick |
+
+The report matched the belief map's CONFIRMED lines (cells and drones), listed no open cells and every follower ARRIVED. Each planner logged one hold at DONE, and all four drones then stayed within 1 cm over 8 s. Map at the end: 61 of 61 empty cells at 3 %, the three targets 0, no false confirmations, 799-800 frames per drone.
+
+**RTF during SEARCHING** (`rtf_windows.sh`, three 30 s windows from the first SWEEPING, so sweep plus follower flight): 0.489, 0.521, 0.523. A little below session 10's hover windows (0.54-0.61), above the 0.4 floor.
+
+**D14's values (task 4).** After COMPLETE the probe's `open` column (highest unconfirmed cell, unknown = 50) never went above 5 %; session 10's worst was 23 %. The last reading at 50 or more was before the third confirmation. So 0.5 and 30 s held with a wide margin, and the end time is set by the sweep, not the map, as session 10 predicted. Unchanged (they change only with the user). One run at one detector seed.
+
+**Run 2: TIMED_OUT** (`mission_timeout:=60`). TIMED_OUT at 68.0 wall-s, 60.7 sim-s by the node's estimate, 19 s into the sweep. The report had no finds, the three target cells as open, and each follower ASCENDING; the latched state read `{"state": "TIMED_OUT", "reason": "60 sim-s"}`. Each planner sent one hold. Two things came out of it:
+
+- **A D29 hold sent while cruising overshoots and comes back.** All three followers were flying to their goals when disabled. Each carried on past its hold point (up to about 5.6 m: iris_4 held at (21.6, 21.8) but was over (22.5, 27.4) 4 s later), then returned to the hold point, where the pose samples found them. On the way past, the belief map confirmed all three targets 2.7-4.1 s after TIMED_OUT, so the finds exist on `/confirmed_finds` but not in the report, which is written once at the end. At DONE this does not arise, since every follower is ARRIVED.
+- **The sim-time estimate runs ahead, as designed.** `goal_sector` is only published once a follower has a goal, which here was about 50 wall-s after t0 (arming and climb). `SimClock` has nothing until then, so the core counts that gap at RTF 1 (D41's "never late" fallback). At RTF about 0.5 the report's `sim_s` is therefore high: run 1 reported 107.3 sim-s for 160 wall-s, where RTF 0.5 would give about 80. The timeout fires early, never late, but `sim_s` and each find's `sim_s` are not yet trustworthy for the eval. A fix would read sim time from a stamp that flows from boot (the followers' `/<robot>/pose`, which copies the navsat sim stamp); D41 names `goal_sector` stamps, so that is the user's call.
+
+**Not shown, with scope and home:**
+
+| Gap | In scope this session? | Home |
+|---|---|---|
+| A second DONE run (only one, at one seed) | yes, not done for time | session 13's dress run is the second |
+| `sim_s` in the report overstated by the climb gap | found here | user decision: read sim time from `/<robot>/pose` stamps (small code change to `mission_node`, outside D41's letter) |
+| Finds after the end are not in the report (overshoot after a timeout hold) | found here | report-only: harmless at DONE; if it matters, the report could be republished when `/confirmed_finds` grows after the end. Not changed |
+| The WAITING gate passes in about 2 s, before arming, so t0 includes 54 s of arming and climb | observed; D41 as written | recorded; if the eval wants search time alone, start the clock at the first SWEEPING (the report already carries `sweep_started_s`) |
+| D24's yield costing time (session 10, once) | watched | did not recur: no yield in either run |
+| Hits split across a sector edge, correlated detector, landing | no | as in session 10's table |
+
+**Plan-level versus code.** Code: `mission_node`, the core helpers, the launch wiring, tests. Plan-level: none; the two questions above (sim-time source, the report after the end) are open for the user.
+
 ## NOT in scope
 
 - Potential-field layer: altitude layers cover the sim (D5); revisit if a same-altitude flight is ever needed.
@@ -1735,9 +1782,10 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Verify: one follower completes observe, update, depart, find
   - [x] Verify first (carried from T6): marker error while the drone flies sideways at sweep speed stays near the hover result. Done 2026-11-17 with `docs/probes/sweep_live_check.py`: cruise at 5 m/s median 3.1-3.3 px, max 7.0, in two runs (session 8 notes).
 
-- [ ] **T9 (P1, human: ~1 day / CC: ~1h)** — uav_planning — mission state machine (designed 2026-11-20, D41; ROS-free `core/mission.py` and 19 tests built in session 10, plus `/confirmed_finds` on `belief_map_node`; `mission_node`, `planner_enable` off at launch and the swarm-launch wiring remain, session 11)
+- [x] **T9 (P1, human: ~1 day / CC: ~1h)** — uav_planning — mission state machine (designed 2026-11-20, D41; ROS-free `core/mission.py` and 19 tests built in session 10, plus `/confirmed_finds` on `belief_map_node`; `mission_node`, planners disabled at launch and the swarm-launch wiring built and flown to DONE in session 11, same day)
   - Surfaced by: R8 (D14), R24 (D29), D41
   - Files: `src/uav_planning/uav_planning/core/mission.py`, `mission_node.py`, `launch/swarm.launch.py`
+  - Verify: done 2026-11-20, one cold run from one command: DONE 31.3 s after the sweep, report lists all 3 finds with the right drones (session 11 notes)
   - Verify: leader + 3 followers, one command, ends DONE about 30 s after the sweep with a `/mission_report` listing every find with drone and time (Nov 24)
 
 Effort assumes features at about 30x and tests at about 50x human-to-CC time, adjusted down for ROS integration.
