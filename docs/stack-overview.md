@@ -9,7 +9,7 @@ choice (the trade-offs, the alternatives rejected), see
 `assessment-ros2-migration.md` — that's the source of truth for *why*. For
 build-environment gotchas, see `docker-notes.md`.
 
-Last updated: 2026-11-04.
+Last updated: 2026-11-20 (session 10).
 
 ---
 
@@ -28,20 +28,19 @@ stacks on.
 
 ## Where the project is right now
 
-- The simulation environment stands up fully: Gazebo + the ArduPilot flight
-  controller + the ROS 2 bridge.
-- **Two project nodes exist and are verified.** `uav_localization/
-  localization_node` turns raw GPS into a clean local position (`/pose`) in a
-  project-defined map frame. `uav_mapping/leader_node` — the first
-  algorithm-relevant node — turns the leader's camera detections into a
-  probability heatmap (`/heatmap`) over the thesis sector grid.
-- The **follower planner is still ahead** — that's the next node
-  (`follower_planner_node`, consuming `/heatmap`). Its design is settled in
-  `planner-decisions.md`.
-- The Gazebo↔SITL FDM handshake works as of 2026-11-02 (`/ap/v1/*` is live and
-  the drone accepts arm/takeoff; see `docker-notes.md`), so actuation is no
-  longer blocked. The planner can still be validated first as a coordination
-  simulation without flight.
+- **The search loop works in simulation with four drones.** A leader sweeps the
+  40 x 40 m arena at 8 m; three followers fly to the best open sectors on one
+  shared map; all 3 targets were confirmed in both cold runs on 2026-11-20.
+- **Nodes that exist and have flown:** `localization_node` (GPS to a shared
+  arena frame), `sweep_node` (the leader's lawnmower), `ground_truth_detector`
+  (a noisy stand-in for YOLO, one per drone), `belief_map_node` (the one
+  shared map: every drone's detections and empty looks), and
+  `follower_planner_node` (one per follower). `leader_node` is the older
+  one-drone map, kept as a reference.
+- **Next:** `mission_node`, the state machine that switches the followers on,
+  decides when the search is over and reports the finds. Its rules are built
+  and tested as a plain-Python library (`uav_planning/core/mission.py`, D41).
+- **Not built:** YOLO (stretch) and precision landing.
 
 ---
 
@@ -58,8 +57,8 @@ stacks on.
 | Harness | ardupilot_gz | Glue package that launches Gazebo and SITL together and wires them up. Ships `iris_runway.launch.py`. |
 | ROS ↔ autopilot | AP_DDS | ArduPilot's native bridge: exposes the autopilot to ROS 2 as `/ap/vN/*` topics and services. Replaces the older MAVROS. |
 | Sensor bridge | ros_gz_bridge | Bridges Gazebo's sensor topics into ROS 2 (`/navsat`, `/odometry`, `/camera/image`, …). |
-| Perception | YOLO26 | Computer-vision marker detection. Not built yet. |
-| Algorithm | Best open sector, with thesis DGA / BLL as baselines | The distributed coordination planner. Each follower picks the best open sector on the shared map. Designed, not built. |
+| Perception | ground-truth detector now, YOLO26 later | Marker detection. Today `uav_perception/ground_truth_detector` reads target positions from Gazebo and adds misses, false alarms and pixel noise; YOLO26 is a stretch goal. |
+| Algorithm | Best open sector, with thesis DGA / BLL as baselines | The distributed coordination planner. Each follower picks the best open sector on the shared map. Built and flown with up to 3 followers. |
 
 ### How the simulation pieces fit together
 
@@ -171,6 +170,25 @@ picture of the system:
 
 Decisions are in `planner-decisions.md`; environment facts are gotchas 24-30 in
 `docker-notes.md`.
+
+## Sessions 2026-11-07 to 2026-11-20: from one follower to a four-drone search
+
+The detail is in `planner-decisions.md` (implementation notes, sessions 1-10).
+What changed in your picture of the system:
+
+- **Followers fly** (Nov 8 one, Nov 12 three), each at its own altitude layer,
+  and give way by sysid when two want the same sector.
+- **Simulation speed is set by Gazebo's main thread**, about 1 ms per drone
+  per physics step. A 2 ms step doubled the speed (D37); four drones run at
+  about half real time.
+- **The leader sweeps on its own** (D39) and never reads detections, so
+  coverage is guaranteed whatever the map says.
+- **One belief map owns the posterior** (D40). It computes every drone's
+  camera footprint itself, caps how much one look can change a cell, and
+  confirms a target when a follower over that sector sees it on 3
+  consecutive frames. A confirmed sector reads 0, so followers move on.
+- **The mission state machine is designed** (D41, session 10) and its
+  library is tested; the node that runs it is session 11.
 
 ---
 
@@ -284,3 +302,32 @@ conflicting observations.
 last message so subscribers joining *after* it was sent still receive it. Used
 for `/heatmap` so a late-starting follower planner gets the current map at
 once instead of waiting for the next publish.
+
+**Real-time factor (RTF)** — simulated seconds per wall-clock second. 1.0
+means the sim keeps up with real time; 0.5 means a 60 s flight takes 2 real
+minutes. Measure it from two `/stats` messages 30 s apart
+(`docs/probes/rtf_windows.sh`), not from the noisy `real_time_factor` field.
+
+**Look cap** — the belief map's rule that one drone looking at one cell can
+move it by at most a fixed amount (±0.85 log-odds, about 50 % to 70 %) per
+look, however many frames the camera takes. It stops a hovering drone, or one
+stuck false detection, from counting as dozens of independent sightings.
+
+**Confirmation** — the belief map's decision that a target is real: a
+follower within 2 m of a sector's centre sees it on 3 consecutive frames. The
+sector then publishes as 0 and is listed on `/confirmed_sectors` and
+`/confirmed_finds` (which also names the drone).
+
+**State machine** — a program that is always in exactly one named state
+(here WAITING, SEARCHING, DONE or TIMED_OUT), checks a condition on a timer,
+and moves to the next state when it holds, doing one thing on each move
+(enable the planners, disable them, publish the report). A launch file can
+only start processes in order; a state machine can wait for a condition like
+"the sweep is done and the map has stayed quiet for 30 s", and can give up on
+a timeout. Keeping its rules in a plain-Python class means they can be unit
+tested without a simulator.
+
+**Hold time (hysteresis)** — requiring a condition to stay true for a while
+before acting on it. The mission's end rule waits 30 s of quiet because one
+false alarm can push a cell over 50 % for a second or two; without the hold,
+the mission could end in the gap between two such blips.

@@ -367,7 +367,7 @@ C) Timeout only
 State: approved
 Actual answer: A) Mission decides (D14, 2026-11-04)
 Accepted scope: no termination code in the planner. Recorded rule for the Nov 24 mission state machine: end when the leader's sweep is complete and every unsuppressed sector is below 0.5 for 30 s, or at timeout, then disable planners through the R6 enable switch. The 0.5 and 30 s values are provisional until tested.
-History: none
+History: EXTENDED by D41 (2026-11-20, session 10 notes): unknown cells count as 0.5, the hold is on the wall clock, the timeout is 600 sim-s after the mission enables the planners, and DONE wins over a timeout on the same tick. The 0.5 and 30 s values are unchanged.
 
 ### R9: Who arms the drones, and under which RMW
 Finding: 9, P1, confidence 9/10, `docker/docker-compose.yml:60` (`RMW_IMPLEMENTATION=rmw_cyclonedds_cpp`) and `docs/docker-notes.md` gotcha 22, native review.
@@ -1735,11 +1735,16 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Verify: one follower completes observe, update, depart, find
   - [x] Verify first (carried from T6): marker error while the drone flies sideways at sweep speed stays near the hover result. Done 2026-11-17 with `docs/probes/sweep_live_check.py`: cruise at 5 m/s median 3.1-3.3 px, max 7.0, in two runs (session 8 notes).
 
+- [ ] **T9 (P1, human: ~1 day / CC: ~1h)** — uav_planning — mission state machine (designed 2026-11-20, D41; ROS-free `core/mission.py` and 19 tests built in session 10, plus `/confirmed_finds` on `belief_map_node`; `mission_node`, `planner_enable` off at launch and the swarm-launch wiring remain, session 11)
+  - Surfaced by: R8 (D14), R24 (D29), D41
+  - Files: `src/uav_planning/uav_planning/core/mission.py`, `mission_node.py`, `launch/swarm.launch.py`
+  - Verify: leader + 3 followers, one command, ends DONE about 30 s after the sweep with a `/mission_report` listing every find with drone and time (Nov 24)
+
 Effort assumes features at about 30x and tests at about 50x human-to-CC time, adjusted down for ROS integration.
 
 ## Unresolved decisions
 
-None (D40, the belief map, was decided 2026-11-18). D40 set D32's N to 3 (untested against a correlated detector); the D14 thresholds remain provisional values by decision, not open questions.
+None (D41, the mission state machine, was decided 2026-11-20). D40 set D32's N to 3 (untested against a correlated detector); the D14 thresholds remain provisional values by decision, not open questions, and session 11 measures them live (session 10's probe: worst false alarm after the sweep 23 %). D24's yield cost about 13 s once in session 10, with an arrived drone giving way; that is an observation, not an open decision, unless it recurs.
 
 ## Completion summary
 

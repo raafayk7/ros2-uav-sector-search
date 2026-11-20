@@ -2,7 +2,7 @@
 
 **Work in progress.** A leader drone sweeps an area and builds a probability map of where targets are; follower drones each fly, independently, to the best open sector on that map. This repo is a ROS 2 / Gazebo Harmonic rebuild of the LUMS senior project *"Distributed Autonomous Surveillance and Rescue Architecture Integrating Computer Vision within Multi-Agent Drone Coordination"* (Anwer, Moeez, Tahir, Kazmi — Spring 2025). The original ran on ROS Noetic + Gazebo 11; this version targets a modern stack and the future-work items the original team listed (true decentralization, scale beyond two followers, more robust perception).
 
-What flies today is **one follower**. Read [Status](#status) before expecting more.
+What flies today: a leader sweeping the arena and **three followers** finding every target on a shared map, in simulation. The mission's start-and-stop logic is not finished. Read [Status](#status) before expecting more.
 
 ## How it is meant to work
 
@@ -17,7 +17,7 @@ What flies today is **one follower**. Read [Status](#status) before expecting mo
                               and flies there through ArduPilot (AP_DDS)
 ```
 
-- **Shared map:** a grid of per-sector probabilities. The leader's detections raise cells; (planned) camera footprints with no detection lower them.
+- **Shared map:** a grid of per-sector probabilities, owned by one `belief_map_node`. Every drone's detections raise cells, and every camera footprint with no detection lowers them. A follower confirms a target when it hovers over a sector and sees it on 3 consecutive frames; that sector then drops out of the search.
 - **Followers decide on their own.** Each one scores every sector on the map, subtracts an overlap penalty for sectors peers have claimed (peers broadcast their goal sector and pose), and flies to the best open one. There is no central planner. Followers fly at different altitude layers so transit crossings stay separated.
 - **Baselines:** the thesis's Distributed Gradient Ascent (DGA) and Bilinear Log-Linear (BLL) are kept as library baselines to measure the sector planner against.
 - **Library first:** the planner, the follower logic and the baselines are plain Python with no ROS import (`src/uav_planning/uav_planning/core/`). The ROS nodes are thin wrappers, so the same code can be tested and evaluated without a simulator.
@@ -33,7 +33,7 @@ Design rationale and the record of decisions: [`docs/planner-decisions.md`](docs
 | Simulator | Gazebo Harmonic |
 | Drone harness | [`ArduPilot/ardupilot_gz`](https://github.com/ArduPilot/ardupilot_gz), ArduPilot SITL |
 | ROS ↔ ArduPilot | AP_DDS (native), not MAVROS |
-| Perception (planned) | Ultralytics YOLO26 |
+| Perception | ground-truth detector with noise today; Ultralytics YOLO26 planned |
 
 ## Quickstart
 
@@ -71,6 +71,13 @@ ros2 launch uav_planning swarm.launch.py
 
 Three iris spawn 5 m apart, climb to 10, 12 and 14 m, and each settles on a different peak of the stub map, about 100 s after launch on this machine.
 
+The search itself, a leader, three followers, one detector per drone and the shared belief map:
+
+```bash
+ros2 launch uav_planning swarm.launch.py leader:=true num_followers:=3
+python3 docs/probes/belief_live_check.py 300 3    # second shell, once the SITLs are up: spawns 3 targets and logs the search
+```
+
 Tests (no simulator needed; ROS sourced for a few of them):
 
 ```bash
@@ -79,24 +86,21 @@ python3 -m pytest src
 
 ## Status
 
-Verified in headless SITL with one iris (real-time factor about 0.46):
+Verified in headless SITL, 2026-11-20, in two cold runs with a leader and three followers (`swarm.launch.py leader:=true num_followers:=3`, real-time factor about 0.55):
 
-- Arm, take off to the 10 m layer, fly to the best stub-map sector and report `ARRIVED` about 7 s after the planner picks it (warm sim), then hold within 0.1 m of the sector centre for 40 s. From a cold start the whole sequence takes under a minute.
-- `planner_enable` false mid-flight holds position.
+- The leader flies a lawnmower sweep over the 40 x 40 m arena (8 x 8 sectors at 5 m) in 68-76 s. Followers launch with it and fly to whatever the shared map currently rates highest.
+- All 3 targets were confirmed in both runs, 15-34 s into the sweep, with no false confirmations. In one run each follower found a different target. Empty sectors ended at 3-5 %.
+- A target 0.3 m inside a sector edge was confirmed in the right sector.
+- Detection is a ground-truth stand-in for YOLO: Gazebo target positions with misses (20 %), false alarms (5 % per frame) and 5 px noise, on a camera held straight down.
 
-Verified with three iris and three followers (`swarm.launch.py`, real-time factor about 0.26-0.44), 2026-11-12, in 3 cold runs:
-
-- Each follower settles on a different peak of the stub map, all `ARRIVED` 90-103 s after launch, with at most one goal change (a same-tick tie the higher sysid gives up).
-- When one follower goes completely silent, its peak is released about 5.6 sim seconds later and the others move up to the better peaks.
-- 72 tests pass: the planner library, the DGA/BLL baselines, a 200-seed coordination harness, the follower logic and the shared-datum localization.
+Earlier milestones, still true: one follower flies to a sector and reports `ARRIVED`, and `planner_enable` false holds it (2026-11-08). Three followers each hold a different stub-map peak, and a silent follower's peak is released about 5.6 sim seconds later (2026-11-12). 198 tests pass: the planner, sweep, belief map and mission libraries, the DGA/BLL baselines, a 200-seed coordination harness and the shared-datum localization.
 
 **Not done yet:**
 
-- **Scale.** Three followers have flown together; four or more have not, and the sim runs at roughly a third of real time with three.
-- **Leader sweep.** The leader's detection-to-heatmap node exists, but there is no sweep controller and the leader has not flown. Followers fly against a stub map.
-- **Perception.** A ground-truth detector (`uav_perception`: Gazebo target poses with misses, false alarms and pixel noise, checked live against the heatmap) now stands in for YOLO, which is a stretch; the old fake publisher stays for tests. The simulated camera now points straight down (an ArduPilot mount param file, checked with spawned markers).
-- **Landing.** Precision landing (colour masking + PID in the original) is not rebuilt.
-- **Re-enabling after a disable** has not been run live.
+- **Mission start and end.** The state machine that switches the followers on, decides the search is over (sweep complete and nothing above 50 % for 30 s, or a timeout) and reports the finds is designed and its library is tested, but its ROS node is not built. Today a run is ended by hand.
+- **Perception.** YOLO26 is a stretch goal; the noisy ground-truth detector stands in.
+- **Landing.** Precision landing (colour masking + PID in the original) is not rebuilt; a find ends in a hover.
+- **Scale beyond four drones** and **re-enabling after a disable** have not been run.
 
 Known issues and measured quirks are logged in [`docs/docker-notes.md`](docs/docker-notes.md) and [`TODOS.md`](TODOS.md).
 
@@ -105,7 +109,7 @@ Known issues and measured quirks are logged in [`docs/docker-notes.md`](docs/doc
 ```
 multi-agent-uavs/
 ├── docs/        # thesis, decision record, roadmap, Docker notes, probes
-├── src/         # colcon workspace: uav_localization, uav_mapping, uav_planning
+├── src/         # colcon workspace: uav_localization, uav_mapping, uav_perception, uav_planning
 ├── docker/      # Dockerfile + compose for the dev container
 ├── skills/      # Claude skill describing this project (optional tooling)
 ├── CLAUDE.md    # context file for AI coding assistants
