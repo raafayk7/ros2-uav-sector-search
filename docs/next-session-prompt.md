@@ -8,7 +8,7 @@ Session 11 is done (2026-11-20). `mission_node` is built and wired: `swarm.launc
 
 The user then amended D41's clock row: the mission reads sim time from the followers' `/<robot>/pose` stamps instead of `goal_sector`. In run 3 the report's `sim_s` matched Gazebo's `/stats` clock to 0.08 s; before, it ran about 30 % high.
 
-One question for the user is still open (planner-decisions, session 11 notes). It does not block session 12: **finds after the end.** A hold sent while cruising overshoots a few metres and comes back. After TIMED_OUT, all three targets were confirmed 3-4 s after the report had been written. This is harmless at DONE. The option is to republish the report when `/confirmed_finds` grows; the recommendation was to leave it.
+The other session-11 question is settled by the user: the report is not republished when a find lands after the end (it can only happen after a timeout, when a hold sent while cruising overshoots a few metres).
 
 What is left before Nov 30: the go/no-go (leader + 3 followers complete a mission in Gazebo from one command, video v1). The mission part is already shown once.
 
@@ -52,5 +52,5 @@ Record the outcome in the roadmap (the claim's status line) and rewrite this fil
 ## Working agreements
 
 - The user has high-level ROS understanding, not deep. Explain any research term (for example "information-seeking control", "negative evidence") in one paragraph the first time.
-- Settled decisions stay settled (stack, D37-D41). The open session-11 question above is the user's to answer; raise it at the start in one line, and do not act on it without a yes.
+- Settled decisions stay settled (stack, D37-D41, including the session-11 amendments).
 - Do not push without asking.

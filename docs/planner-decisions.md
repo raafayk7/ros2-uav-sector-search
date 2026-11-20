@@ -1677,12 +1677,12 @@ Finds: (6, 1) by iris_4 at +56.0 wall-s (sim +26.2), (4, 5) by iris_2 and (1, 2)
 |---|---|---|
 | A second DONE run | yes, shown | run 3, seed 2 |
 | `sim_s` in the report overstated by the climb gap | yes, fixed | run 3: within 0.08 s of Gazebo's clock |
-| Finds after the end are not in the report (overshoot after a timeout hold) | found here | report-only: harmless at DONE; if it matters, the report could be republished when `/confirmed_finds` grows after the end. Not changed |
+| Finds after the end are not in the report (overshoot after a timeout hold) | found here | decided by the user: left as is. Harmless at DONE; after a timeout the report describes the state at the end |
 | The WAITING gate passes in about 2 s, before arming, so t0 includes 54 s of arming and climb | observed; D41 as written | recorded; if the eval wants search time alone, start the clock at the first SWEEPING (the report already carries `sweep_started_s`) |
 | D24's yield costing time (session 10, once) | watched | did not recur: no yield in either run |
 | Hits split across a sector edge, correlated detector, landing | no | as in session 10's table |
 
-**Plan-level versus code.** Code: `mission_node` (including the pose-stamp sim time), the core helpers, the launch wiring, tests. Plan-level: D41's clock row (sim time from pose stamps, decided by the user). Still open for the user: republishing the report when finds arrive after the end (recommended: leave it).
+**Plan-level versus code.** Code: `mission_node` (including the pose-stamp sim time), the core helpers, the launch wiring, tests. Plan-level: D41's clock row (sim time from pose stamps, decided by the user). Decided by the user (2026-11-20): the report is not republished when finds arrive after the end; it describes the state at the end.
 
 ## NOT in scope
 
