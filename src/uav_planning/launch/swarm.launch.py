@@ -4,6 +4,7 @@ optionally led by a sweeping leader with a belief map (session 9, D40).
   ros2 launch uav_planning swarm.launch.py              # sim + 3 followers
   ros2 launch uav_planning swarm.launch.py sim:=false   # followers only
   ros2 launch uav_planning swarm.launch.py leader:=true num_followers:=1
+  ros2 launch uav_planning swarm.launch.py leader:=true mission:=false
 
 Why our own sim launch: upstream multiagent.launch.py hard-codes 4 different
 vehicles. This reuses its per-vehicle building block, robots/robot.launch.py
@@ -48,12 +49,25 @@ all into /heatmap in place of the stub. The leader bridges camera_info (the
 sweep plans from it); the followers' detectors and the map use the sim-camera
 defaults, so they bridge no camera unless camera:=true.
 
+With a leader, mission:=true (the default) also starts mission_node (D41) and
+launches every planner disabled (start_enabled false): arm_takeoff still
+climbs each follower to its layer, and the mission enables the planners once
+it has seen the sweep status, the map and every planner_status, then
+disables them at DONE or TIMED_OUT (each drone holds, D29). mission:=false
+is the session-10 behaviour: planners enabled from the start, no mission.
+
 Launch args:
   num_followers   default 3 (the leader is extra)
   leader          add the leader, detectors and belief map (default false)
   follower_y      followers' spawn y with a leader, m (default -5.0)
   detector_seed   ground-truth detector seed, drone i gets seed + i
                   (default -1: random)
+  mission         with a leader, run mission_node and start the planners
+                  disabled (default true; ignored without a leader)
+  mission_threshold, mission_hold   D14 end rule: every unconfirmed cell
+                  below the threshold for hold wall-s (default 0.5, 30.0)
+  mission_timeout sim seconds after the planners are enabled (default
+                  600.0, D41)
   sim             start Gazebo + SITL here (default true)
   followers       start the followers once /clock flows (default true;
                   false brings up the sim alone, e.g. to measure RTF)
@@ -253,11 +267,19 @@ def _sim_actions(context, drones):
     return actions
 
 
+def _mission(context, drones):
+    """True when mission_node runs: a leader and mission:=true."""
+    return (drones[0].role == 'leader'
+            and _arg(context, 'mission').lower() == 'true')
+
+
 def _follower_actions(context, drones):
     follower_file = str(Path(get_package_share_directory('uav_planning'),
                              'launch', 'follower.launch.py'))
     followers = [d for d in drones if d.role == 'follower']
     stub = len(followers) == len(drones)     # no leader: T5's stub map
+    # Under a mission the planners wait for its planner_enable (D41).
+    enabled = 'false' if _mission(context, drones) else 'true'
     actions = []
     for d in followers:
         name, sysid, i = d.name, d.sysid, d.index
@@ -278,6 +300,7 @@ def _follower_actions(context, drones):
                 'datum_lon': _arg(context, 'datum_lon'),
                 'datum_alt': _arg(context, 'datum_alt'),
                 'use_stub': 'true' if stub and i == 0 else 'false',
+                'start_enabled': enabled,
                 'arm_timeout': _arg(context, 'arm_timeout'),
             }.items()))
     return actions
@@ -319,6 +342,18 @@ def _leader_actions(context, drones):
             'confirmers': ','.join(d.name for d in drones if d.role == 'follower'),
             'use_sim_time': False,
         }]))
+    if _mission(context, drones):
+        actions.append(Node(
+            package='uav_planning', executable='mission_node',
+            name='mission_node', output='screen',
+            parameters=[{
+                'followers': ','.join(d.name for d in drones if d.role == 'follower'),
+                'leader': leader.name,
+                'threshold': float(_arg(context, 'mission_threshold')),
+                'hold': float(_arg(context, 'mission_hold')),
+                'timeout': float(_arg(context, 'mission_timeout')),
+                'use_sim_time': False,
+            }]))
     return actions
 
 
@@ -355,6 +390,10 @@ def generate_launch_description():
         DeclareLaunchArgument('leader', default_value='false'),
         DeclareLaunchArgument('follower_y', default_value='-5.0'),
         DeclareLaunchArgument('detector_seed', default_value='-1'),
+        DeclareLaunchArgument('mission', default_value='true'),
+        DeclareLaunchArgument('mission_threshold', default_value='0.5'),
+        DeclareLaunchArgument('mission_hold', default_value='30.0'),
+        DeclareLaunchArgument('mission_timeout', default_value='600.0'),
         DeclareLaunchArgument('sim', default_value='true'),
         DeclareLaunchArgument('followers', default_value='true'),
         DeclareLaunchArgument('camera', default_value='false'),
