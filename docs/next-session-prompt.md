@@ -1,66 +1,58 @@
-# Next-session prompt: four drones, then the mission state machine (session 10)
+# Next-session prompt: the mission node, end to end (session 11)
 
 Paste the block below to open the next session. Replace this file after each session.
 
 ## Where the plan stands
 
-Session 9 is done (2026-11-18). The user decided D40: one `belief_map_node` that computes every drone's footprint itself; a per-look evidence cap of ±0.85 (R29); D32's N = 3, with a confirmed sector published as 0; and iris_1 as the corner leader in `swarm.launch.py leader:=true`. Built: `uav_mapping/core` (geometry + belief, 33 tests; `python3 -m pytest src`: 178 passed), `belief_map_node`, the swarm leader role (one detector per drone, followers spawned 5 m south of the arena), and a SIGTERM fix. Live, leader + 1 follower in two cold runs: the follower confirmed all 3 targets, 10-29 s into the sweep, with no false confirmations. **That meets the Nov 20 checkpoint (D33) two days early.** Each detector costs about 2 % RTF at 2 drones (0.99 → 0.95).
+Session 10 is done (2026-11-20). Leader + 3 followers ran live twice, cold. All 3 targets were confirmed, 15-34 s into a 68-76 s sweep, with no false confirmations. RTF while hovering with 4 detectors was 0.54-0.61. A target 0.3 m inside a sector edge was confirmed in the right sector. The user decided D41, the mission state machine: `mission_node` in `uav_planning`, WAITING -> SEARCHING -> DONE or TIMED_OUT, planners launch disabled and the mission enables them, D14's end rule, a 600 sim-s timeout, and a D29 hold at the end. Built: `uav_planning/core/mission.py` (19 tests) and latched `/confirmed_finds` on `belief_map_node` (checked live). `python3 -m pytest src`: 198 passed. From the probe's new `open` column, the end rule would have fired 30 s after the sweep. It has not run as a node yet.
 
-What is left: the Nov 24 mission state machine and the Nov 30 go/no-go (leader + 3 followers complete a mission in Gazebo from one command, video v1). Nothing has run with more than 2 drones and a belief map yet.
+What is left: the Nov 24 milestone (mission end to end) and the Nov 30 go/no-go (leader + 3 followers complete a mission in Gazebo from one command, video v1).
 
 | Session | Work | Milestone | Model | Why that model | Time |
 |---|---|---|---|---|---|
-| 1-8 (done 2026-11-07 to 11-17) | Datum, library, node, first flight, swarm, nadir camera, sim speed, detector, sweep | Nov 10, Nov 15 | mixed | see git history | ~20 h |
-| 9 (done 2026-11-18) | D40 belief map, leader role, two live runs | Nov 20 (met) | Opus | Architecture plus a new node across drones | ~2.5 h |
-| **10 (this prompt)** | Leader + 3 followers live (RTF, 3 targets, crowding), a target near a sector edge; then design the mission state machine with the user and build its ROS-free core | Nov 24 | **Opus** | Live debugging at 4 drones, and architecture the user is learning | ~3-4 h |
-| 11 | Mission node live end to end from one command, leader + 3 followers, D14 end rule measured | Nov 24 (likely Nov 22-24) | Opus | End-to-end integration in SITL | ~3 h |
-| 12 | Literature check on the narrowed contribution claim (roadmap "Contribution claim"): closest prior work, whether the claim holds, rewording if needed, written to `docs/literature-check.md`. No sim | before the LLM layer (Dec 10) and any README claim | Opus | Judging novelty against papers, not just collecting them | ~1.5-2 h |
+| 1-9 (done 2026-11-07 to 11-18) | Datum, library, node, first flight, swarm, nadir camera, sim speed, detector, sweep, belief map | Nov 10, 15, 20 | mixed | see git history | ~22.5 h |
+| 10 (done 2026-11-20) | 4 drones live, edge target, D41 design, mission core | (Nov 24 half) | Opus | Live debugging and architecture | ~2.5 h |
+| **11 (this prompt)** | `mission_node`, `planner_enable` off at launch, launch wiring, live end to end from one command, D14 end rule measured | Nov 24 | **Opus** | End-to-end integration in SITL; the first node that drives the others | ~3 h |
+| 12 | Literature check on the narrowed contribution claim (roadmap "Contribution claim"), in `docs/literature-check.md`. No sim | before the LLM layer (Dec 10) and any README claim | Opus | Judging novelty against papers | ~1.5-2 h |
 | 13 | Go/no-go dress run and video v1 (Gazebo GUI capture) | Nov 30 | Sonnet if 11 lands clean, else Opus | Mostly running and recording | ~2 h |
 
-At 12-15 h a week, sessions 10-11 fit before Nov 24 and sessions 12-13 before Nov 30, with slack for one bad sim day. Session 12 needs no sim, so it can swap with 13 if a sim day goes badly.
+Session 11 fits before Nov 24 with a day to spare. Sessions 12-13 fit before Nov 30, and 12 needs no sim, so it can swap with 13 on a bad sim day.
 
 ---
 
-Continuing the multi-agent UAV ROS 2 rebuild: session 10. `swarm.launch.py leader:=true` flies a corner leader (8 m sweep, D39) and followers that read one `belief_map_node` (D40). With one follower, all 3 targets were confirmed before the sweep ended (Nov 20 loop, met). This session scales it to 3 followers, then designs and starts the mission state machine (Nov 24).
+Continuing the multi-agent UAV ROS 2 rebuild: session 11. Leader + 3 followers find all 3 targets with `swarm.launch.py leader:=true num_followers:=3`, and the mission's rules are a tested ROS-free core (`uav_planning/core/mission.py`, D41). This session wraps the core in `mission_node`, wires it into the swarm launch, and runs one whole mission from one command (Nov 24).
 
 ## Read first
 
 - `CLAUDE.md` (Docker gotchas; always `bash -lc` / `bash -l`).
-- `docs/planner-decisions.md`: **session 9 notes** (D40, the probe table, both live runs, the "not shown" table), D14 (mission end), D12/D29 (`planner_status`, `planner_enable`, hold on disable), D24 (goal conflicts), D13 and D32.
-- `docs/roadmap.md`: the Mission row, "Mission timing", the Nov 24 and Nov 30 lines, and the open question on sweep time vs timeout.
-- `src/uav_mapping/uav_mapping/core/belief.py` and `belief_map_node.py`; `src/uav_planning/launch/swarm.launch.py` (`_leader_actions`, `_follower_actions`).
-- `docs/docker-notes.md` gotchas 54-56 (new: RTF from `/stats` deltas, `up -d` recreated the container, off-grid follower spawns).
+- `docs/planner-decisions.md`: **session 10 notes** (D41's table, both 4-drone runs, the D14 timing, the "not shown" table), then D14, D29 and D24.
+- `src/uav_planning/uav_planning/core/mission.py` and `test/test_mission.py`; `follower_planner_node.py` (how `planner_enable` and `goal_sector` work, `enabled` parameter); `sweep_node.py` (`sweep_status` QoS); `swarm.launch.py` (`_leader_actions`, `_follower_actions`).
+- `docs/docker-notes.md` gotchas 57-58 (new: renamed `XAUTHORITY` after reboot; check setuptools with `/usr/bin/python3`).
 
 ## Task
 
-1. **Four drones live** (verify first, about 1 h): `swarm.launch.py leader:=true num_followers:=3` cold, with `docs/probes/belief_live_check.py 240 3`. Measure RTF with `docs/probes/rtf_windows.sh` (4 detectors). Check that the three followers split the three targets without crowding one sector (D24, D25), and that every confirmation is right. If RTF falls below about 0.4 or the run fails, find out why before step 3.
-2. **A target near a sector edge** (short): move one target to 0.3 m inside a sector edge. Do boxes split between two sectors, does the 3-frame streak still complete, and does a follower that first hovers over the wrong sector move on? Record what happens. Change the rule only with the user.
-3. **Design the mission state machine with the user before coding** (architecture, the part they are learning). Offer a default with reasons for each:
-   - Where it lives (a `mission_node` in `uav_planning` or a new package) and what it reads (`sweep_status`, `/heatmap`, `/confirmed_sectors`, `planner_status`) and writes (`planner_enable` per follower, a latched `/mission_state`).
-   - States: the roadmap's launch → prior-guided dispatch while the leader sweeps → localize → report, and what each one means now that confirmation lives in the map.
-   - D14's end rule: sweep COMPLETE and every unsuppressed sector below 0.5 for 30 s, or a timeout. Which clock, and what timeout in Gazebo.
-   - At the end: disable planners (D29 hold), and what the leader and followers do next (hold, land, RTL). What "report" outputs (confirmed sectors, the drone and time of each find, mission time).
-4. **Build** the ROS-free core with unit tests, if time allows; the node and the live end-to-end run are session 11.
+1. **`mission_node`** (thin wrapper, mirror `sweep_node` and `follower_planner_node`): wall-clock 1 Hz timer calling `Mission.tick`. Subscribes `/iris_1/sweep_status` (latched), `/heatmap` (latched), `/confirmed_finds` (latched String JSON), each follower's `planner_status` and `goal_sector`. Sim time is the latest `goal_sector` header stamp, extrapolated by wall time since it arrived, or None before any. Publishes `planner_enable` to every follower each tick, latched `/mission_state` (state and reason, when either changes) and latched `/mission_report` (JSON) on the end. Log one line per state change and per new find. Parameters: `followers`, `leader`, the three D41 values, topic templates. A node test needs no sim if it only checks parameter parsing; the rules are already tested.
+2. **Launch wiring**: `swarm.launch.py leader:=true` starts `mission_node` and passes `enabled:=false` to every follower planner (check the planner's parameter name). Add `mission:=true|false` (default true with the leader) so the session-10 behaviour is one flag away. Rebuild after every edit (gotcha 32).
+3. **Live, end to end**: cold, `leader:=true num_followers:=3`, targets from `belief_live_check.py 400 3` (it spawns them; it also prints `open`). Check: planners stay HOLDING until SEARCHING; DONE fires about 30 s after COMPLETE; `/mission_report` lists 3 finds with the right drones and times, and every drone holds afterwards. Take one `rtf_windows.sh` run during SEARCHING (the session-10 windows were in hover only). If time allows, one run with `timeout:=60` to see TIMED_OUT and its report.
+4. **D14 values**: from those runs, say whether 0.5 and 30 s held (session 10: the worst false alarm after the sweep was 23 %). Change them only with the user.
 
-Record what was built in `docs/planner-decisions.md` as "Implementation notes (session 10)", add any new trap to `docs/docker-notes.md`, and rewrite this file for session 11.
+Record what was built in `docs/planner-decisions.md` as "Implementation notes (session 11)", add any new trap to `docs/docker-notes.md`, update the roadmap's Mission row and Nov 24 line, and rewrite this file for session 12 (the literature check) or 13.
 
 ## Environment
 
-- Host is Ubuntu 24.04. Docker data is on a USB ext4 partition: check `mount | grep docker-data` first. Start a stopped container with `docker compose -f docker/docker-compose.yml start` (`up -d` recreated it once, gotcha 55). Use `stop`, never `down`.
+- Host is Ubuntu 24.04. Docker data is on a USB ext4 partition: check `mount | grep docker-data` first; if it is missing the daemon hangs (gotcha 38) and the user must plug the USB in. Start a stopped container with `docker compose -f docker/docker-compose.yml start`. If that fails on `.Xauthority` (gotcha 57), `up -d` recreates it; then check `/usr/bin/python3 -c "import setuptools; print(setuptools.__version__)"` reads 68.1.2 before building (gotcha 58). Use `stop`, never `down`.
 - **WinBoat must be stopped (gotchas 42, 46):** `docker ps --filter name=WinBoat`; if it is up, tell the user at once.
-- In the container, always `docker compose exec ros2 bash -lc '...'` and `source /usr/local/bin/entrypoint.sh` first; interactively, `exec ros2 bash -l`. Do not put `pkill -f NAME` in a `bash -lc` string that contains NAME (gotcha 49); `pkill -f "NAM[E]"` works.
-- Session-9 stack, one command from a fresh directory: `rm -rf /tmp/sim1 && mkdir -p /tmp/sim1 && cd /tmp/sim1 && ros2 launch uav_planning swarm.launch.py leader:=true num_followers:=1 detector_seed:=1`. Once both SITLs log "JSON received" (about 10-15 s), run `python3 /workspaces/multi-agent-uavs/docs/probes/belief_live_check.py 150 1` from the same shell setup: it spawns the targets, and the sweep starts about 25 s later. Run the launch with `docker compose exec -d` and wait on its log; match only new lines (a wait loop once matched the previous run's log, session 8).
+- In the container, always `docker compose exec ros2 bash -lc '...'` and `source /usr/local/bin/entrypoint.sh` first; interactively, `exec ros2 bash -l`. Do not put `pkill -f NAME` in a `bash -lc` string that contains NAME (gotcha 49).
+- Session-10 stack, one command from a fresh directory: `rm -rf /tmp/sim1 && mkdir -p /tmp/sim1 && cd /tmp/sim1 && ros2 launch uav_planning swarm.launch.py leader:=true num_followers:=3 detector_seed:=1`, run with `docker compose exec -d` and its output redirected to a log. All four SITLs logged "JSON received" within about 15 s. Then `python3 /workspaces/multi-agent-uavs/docs/probes/belief_live_check.py 300 3` (add `--edge` for the edge target).
 - `docker compose restart ros2` between sim runs; `pkill` leaves `arducopter`/`MicroXRCEAgent` behind.
-- `colcon build --symlink-install` copies `uav_planning`'s files, so rebuild after every edit (gotcha 32).
-- `wait_for_clock` caught a silent ROS `/clock` in 2 of 4 earlier cold starts at the 2 ms step (gotcha 33). Both session-9 starts were fine. If the launch shuts down with "no /clock", restart the container and run again.
 - Commit after each working sub-task on `main`. Do not push without asking.
 
 ## Done means
 
-Four-drone run measured (RTF, confirmations, how the targets were split), the edge-target behaviour recorded, the mission state machine design agreed with the user, its core built with tests if time allows, notes recorded, and this file rewritten for session 11. Say plainly which changes are plan-level and which are code, and for each "not shown" gap, whether it was in scope and where it now lives.
+`mission_node` built and wired, one live mission from one command ending in DONE with a correct report, the end rule's timing measured, notes recorded, and this file rewritten. Say plainly which changes are plan-level and which are code, and for each "not shown" gap, whether it was in scope and where it now lives.
 
 ## Working agreements
 
-- The user has high-level ROS understanding, not deep. Explain a new concept in one paragraph before code (for example, what a state machine buys over a launch-file sequence, and why the end rule needs a hold time).
-- Settled decisions stay settled (stack, D37-D40); don't reopen them without new evidence. The D14 values (0.5, 30 s) and the timeout are this session's knobs.
+- The user has high-level ROS understanding, not deep. Explain a new concept in one paragraph before code (this session: why a command topic like `planner_enable` is resent rather than latched, and what "latched" means for a late joiner).
+- Settled decisions stay settled (stack, D37-D41); don't reopen them without new evidence. The D14 values (0.5, 30 s) are this session's knobs, to change only with the user.
 - Do not push without asking.

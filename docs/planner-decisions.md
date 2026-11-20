@@ -4,7 +4,7 @@ Review target (fixed): the follower planner section of `docs/roadmap.md`, scoped
 
 ## Decisions at a glance
 
-Status: decided. `belief_map_node` and a leader role in the swarm launch are built as of 2026-11-18 (session 9, D40), and one follower completed the Nov 20 search loop in two cold runs. The leader's sweep controller is built and flown as of 2026-11-17 (session 8, D39). T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07. T3 (node) and T4 (arm helper, stub map) are built and flown as of 2026-11-08: one follower in headless SITL reaches the best stub sector and reports ARRIVED, and disabling holds it. T5 (swarm launch) is built and flown as of 2026-11-12: three followers each hold a different stub peak. Full reasoning is in the ledger below.
+Status: decided. The mission state machine is designed (D41) and its ROS-free core is built and tested as of 2026-11-20 (session 10); a leader and 3 followers found all 3 targets in two cold runs. `belief_map_node` and a leader role in the swarm launch are built as of 2026-11-18 (session 9, D40), and one follower completed the Nov 20 search loop in two cold runs. The leader's sweep controller is built and flown as of 2026-11-17 (session 8, D39). T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07. T3 (node) and T4 (arm helper, stub map) are built and flown as of 2026-11-08: one follower in headless SITL reaches the best stub sector and reports ARRIVED, and disabling holds it. T5 (swarm launch) is built and flown as of 2026-11-12: three followers each hold a different stub peak. Full reasoning is in the ledger below.
 
 | Topic | Decision | Ref |
 |---|---|---|
@@ -27,6 +27,7 @@ Status: decided. `belief_map_node` and a leader role in the swarm launch are bui
 | Found target | Follower within arrival radius (2.0 m) and above 5 m sees it in its sector on 3 consecutive frames of its own detector; `belief_map_node` publishes that sector as 0 from then on and lists it on `/confirmed_sectors` | D13, D32, D40 |
 | Belief map | One `belief_map_node` fuses every drone's detections + pose (it computes footprints itself); per drone, cell and look, evidence is capped at +-0.85 log-odds, a new look after 1 s out of view or every 4 s | D40 |
 | Mission end | Sweep done and all unsuppressed sectors under 0.5 for 30 s, or timeout; decided by the mission state machine | D14 |
+| Mission | `mission_node` in `uav_planning` (`core/mission.py`): WAITING -> SEARCHING -> DONE or TIMED_OUT; planners launch disabled and the mission enables them; at the end it disables them (D29 hold); wall-clock node, timeout 600 sim-s; latched `/mission_state` and `/mission_report` | D41 |
 | Milestone map | New stub publisher, 8x8 at 5 m, multiple peaks | D19 |
 | Camera | Required before footprints: gimbal to nadir, proven with the marker test, 2 h timebox | D30 |
 | Sim speed | 2 h timebox after Nov 15, before Nov 24 (ran 2026-11-16: Gazebo's main thread is the limit; a 2 ms step doubles RTF and is the swarm default) | D23, D37 |
@@ -1566,6 +1567,64 @@ At 4 frames per sim second (a 2 Hz wall-clock detector at RTF 0.5) the per-frame
 | The leader-only map under the cap, live (both runs also had follower footprints; offline only: cols 1-6 at 13, edge at 24) | not needed unless the leader flies alone again |
 
 **Plan-level versus code.** Plan-level: D40 (four choices), dropping R30's footprint topic, N = 3, T8 checked off, the roadmap rows and TODOS. Code: `uav_mapping/core`, its tests, `belief_map_node`, the `swarm.launch.py` leader role, the SIGTERM fix, the probes.
+
+## Implementation notes (session 10, 2026-11-20)
+
+Ran: leader + 3 followers live, twice (the second with a target near a sector edge); the mission state machine design with the user; its ROS-free core; `/confirmed_finds` on the belief map (about 2.5 h, including a Docker recovery, docker-notes 57-58). One decision by the user (D41); the rest is code and measurements.
+
+**Four drones live.** `swarm.launch.py leader:=true num_followers:=3 detector_seed:=1`, headless, 2 ms step, cold from a fresh directory each time, `belief_live_check.py ... 3` (the session-8 targets). Times are wall seconds after the leader's first SWEEPING.
+
+| | Run 1 | Run 2 (`--edge`: target_green at (20.3, 27.0), 0.3 m inside its cell's west edge) |
+|---|---|---|
+| `/clock` gate | 15.3 s (sim/wall 0.19 while booting) | fine |
+| Sweep, SWEEPING to COMPLETE | 68.0 s (41-49 s at 2 drones) | 75.5 s |
+| Finds (sector, drone, s) | (6, 1) iris_4 15.5; (4, 5) iris_2 22.8; (1, 2) iris_3 23.2 | (1, 2) iris_2 16.4; (6, 1) iris_3 17.1; (4, 5) iris_3 34.1 |
+| False confirmations | 0 | 0 |
+| Map at the end | 61 of 61 empties at 3 %; targets 0 | empties 3-5 % (cell (3, 5), next to the edge target, at 4) |
+| Frames per drone | 480-482, equal | 602, equal |
+| RTF, `/stats` field (10 s samples) | median 0.55 (0.17-0.82) | median 0.51 (0.21-0.78) |
+
+**RTF with 4 detectors** (`rtf_windows.sh`, all four hovering after run 1): 0.605, 0.539, 0.548. Above the 0.4 floor this session set, and close to T7's idle figure scaled by D37 (about 0.48), so 4 detectors and the belief map cost little at 4 drones. Each follower planner used about 30 % of a core (its `/clock` subscription, docker-notes 34); Gazebo 136 %.
+
+**How the followers split the targets (D24, D25).** In run 1 each follower confirmed a different target. Twice two followers chose the same goal while climbing ((4, 5) at +12.5 s, (1, 2) at +14.5 s); the higher sysid yielded within 2 s each time, as D24 says. In run 2 iris_3 made two finds and iris_4 none, and one case cost time: iris_4 reported ARRIVED over (4, 5) at +21.1 s, iris_3 chose (4, 5) in the same second, and iris_4 yielded (D24: the higher sysid yields to any lower sysid's goal zone) and left 2.1 s later, before its 3-frame streak finished. iris_3 then flew there, arrived at +31.5 s and confirmed at +34.1 s. The find came about 13 s later than if iris_4 had stayed. Seen once; D24 is unchanged (no rule change without the user), and the case is in the table below.
+
+**The edge target (task 2).** The correct sector (4, 5) was confirmed, 2.6 s after iris_3 arrived (session 9: 0.2-4.8 s), and the streak completed on the first try that was not cut short by the yield above. No follower hovered over the wrong sector (3, 5) first, so whether its own negative looks would move it on was not exercised. After the confirmation iris_3 moved to (3, 5), the best open cell at that moment (8 %), and it fell to 3-4 %. The probe does not log hits per cell, so whether detections split between (3, 5) and (4, 5) is not shown. At 12 m the 5 px noise is about 0.29 m on the ground, so roughly 15 % of frames would land across a 0.3 m edge. That matches a streak that still completes. No rule change.
+
+**D14's end timing (first measurement).** The probe now prints `open`, the highest unconfirmed cell (unknown = 50). In run 2 it last reached 50 or more at +32.6 s (the edge target, before its confirmation). After the sweep completed it never went above 23 % (false alarms, back under 10 % within 1-3 s). So the D14 rule would have ended the mission at COMPLETE + 30 s, +105.5 s, with the 0.5 threshold about 27 points above the worst false alarm. At 4 drones the end time is set by the sweep, not by the map. Run 1 predates the column.
+
+**D41 (decided 2026-11-20 by the user: the four recommended options, plus the defaults stated with them).** The mission state machine:
+
+| Choice | Value | Reason |
+|---|---|---|
+| Where | `mission_node` in `uav_planning`, rules in ROS-free `core/mission.py` | Its inputs and outputs (`sweep_status`, `planner_enable`) are `uav_planning` topics already; no package boilerplate for one node |
+| States | WAITING (sweep status, `/heatmap` and every follower's `planner_status` seen) -> SEARCHING -> DONE or TIMED_OUT. The roadmap's dispatch and localize phases are not mission states | Followers dispatch themselves from the map and a find is a map event (D40), so localization belongs to one follower and one sector, not to the mission. Finds are logged inside SEARCHING |
+| Start | Planners launch disabled; the mission sends `planner_enable` true when it enters SEARCHING, resent at 1 Hz (the topic is not latched) | A clean t0, and one owner of the lifecycle. Cost: if `mission_node` dies, nothing searches |
+| End rule | D14 as written: sweep COMPLETE and every unconfirmed cell below 0.5 for 30 s, unknown counting as 0.5; DONE wins over a timeout on the same tick | Nothing unseen can end the mission; the hold rides out a false alarm (run 2: worst 23 %) |
+| Clock | Node on wall time (no `/clock` subscriber); sim time read from the followers' `goal_sector` stamps; the hold is in wall seconds, like the belief map | A `/clock` subscriber costs about 45 % of a core (docker-notes 34). Where sim time is missing, wall time stands in, which ends a run early at RTF below 1, never late |
+| Timeout | 600 sim-s after t0 | The end rule should fire about 100 s in; 6x margin, about 20 wall-min at worst at RTF 0.5. The eval's 15 sim-min stays for the 2D sim |
+| End action | Disable every planner (D29 sends one hold); the leader keeps hovering | No new flight code; landing comes with `landing_node` |
+| Outputs | Latched `/mission_state` (String) and, at the end, latched `/mission_report` (String, JSON: outcome, wall and sim duration, sweep start and end, each find with cell, drone and time, cells still open, each follower's last status, the parameters) | Everything the eval and the video caption need, from one topic |
+| Who found it | `belief_map_node` also publishes latched `/confirmed_finds` (String, JSON list of cell, drone and wall time, in order) next to `/confirmed_sectors` | The belief core already records the drone; guessing it from nearby followers would be fragile |
+
+**What was built (code).**
+
+- `uav_planning/core/mission.py`: `Mission.tick` (one call a second with the latest inputs, returns state, enable and reason), `open_cells`, `Mission.report`. 19 tests in `test/test_mission.py`: the WAITING gate, the hold and its restart on a false alarm, unknown and confirmed cells, the sim-time timeout and both wall fallbacks, DONE over TIMED_OUT, a find logged once, the report.
+- `belief_map_node`: `/confirmed_finds` (parameter `finds_topic`); `BeliefMap.finds()` with one test. `python3 -m pytest src`: 198 passed (178 before).
+- `belief_live_check.py`: `--edge` and the `open` column.
+- Not built: `mission_node` itself, `planner_enable` defaulting to false under `swarm.launch.py`, and the launch wiring (session 11).
+
+**Not shown, with scope and home:**
+
+| Gap | In scope this session? | Home |
+|---|---|---|
+| `mission_node` live end to end from one command, and D14's end rule firing for real (only predicted from the probe here) | no: the node is session 11 by plan | session 11 |
+| An arrived higher-sysid follower yields to a lower sysid that picks its sector in the same second (D24), costing about 13 s once | observed, not in scope to change | session 11 reports find times per drone; reopen D24 with the user only if it recurs |
+| Edge target: hits split between two sectors (no per-cell hit log), and a follower first hovering over the wrong sector (did not happen) | yes, partly shown | per-cell hit logging belongs with the YOLO stretch, where boxes are larger and noisier |
+| Four-drone RTF during the sweep from `/stats` windows (only the hover was windowed; the noisy field read about 0.5 during the sweep) | partly | session 11, one window during SEARCHING |
+| `/confirmed_finds` live | yes, shown | a third cold run (leader + 1 follower, after the rebuild): the latched topic listed all three finds with drone and wall time, matching the belief map's CONFIRMED lines; one follower found all 3 targets again |
+| A false confirmation, the cap against a correlated detector, attitude in the footprint, landing | no | as in session 9's table |
+
+**Plan-level versus code.** Plan-level: D41 (where, start, end action, clock and timeout, plus the stated defaults for states, outputs and `/confirmed_finds`), the decisions table row, the roadmap's Mission row. Code: `core/mission.py` and its tests, `/confirmed_finds`, the probe changes, docker-notes 57-58.
 
 ## NOT in scope
 
