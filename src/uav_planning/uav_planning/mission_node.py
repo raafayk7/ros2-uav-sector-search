@@ -21,8 +21,9 @@ Topics (templates with {robot}, absolute by default as in the other nodes):
   in   finds_topic          String JSON, latched (/confirmed_finds)
   in   status_topic         String per follower, every planner tick
                             (/{robot}/planner_status)
-  in   goal_topic           PointStamped per follower; its sim stamp is
-                            the node's only sim time (/{robot}/goal_sector)
+  in   pose_topic           PoseStamped per follower; its stamp (the navsat
+                            sim stamp, copied by localization_node) is the
+                            node's only sim time (/{robot}/pose)
   out  enable_topic         Bool per follower, every tick
                             (/{robot}/planner_enable)
   out  state_topic          String JSON {state, reason}, latched, on change
@@ -32,7 +33,11 @@ Topics (templates with {robot}, absolute by default as in the other nodes):
 
 Time: wall clock (use_sim_time false), so no /clock subscriber (about 45 % of
 a core each, docker-notes 34). The D14 hold is in wall seconds, like the
-belief map; the timeout is in sim seconds read from goal_sector stamps.
+belief map; the timeout is in sim seconds read from the followers' pose
+stamps. Poses flow from the first GPS fix, before t0, so sim time is known
+for the whole mission. (Session 11 first used goal_sector stamps, which
+start only once a follower has a goal, about 50 wall-s in; the gap was then
+counted at RTF 1 and the report's sim_s ran about 30 % high.)
 """
 
 import json
@@ -43,7 +48,7 @@ from rclpy.node import Node
 from rclpy.qos import (QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy,
                        QoSDurabilityPolicy)
 
-from geometry_msgs.msg import PointStamped
+from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import OccupancyGrid
 from std_msgs.msg import Bool, String
 
@@ -71,7 +76,7 @@ class MissionNode(Node):
         d('heatmap_topic', '/heatmap')
         d('finds_topic', '/confirmed_finds')
         d('status_topic', '/{robot}/planner_status')
-        d('goal_topic', '/{robot}/goal_sector')
+        d('pose_topic', '/{robot}/pose')
         d('enable_topic', '/{robot}/planner_enable')
         d('state_topic', '/mission_state')
         d('report_topic', '/mission_report')
@@ -85,7 +90,7 @@ class MissionNode(Node):
         self.mission = Mission(self.followers, params)  # raises if none
         sweep_topic = g('sweep_status_topic') or f'/{self.leader}/sweep_status'
         per = {f: {k: g(k).format(robot=f)
-                   for k in ('status_topic', 'goal_topic', 'enable_topic')}
+                   for k in ('status_topic', 'pose_topic', 'enable_topic')}
                for f in self.followers}
         self.topics = {'sweep_status': sweep_topic,
                        'heatmap': g('heatmap_topic'),
@@ -111,8 +116,8 @@ class MissionNode(Node):
             reliability=QoSReliabilityPolicy.RELIABLE,
             durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
             history=QoSHistoryPolicy.KEEP_LAST, depth=1)
-        # planner_status and goal_sector: RELIABLE + VOLATILE depth 10, what
-        # follower_planner_node offers.
+        # planner_status and pose: RELIABLE + VOLATILE depth 10, what
+        # follower_planner_node and localization_node offer.
         state_qos = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE,
             history=QoSHistoryPolicy.KEEP_LAST, depth=10)
@@ -133,7 +138,7 @@ class MissionNode(Node):
                 String, t['status_topic'],
                 lambda m, n=f: self._on_status(n, m), state_qos)
             self.create_subscription(
-                PointStamped, t['goal_topic'], self._on_goal, state_qos)
+                PoseStamped, t['pose_topic'], self._on_pose, state_qos)
             self.enable_pubs[f] = self.create_publisher(
                 Bool, t['enable_topic'], enable_qos)
         self.state_pub = self.create_publisher(
@@ -169,7 +174,7 @@ class MissionNode(Node):
     def _on_status(self, name, msg: String):
         self.status[name] = msg.data
 
-    def _on_goal(self, msg: PointStamped):
+    def _on_pose(self, msg: PoseStamped):
         stamp = _secs(msg.header.stamp)
         if stamp > 0.0:     # an unstamped message carries no sim time
             self.sim.update(stamp, self._wall())

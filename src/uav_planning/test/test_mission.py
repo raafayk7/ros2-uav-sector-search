@@ -252,7 +252,7 @@ def test_node_resolves_topics_per_follower():
         assert node.topics['sweep_status'] == '/iris_1/sweep_status'
         assert node.topics['followers']['iris_3'] == {
             'status_topic': '/iris_3/planner_status',
-            'goal_topic': '/iris_3/goal_sector',
+            'pose_topic': '/iris_3/pose',
             'enable_topic': '/iris_3/planner_enable'}
         node.destroy_node()
     finally:

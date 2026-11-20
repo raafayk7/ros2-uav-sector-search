@@ -18,7 +18,7 @@ Choices pinned in docs/planner-decisions.md (D14, D41):
   nothing unseen can end the mission. The hold is on the wall clock, like the
   belief map whose evidence it waits on.
 * Timeout: ``timeout`` seconds of sim time after t0. The caller supplies sim
-  time (the node reads it from the followers' stamps). Where it is missing,
+  time (the node reads it from the followers' pose stamps). Where it is missing,
   wall time stands in (a tick with no sim time, or the gap between t0 and
   the first sim time seen), which ends a run early, never late, at RTF
   below 1.
@@ -228,7 +228,7 @@ def parse_finds(text: str) -> List[Tuple[Cell, str]]:
 
 class SimClock:
     """Sim time from the latest stamped message seen (the node uses the
-    followers' goal_sector stamps), carried forward by wall time since it
+    followers' pose stamps), carried forward by wall time since it
     arrived. Below RTF 1 that overstates sim time by at most the gap between
     messages, so a timeout read from it comes early, never late."""
 
