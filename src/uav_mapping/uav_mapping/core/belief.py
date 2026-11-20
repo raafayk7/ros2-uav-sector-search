@@ -175,6 +175,12 @@ class BeliefMap:
         self._streak[drone] = (cell, n)
         return None
 
+    def finds(self) -> List[dict]:
+        """Confirmed sectors as plain data, in the order they were found."""
+        return [{'cell': list(cell), 'drone': drone, 't': t}
+                for cell, (drone, t) in sorted(self.confirmed.items(),
+                                               key=lambda kv: kv[1][1])]
+
     # ------------------------------------------------------------------
     def probability(self, cell: Cell) -> Optional[float]:
         """Posterior of one cell (None if never observed), suppression aside."""

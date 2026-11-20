@@ -16,6 +16,10 @@ which stays as the verified single-drone reference.
                                     confirmed sectors as 0
   out  /confirmed_sectors           PoseArray of confirmed sector centres,
                                     latched, republished when it grows
+  out  /confirmed_finds             String, JSON list of {cell, drone, t} in
+                                    order of finding (t in wall seconds),
+                                    latched, sent with /confirmed_sectors;
+                                    mission_node's report reads it (D41)
 
 Time: wall clock (use_sim_time false), like the detectors that drive it, so
 a look (D40) spans the same number of detector frames at any RTF, and the
@@ -24,6 +28,8 @@ node adds no /clock subscriber (docker-notes 34).
 Topic parameters are templates with {robot}, absolute by default as in the
 other nodes.
 """
+
+import json
 
 import rclpy
 from rclpy.executors import ExternalShutdownException
@@ -34,6 +40,7 @@ from rclpy.qos import (QoSDurabilityPolicy, QoSHistoryPolicy, QoSProfile,
 from geometry_msgs.msg import Pose, PoseArray, PoseStamped
 from nav_msgs.msg import OccupancyGrid
 from sensor_msgs.msg import CameraInfo
+from std_msgs.msg import String
 from vision_msgs.msg import Detection2DArray
 
 from uav_mapping.core.belief import BeliefMap, BeliefParams, project_frame
@@ -60,6 +67,7 @@ class BeliefMapNode(Node):
         d('camera_info_topic', '/{robot}/camera/camera_info')
         d('heatmap_topic', '/heatmap')
         d('confirmed_topic', '/confirmed_sectors')
+        d('finds_topic', '/confirmed_finds')
         d('arena_frame', 'arena')
         d('publish_period', 1.0)
         # Grid: must match the planners' and the sweep's (D39 defaults).
@@ -137,6 +145,8 @@ class BeliefMapNode(Node):
             OccupancyGrid, g('heatmap_topic'), latched)
         self.confirmed_pub = self.create_publisher(
             PoseArray, g('confirmed_topic'), latched)
+        self.finds_pub = self.create_publisher(
+            String, g('finds_topic'), latched)
         self._publish_confirmed()
 
         self.create_timer(float(g('publish_period')), self._publish_heatmap)
@@ -206,6 +216,7 @@ class BeliefMapNode(Node):
             pose.orientation.w = 1.0
             msg.poses.append(pose)
         self.confirmed_pub.publish(msg)
+        self.finds_pub.publish(String(data=json.dumps(self.map.finds())))
 
     def _report(self):
         known = sum(v >= 0 for v in self.map.occupancy_data())

@@ -287,6 +287,19 @@ def test_streaks_are_per_drone():
     assert bm.update('f1', 1.0, OVER, hit((3, 3)), confirmer=True) == (3, 3)
 
 
+def test_finds_list_drone_and_time_in_order_of_finding():
+    bm = BeliefMap(GRID)
+    other = GRID.centre((1, 1))
+    over_other = (other[0], other[1], 12.0)
+    for i in range(3):
+        bm.update('f2', 10.0 + i * 0.5, over_other, hit((1, 1)), confirmer=True)
+    for i in range(3):
+        bm.update('f1', 5.0 + i * 0.5, OVER, hit((3, 3)), confirmer=True)
+    assert bm.finds() == [{'cell': [3, 3], 'drone': 'f1', 't': 6.0},
+                          {'cell': [1, 1], 'drone': 'f2', 't': 11.0}]
+    assert BeliefMap(GRID).finds() == []
+
+
 def test_a_confirmed_sector_publishes_zero_and_stays_there():
     bm = BeliefMap(GRID)
     for i in range(3):

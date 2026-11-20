@@ -10,7 +10,12 @@ Run inside the container after
   swarm.launch.py leader:=true num_followers:=N
 is up (the sim must exist to spawn into; the drones need not be armed yet):
 
-  python3 belief_live_check.py [SECS] [N] [--no-spawn]
+  python3 belief_live_check.py [SECS] [N] [--no-spawn] [--edge]
+
+--edge (session 10) moves target_green to 0.3 m inside the west edge of its
+cell (4, 5), so its 1.5 m box straddles cells (3, 5) and (4, 5). Each line also
+shows `open`, the highest unsuppressed cell in percent (unknown counts as 50),
+which is what D14's end rule tests.
 """
 import math
 import subprocess
@@ -30,6 +35,7 @@ ARGS = [a for a in sys.argv[1:] if not a.startswith('--')]
 SECS = float(ARGS[0]) if ARGS else 240.0
 N = int(ARGS[1]) if len(ARGS) > 1 else 1
 SPAWN = '--no-spawn' not in sys.argv
+EDGE = '--edge' in sys.argv
 LEADER = 'iris_1'
 FOLLOWERS = [f'iris_{k + 2}' for k in range(N)]
 TARGETS = {   # session 8's three, one per lane, in cells (1, 2), (4, 5), (6, 1)
@@ -37,6 +43,8 @@ TARGETS = {   # session 8's three, one per lane, in cells (1, 2), (4, 5), (6, 1)
     'target_green': (21.0, 27.0, '0 1 0 1'),
     'target_blue': (33.0, 6.0, '0 0 1 1'),
 }
+if EDGE:
+    TARGETS['target_green'] = (20.3, 27.0, '0 1 0 1')
 SDF = """<?xml version="1.0"?><sdf version="1.9"><model name="{n}"><static>true</static>
 <link name="l"><visual name="v"><geometry><box><size>1.5 1.5 0.1</size></box></geometry>
 <material><ambient>{c}</ambient><diffuse>{c}</diffuse></material>
@@ -90,6 +98,14 @@ class Watch(Node):
     def _conf(self, m):
         self.confirmed = [(p.position.x, p.position.y) for p in m.poses]
 
+    def open_max(self):
+        """Highest unsuppressed cell in percent, unknown as 50 (D14)."""
+        if not self.grid:
+            return None
+        conf = {self.cell(x, y) for x, y in self.confirmed}
+        return max((50 if v < 0 else v) for i, v in enumerate(self.grid.data)
+                   if (i % 8, i // 8) not in conf)
+
     def cell(self, x, y):
         return (int(math.floor(x / 5.0)), int(math.floor(y / 5.0)))
 
@@ -125,7 +141,8 @@ def main():
         rclpy.spin_once(w, timeout_sec=0.2)
         t = time.time() - t0
         known = sum(v >= 0 for v in w.grid.data) if w.grid else 0
-        parts = [f'sweep {w.sweep}', f'known {known}', f'conf {len(w.confirmed)}']
+        parts = [f'sweep {w.sweep}', f'known {known}', f'conf {len(w.confirmed)}',
+                 f'open {w.open_max()}']
         for r in FOLLOWERS:
             p = w.pose.get(r)
             g = w.goal.get(r)
