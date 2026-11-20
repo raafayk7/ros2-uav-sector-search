@@ -1,9 +1,11 @@
-"""Tests for the mission state machine (core/mission.py). No ROS needed."""
+"""Tests for the mission state machine (core/mission.py). No ROS needed,
+except the two mission_node parameter tests at the end."""
 
 import pytest
 
 from uav_planning.core.mission import (
-    DONE, SEARCHING, TIMED_OUT, WAITING, Mission, MissionParams, open_cells)
+    DONE, SEARCHING, TIMED_OUT, WAITING, Mission, MissionParams, SimClock,
+    open_cells, parse_finds, parse_names)
 
 FOLLOWERS = ['iris_2', 'iris_3', 'iris_4']
 W = 8                                  # 8x8 arena (D39)
@@ -199,3 +201,74 @@ def test_a_find_is_logged_once_with_its_first_drone():
     tick(m, 110.0, sweep='SWEEPING', finds=[((1, 2), 'iris_3')])
     tick(m, 111.0, sweep='SWEEPING', finds=[((1, 2), 'iris_9')])
     assert [f['drone'] for f in m.report()['finds']] == ['iris_3']
+
+
+# ---- Node helpers (parse_names, parse_finds, SimClock) ---------------------
+
+def test_parse_names_drops_blanks_and_spaces():
+    assert parse_names(' iris_2, iris_3,,iris_4 ') == ['iris_2', 'iris_3', 'iris_4']
+    assert parse_names('') == []
+
+
+def test_parse_finds_reads_belief_map_json():
+    text = ('[{"cell": [6, 1], "drone": "iris_4", "t": 15.5},'
+            ' {"cell": [4, 5], "drone": "iris_2", "t": 22.8}]')
+    assert parse_finds(text) == [((6, 1), 'iris_4'), ((4, 5), 'iris_2')]
+    assert parse_finds('[]') == []
+
+
+@pytest.mark.parametrize('text', ['not json', '{"cell": [1, 2]}', '[{"cell": [1]}]',
+                                  '[{"drone": "iris_2"}]'])
+def test_parse_finds_rejects_anything_else(text):
+    with pytest.raises(ValueError):
+        parse_finds(text)
+
+
+def test_sim_clock_carries_the_latest_stamp_forward_by_wall_time():
+    c = SimClock()
+    assert c.now(10.0) is None
+    c.update(50.0, 10.0)
+    assert c.now(12.5) == 52.5
+    c.update(49.0, 13.0)            # an older stamp from another follower
+    assert c.now(13.0) == 53.0
+    c.update(51.0, 13.0)            # sim behind wall (RTF < 1): newest wins
+    assert c.now(14.0) == 52.0
+
+
+# ---- mission_node parameters (needs ROS, no sim) ---------------------------
+
+def test_node_resolves_topics_per_follower():
+    pytest.importorskip('rclpy')
+    import rclpy
+    from uav_planning.mission_node import MissionNode
+
+    rclpy.init(args=['--ros-args', '-p', 'followers:=iris_2, iris_3',
+                     '-p', 'leader:=iris_1', '-p', 'hold:=12.0',
+                     '-p', 'timeout:=60.0'])
+    try:
+        node = MissionNode()
+        assert node.followers == ['iris_2', 'iris_3']
+        assert node.mission.params == MissionParams(0.5, 12.0, 60.0)
+        assert node.topics['sweep_status'] == '/iris_1/sweep_status'
+        assert node.topics['followers']['iris_3'] == {
+            'status_topic': '/iris_3/planner_status',
+            'goal_topic': '/iris_3/goal_sector',
+            'enable_topic': '/iris_3/planner_enable'}
+        node.destroy_node()
+    finally:
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+def test_node_refuses_an_empty_follower_list():
+    pytest.importorskip('rclpy')
+    import rclpy
+    from uav_planning.mission_node import MissionNode
+
+    rclpy.init(args=['--ros-args', '-p', 'followers:=" "'])
+    try:
+        with pytest.raises(ValueError):
+            MissionNode()
+    finally:
+        if rclpy.ok():
+            rclpy.shutdown()

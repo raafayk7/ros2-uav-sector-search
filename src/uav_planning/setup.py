@@ -25,7 +25,7 @@ setup(
     maintainer='Raafay',
     maintainer_email='182409092+raafayk7@users.noreply.github.com',
     description='Follower sector planner: ROS-free core library, '
-                'follower_planner_node, sweep_node, arm_takeoff, stub_heatmap_publisher, wait_for_clock '
+                'follower_planner_node, sweep_node, mission_node, arm_takeoff, stub_heatmap_publisher, wait_for_clock '
                 'and the swarm launch.',
     license='MIT',
     entry_points={'console_scripts': [
@@ -34,5 +34,6 @@ setup(
         'stub_heatmap_publisher = uav_planning.stub_heatmap_publisher:main',
         'wait_for_clock = uav_planning.wait_for_clock:main',
         'sweep_node = uav_planning.sweep_node:main',
+        'mission_node = uav_planning.mission_node:main',
     ]},
 )

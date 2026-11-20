@@ -27,6 +27,7 @@ Choices pinned in docs/planner-decisions.md (D14, D41):
 what to publish. Same conventions as planner.py: cells are (col, row).
 """
 
+import json
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple
 
@@ -205,3 +206,41 @@ class Mission:
 
 def _span(start: Optional[float], end: Optional[float]) -> Optional[float]:
     return None if start is None or end is None else end - start
+
+
+# ---- Helpers for mission_node (still no ROS) ------------------------------
+
+def parse_names(spec: str) -> List[str]:
+    """``"iris_2, iris_3"`` -> ``["iris_2", "iris_3"]``; empty items dropped."""
+    return [s.strip() for s in spec.split(',') if s.strip()]
+
+
+def parse_finds(text: str) -> List[Tuple[Cell, str]]:
+    """belief_map_node's /confirmed_finds JSON (a list of {cell, drone, t})
+    -> [(cell, drone)]. Raises ValueError on anything else."""
+    try:
+        items = json.loads(text)
+        return [((int(f['cell'][0]), int(f['cell'][1])), str(f['drone']))
+                for f in items]
+    except (ValueError, TypeError, KeyError, IndexError) as e:
+        raise ValueError(f"not a confirmed_finds list: {e}") from None
+
+
+class SimClock:
+    """Sim time from the latest stamped message seen (the node uses the
+    followers' goal_sector stamps), carried forward by wall time since it
+    arrived. Below RTF 1 that overstates sim time by at most the gap between
+    messages, so a timeout read from it comes early, never late."""
+
+    def __init__(self):
+        self.stamp: Optional[float] = None
+        self.received: Optional[float] = None
+
+    def update(self, stamp: float, wall: float):
+        if self.stamp is None or stamp >= self.stamp:
+            self.stamp, self.received = stamp, wall
+
+    def now(self, wall: float) -> Optional[float]:
+        if self.stamp is None:
+            return None
+        return self.stamp + max(0.0, wall - self.received)
