@@ -72,6 +72,8 @@ Launch args:
   followers       start the followers once /clock flows (default true;
                   false brings up the sim alone, e.g. to measure RTF)
   camera          bridge each drone's camera (default false)
+  gui             open the Gazebo window (default false: server only; needs
+                  DISPLAY and an X login file in the container)
   spacing         spawn spacing along x, m (default 5.0)
   physics_step    Gazebo max_step_size, s: 0.002 (default, with a 250 Hz
                   autopilot loop) or 0.001 (upstream, 400 Hz loop)
@@ -209,6 +211,7 @@ def _sim_actions(context, drones):
                            f'got {step}')
     world = _world(step)
     camera = _arg(context, 'camera').lower() == 'true'
+    gui = _arg(context, 'gui').lower() == 'true'
     bridge_files = {
         'follower': _bridge_config('all' if camera else 'none'),
         'leader': _bridge_config('all' if camera else 'info'),
@@ -220,7 +223,9 @@ def _sim_actions(context, drones):
                 get_package_share_directory('ros_gz_sim'),
                 'launch', 'gz_sim.launch.py'))),
             # -s server only (headless), -r run at start, -v2 warnings only.
-            launch_arguments={'gz_args': f'-v2 -s -r {world}'}.items(),
+            # With gui:=true, no -s: the same command also opens the client.
+            launch_arguments={
+                'gz_args': f'-v2 {"" if gui else "-s "}-r {world}'}.items(),
         ),
         Node(
             package='ros_gz_bridge', executable='parameter_bridge',
@@ -397,6 +402,7 @@ def generate_launch_description():
         DeclareLaunchArgument('sim', default_value='true'),
         DeclareLaunchArgument('followers', default_value='true'),
         DeclareLaunchArgument('camera', default_value='false'),
+        DeclareLaunchArgument('gui', default_value='false'),
         DeclareLaunchArgument('spacing', default_value='5.0'),
         DeclareLaunchArgument('physics_step', default_value='0.002'),
         DeclareLaunchArgument('datum_lat', default_value='-35.3632621'),
