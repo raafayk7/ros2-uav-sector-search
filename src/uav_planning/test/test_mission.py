@@ -5,7 +5,8 @@ import pytest
 
 from uav_planning.core.mission import (
     DONE, SEARCHING, TIMED_OUT, WAITING, Mission, MissionParams, SimClock,
-    open_cells, parse_finds, parse_names)
+    assign_returns, cell_centre, open_cells, parse_finds, parse_names,
+    parse_pairs)
 
 FOLLOWERS = ['iris_2', 'iris_3', 'iris_4']
 W = 8                                  # 8x8 arena (D39)
@@ -269,6 +270,168 @@ def test_node_refuses_an_empty_follower_list():
     try:
         with pytest.raises(ValueError):
             MissionNode()
+    finally:
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+# ---- Return to find ---------------------------------------------------------
+
+FOLLOWERS = ['iris_2', 'iris_3', 'iris_4']
+
+
+def test_cell_centre_uses_resolution_and_origin():
+    assert cell_centre((1, 2)) == (7.5, 12.5)
+    assert cell_centre((0, 0), 2.0, (10.0, -4.0)) == (11.0, -3.0)
+
+
+def test_each_finder_takes_its_own_find():
+    finds = [((4, 5), 'iris_4'), ((1, 2), 'iris_3'), ((6, 1), 'iris_2')]
+    poses = {f: (0.0, 0.0) for f in FOLLOWERS}
+    assert assign_returns(finds, poses, FOLLOWERS) == {
+        'iris_4': (4, 5), 'iris_3': (1, 2), 'iris_2': (6, 1)}
+
+
+def test_a_drone_that_found_two_keeps_the_earlier():
+    finds = [((1, 2), 'iris_3'), ((6, 1), 'iris_3')]
+    # iris_4 is the nearer of the two others to (6, 1) = (32.5, 7.5).
+    poses = {'iris_2': (0.0, 0.0), 'iris_3': (7.5, 12.5), 'iris_4': (30.0, 5.0)}
+    plan = assign_returns(finds, poses, FOLLOWERS)
+    assert plan == {'iris_3': (1, 2), 'iris_4': (6, 1)}
+
+
+def test_more_finds_than_followers_leaves_the_extras_out():
+    finds = [((0, 0), 'iris_2'), ((1, 0), 'iris_2'), ((2, 0), 'iris_2'),
+             ((3, 0), 'iris_2'), ((4, 0), 'iris_2')]
+    poses = {f: (0.0, 0.0) for f in FOLLOWERS}
+    plan = assign_returns(finds, poses, FOLLOWERS)
+    assert len(plan) == 3 and plan['iris_2'] == (0, 0)
+    assert len(set(plan.values())) == 3          # no find twice
+
+
+def test_a_follower_without_a_pose_is_not_sent():
+    finds = [((1, 2), 'iris_3'), ((6, 1), 'iris_3')]
+    assert assign_returns(finds, {'iris_3': (0.0, 0.0)}, FOLLOWERS) == {
+        'iris_3': (1, 2)}
+
+
+def test_a_find_by_the_leader_goes_to_the_nearest_follower():
+    finds = [((6, 1), 'iris_1')]
+    poses = {'iris_2': (0.0, 0.0), 'iris_3': (31.0, 8.0), 'iris_4': (20.0, 20.0)}
+    assert assign_returns(finds, poses, FOLLOWERS) == {'iris_3': (6, 1)}
+
+
+def test_no_finds_means_no_returns():
+    assert assign_returns([], {'iris_2': (0.0, 0.0)}, FOLLOWERS) == {}
+
+
+def test_parse_pairs():
+    assert parse_pairs('iris_2:10, iris_3:12.5,') == {'iris_2': 10.0, 'iris_3': 12.5}
+    assert parse_pairs('a:2,b:3', int) == {'a': 2, 'b': 3}
+    assert parse_pairs('') == {}
+    with pytest.raises(ValueError):
+        parse_pairs('iris_2')
+
+
+# ---- Return to find in the node ---------------------------------------------
+
+RETURN_ARGS = ['--ros-args', '-p', 'followers:=iris_2,iris_3,iris_4',
+               '-p', 'return_to_finds:=true',
+               '-p', 'sysids:=iris_2:2,iris_3:3,iris_4:4',
+               '-p', 'layers:=iris_2:10,iris_3:12,iris_4:14',
+               '-p', 'datum_lat:=-35.3632621', '-p', 'datum_lon:=149.1652374',
+               '-p', 'datum_alt:=10.195']
+
+
+class _FakePub:
+    def __init__(self):
+        self.sent = []
+
+    def publish(self, msg):
+        self.sent.append(msg)
+
+
+def _return_node():
+    from uav_planning.core.mission import Find
+    from uav_planning.mission_node import MissionNode
+    node = MissionNode()
+    node.cmd_pubs = {f: _FakePub() for f in node.followers}
+    node.return_pub = _FakePub()
+    node.mission.finds = {
+        (4, 5): Find((4, 5), 'iris_4', 78.0, None),
+        (1, 2): Find((1, 2), 'iris_3', 85.0, None)}
+    node.poses = {'iris_2': (27.5, 2.5), 'iris_3': (12.5, 7.5),
+                  'iris_4': (27.5, 22.5)}
+    return node
+
+
+def test_return_needs_datum_sysids_and_layers():
+    pytest.importorskip('rclpy')
+    import rclpy
+    from uav_planning.mission_node import MissionNode
+
+    rclpy.init(args=['--ros-args', '-p', 'return_to_finds:=true'])
+    try:
+        with pytest.raises(ValueError, match='return_to_finds needs'):
+            MissionNode()
+    finally:
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+def test_return_sends_each_finder_to_its_find_at_its_layer():
+    pytest.importorskip('rclpy')
+    import rclpy
+
+    rclpy.init(args=RETURN_ARGS)
+    try:
+        node = _return_node()
+        node._return_tick(100.0)
+        assert {f: c for f, (c, _, _) in node.return_plan.items()} == {
+            'iris_4': (4, 5), 'iris_3': (1, 2)}
+        assert node.cmd_pubs['iris_2'].sent == []          # no find, no command
+        for f, layer in (('iris_3', 12.0), ('iris_4', 14.0)):
+            (msg,) = node.cmd_pubs[f].sent
+            assert msg.header.frame_id == 'map' and msg.altitude == layer
+        assert node.return_status == 'RETURNING'
+        node.destroy_node()
+    finally:
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+def test_return_ends_at_finds_once_all_are_within_the_radius():
+    pytest.importorskip('rclpy')
+    import rclpy
+
+    rclpy.init(args=RETURN_ARGS)
+    try:
+        node = _return_node()
+        node._return_tick(100.0)
+        node.poses['iris_4'] = (22.5, 27.5)                # (4, 5) centre
+        node.poses['iris_3'] = (7.5, 12.5)                 # (1, 2) centre
+        node._return_tick(101.0)
+        assert node.return_status == 'AT_FINDS'
+        sent = len(node.cmd_pubs['iris_4'].sent)
+        node._return_tick(102.0)                           # done: no more commands
+        assert len(node.cmd_pubs['iris_4'].sent) == sent
+        node.destroy_node()
+    finally:
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+def test_return_gives_up_after_the_timeout():
+    pytest.importorskip('rclpy')
+    import rclpy
+
+    rclpy.init(args=RETURN_ARGS + ['-p', 'return_timeout:=30.0'])
+    try:
+        node = _return_node()
+        node._return_tick(100.0)
+        node._return_tick(131.0)
+        assert node.return_status == 'TIMED_OUT'
+        node.destroy_node()
     finally:
         if rclpy.ok():
             rclpy.shutdown()

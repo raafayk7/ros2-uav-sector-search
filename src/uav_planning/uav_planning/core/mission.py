@@ -23,6 +23,12 @@ Choices pinned in docs/planner-decisions.md (D14, D41):
   the first sim time seen), which ends a run early, never late, at RTF
   below 1.
 
+* Return to find (D41 amended, 2026-11-22): after DONE, ``assign_returns``
+  gives each find a follower to hover over it, so the run ends with drones on
+  the finds instead of on whatever sectors they had moved on to. The finder
+  keeps its own find; a drone that found two keeps the earlier, and the other
+  goes to the nearest drone without one. It is the node's job to fly them.
+
 ``Mission.tick`` is called once a second with the latest inputs and returns
 what to publish. Same conventions as planner.py: cells are (col, row).
 """
@@ -208,7 +214,61 @@ def _span(start: Optional[float], end: Optional[float]) -> Optional[float]:
     return None if start is None or end is None else end - start
 
 
+# ---- Return to find -------------------------------------------------------
+
+def cell_centre(cell: Cell, resolution: float = 5.0,
+                origin: Tuple[float, float] = (0.0, 0.0)) -> Tuple[float, float]:
+    """Arena (x, y) of a cell's centre; cells are (col, row)."""
+    return (origin[0] + (cell[0] + 0.5) * resolution,
+            origin[1] + (cell[1] + 0.5) * resolution)
+
+
+def assign_returns(finds: Sequence[Tuple[Cell, str]],
+                   poses: Dict[str, Tuple[float, float]],
+                   followers: Sequence[str], resolution: float = 5.0,
+                   origin: Tuple[float, float] = (0.0, 0.0)) -> Dict[str, Cell]:
+    """Follower -> the find it should hover over at the end.
+
+    ``finds`` is every (cell, finder) in the order they were found; ``poses``
+    maps follower to its latest arena (x, y). A finder takes its own find,
+    the earliest one if it found several. Each remaining find goes to the
+    nearest follower that has none yet (ties by name), and is left out if
+    every follower already has one or none has a pose. No follower gets two.
+    """
+    plan: Dict[str, Cell] = {}
+    rest: List[Cell] = []
+    for cell, drone in finds:
+        cell = tuple(cell)
+        if drone in followers and drone not in plan:
+            plan[drone] = cell
+        else:
+            rest.append(cell)
+    for cell in rest:
+        centre = cell_centre(cell, resolution, origin)
+        free = [f for f in followers if f not in plan and f in poses]
+        if not free:
+            break
+        best = min(free, key=lambda f: (
+            (poses[f][0] - centre[0]) ** 2 + (poses[f][1] - centre[1]) ** 2, f))
+        plan[best] = cell
+    return plan
+
+
 # ---- Helpers for mission_node (still no ROS) ------------------------------
+
+def parse_pairs(spec: str, cast=float) -> Dict[str, float]:
+    """``"iris_2:10,iris_3:12"`` -> ``{"iris_2": 10.0, "iris_3": 12.0}``.
+    One string, since an empty array launch param has no type in ROS 2."""
+    out = {}
+    for item in (s.strip() for s in spec.split(',')):
+        if not item:
+            continue
+        name, sep, value = item.partition(':')
+        if not sep or not name.strip():
+            raise ValueError(f"'{item}' must be name:value")
+        out[name.strip()] = cast(value)
+    return out
+
 
 def parse_names(spec: str) -> List[str]:
     """``"iris_2, iris_3"`` -> ``["iris_2", "iris_3"]``; empty items dropped."""

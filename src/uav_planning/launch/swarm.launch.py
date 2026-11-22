@@ -68,6 +68,8 @@ Launch args:
                   below the threshold for hold wall-s (default 0.5, 30.0)
   mission_timeout sim seconds after the planners are enabled (default
                   600.0, D41)
+  return_to_finds after DONE, each find's finder flies to hover over it
+                  (default true; D41 amended; skipped on TIMED_OUT)
   sim             start Gazebo + SITL here (default true)
   followers       start the followers once /clock flows (default true;
                   false brings up the sim alone, e.g. to measure RTF)
@@ -113,6 +115,7 @@ from launch_ros.actions import Node
 
 WORLD = 'runway'
 # physics step (s) -> extra SITL defaults file. Only these two are flown.
+FOLLOWER_LAYER = 10.0    # D5: follower k flies at 10 + 2 k m
 STEP_PARMS = {'0.001': None, '0.002': 'loop_250hz.parm'}
 
 
@@ -533,6 +536,14 @@ def _leader_actions(context, drones):
                 'threshold': float(_arg(context, 'mission_threshold')),
                 'hold': float(_arg(context, 'mission_hold')),
                 'timeout': float(_arg(context, 'mission_timeout')),
+                'return_to_finds': _arg(context, 'return_to_finds').lower() == 'true',
+                'sysids': ','.join(f'{d.name}:{d.sysid}' for d in drones
+                                   if d.role == 'follower'),
+                'layers': ','.join(f'{d.name}:{FOLLOWER_LAYER + 2 * d.index}'
+                                   for d in drones if d.role == 'follower'),
+                'datum_lat': float(_arg(context, 'datum_lat')),
+                'datum_lon': float(_arg(context, 'datum_lon')),
+                'datum_alt': float(_arg(context, 'datum_alt')),
                 'use_sim_time': False,
             }]))
     return actions
@@ -575,6 +586,7 @@ def generate_launch_description():
         DeclareLaunchArgument('mission_threshold', default_value='0.5'),
         DeclareLaunchArgument('mission_hold', default_value='30.0'),
         DeclareLaunchArgument('mission_timeout', default_value='600.0'),
+        DeclareLaunchArgument('return_to_finds', default_value='true'),
         DeclareLaunchArgument('sim', default_value='true'),
         DeclareLaunchArgument('followers', default_value='true'),
         DeclareLaunchArgument('camera', default_value='false'),
