@@ -58,6 +58,10 @@ services:
       # ROS 2 you run, or set a non-zero domain to isolate this container.
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      # rmw_cyclonedds_cpp allows 32 DDS participants (one per process) per
+      # domain; a leader + 3 followers with arena_view needs about 34
+      # (docker-notes gotcha 61). Raise it to the most a domain can hold.
+      - CYCLONEDDS_URI=<CycloneDDS><Domain id="any"><Discovery><MaxAutoParticipantIndex>119</MaxAutoParticipantIndex></Discovery></Domain></CycloneDDS>
       # Make SDL/Gazebo behave better on iGPU
       - LIBGL_ALWAYS_SOFTWARE=${LIBGL_ALWAYS_SOFTWARE:-0}
 
