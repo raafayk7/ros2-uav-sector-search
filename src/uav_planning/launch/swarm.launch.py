@@ -78,9 +78,11 @@ Launch args:
                   white line every 5 m on plain ground, without the runway
                   visuals (the ground collision is the same), turn shadows
                   off, colour the leader's propellers yellow and the
-                  followers' cyan with a matching 1.6 m halo above each, and
-                  open the Gazebo view straight down on it with a stats
-                  overlay (default false; for video; use with gui:=true)
+                  followers' cyan with a matching 1.6 m halo above each, put
+                  a marker disc on the ground under each drone (starts
+                  ground_marker_node and a set_pose bridge), and open the
+                  Gazebo view straight down on it with a stats overlay
+                  (default false; for video; use with gui:=true)
   spacing         spawn spacing along x, m (default 5.0)
   physics_step    Gazebo max_step_size, s: 0.002 (default, with a 250 Hz
                   autopilot loop) or 0.001 (upstream, 400 Hz loop)
@@ -169,6 +171,7 @@ def _bridge_config(camera: str) -> str:
 
 # Propeller colours with arena_view: not the target colours (red, green, blue).
 PROP_COLORS = {'leader': '1 0.8 0', 'follower': '0 0.9 0.9'}
+MARKER_PREFIX = 'ground_marker_'
 HALO = ('<visual name="role_halo"><pose>0 0 0.06 0 0 0</pose>'
         '<cast_shadows>false</cast_shadows><transparency>0.5</transparency>'
         '<geometry><cylinder><radius>0.8</radius><length>0.01</length>'
@@ -222,6 +225,22 @@ _PLAIN_GROUND_SDF = (
     '<normal>0 0 1</normal><size>400 400</size></plane></geometry>'
     '<material><ambient>0.6 0.6 0.55 1</ambient><diffuse>0.6 0.6 0.55 1'
     '</diffuse></material></visual></link></model>')
+
+
+def _ground_marker_sdf(name: str, rgb: str, x: float, y: float) -> str:
+    """A static, visual-only marker on the ground: a translucent disc with a
+    solid dot in the middle. ground_marker_node moves it under its drone."""
+    def disc(vname, radius, z, transparency):
+        return (f'<visual name="{vname}"><pose>0 0 {z} 0 0 0</pose>'
+                f'<cast_shadows>false</cast_shadows>'
+                f'<transparency>{transparency}</transparency><geometry>'
+                f'<cylinder><radius>{radius}</radius><length>0.01</length>'
+                f'</cylinder></geometry><material><ambient>{rgb} 1</ambient>'
+                f'<diffuse>{rgb} 1</diffuse></material></visual>')
+    return (f'<model name="{name}"><static>true</static>'
+            f'<pose>{x} {y} 0.06 0 0 0</pose><link name="link">'
+            + disc('ring', 0.9, 0, 0.5) + disc('dot', 0.25, 0.005, 0)
+            + '</link></model>')
 
 
 def _arena_gui_sdf(size: float = 40.0) -> str:
@@ -285,10 +304,11 @@ def _arena_view_sdf(size: float = 40.0, cell: float = 5.0) -> str:
             '<link name="link">' + ''.join(visuals) + '</link></model>')
 
 
-def _world(step: str, arena_view: bool = False) -> Path:
+def _world(step: str, arena_view: bool = False, markers=()) -> Path:
     """The runway world, copied with a new max_step_size unless it is 1 ms.
 
-    With arena_view the copy also gets the arena_view visual model.
+    With arena_view the copy also gets the arena_view visual model and one
+    ground marker per (name, rgb, x, y) in markers.
     """
     world = Path(get_package_share_directory('ardupilot_gz_gazebo'),
                  'worlds', f'{WORLD}.sdf')
@@ -315,8 +335,9 @@ def _world(step: str, arena_view: bool = False) -> Path:
             raise RuntimeError(f'expected one {shadows} and no <gui> block '
                                f'in {world}')
         sdf = sdf.replace(shadows, '<cast_shadows>false</cast_shadows>')
-        sdf = sdf.replace('</world>',
-                          _arena_view_sdf() + _arena_gui_sdf() + '</world>')
+        extra = ''.join(_ground_marker_sdf(*m) for m in markers)
+        sdf = sdf.replace('</world>', _arena_view_sdf() + extra
+                          + _arena_gui_sdf() + '</world>')
     # Same file name in a temp dir: the world name inside stays "runway".
     out = Path(tempfile.mkdtemp()) / world.name
     out.write_text(sdf)
@@ -347,7 +368,9 @@ def _sim_actions(context, drones):
         raise RuntimeError(f'physics_step must be one of {list(STEP_PARMS)}, '
                            f'got {step}')
     arena_view = _arg(context, 'arena_view').lower() == 'true'
-    world = _world(step, arena_view)
+    markers = [(f'{MARKER_PREFIX}{d.name}', PROP_COLORS[d.role], d.x, d.y)
+               for d in drones]
+    world = _world(step, arena_view, markers)
     camera = _arg(context, 'camera').lower() == 'true'
     gui = _arg(context, 'gui').lower() == 'true'
     bridge_files = {
@@ -371,6 +394,20 @@ def _sim_actions(context, drones):
             arguments=['/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'],
         ),
     ]
+
+    if arena_view:
+        actions += [
+            # Gazebo's set_pose service as a ROS service.
+            Node(package='ros_gz_bridge', executable='parameter_bridge',
+                 name='set_pose_bridge', output='screen',
+                 arguments=[f'/world/{WORLD}/set_pose'
+                            '@ros_gz_interfaces/srv/SetEntityPose']),
+            Node(package='uav_planning', executable='ground_marker_node',
+                 name='ground_marker_node', output='screen',
+                 parameters=[{'robots': [d.name for d in drones],
+                              'world': WORLD,
+                              'marker_prefix': MARKER_PREFIX}]),
+        ]
 
     robot_lds = PythonLaunchDescriptionSource(
         str(Path(bringup, 'launch', 'robots', 'robot.launch.py')))
