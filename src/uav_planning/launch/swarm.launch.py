@@ -74,6 +74,11 @@ Launch args:
   camera          bridge each drone's camera (default false)
   gui             open the Gazebo window (default false: server only; needs
                   DISPLAY and an X login file in the container)
+  arena_view      draw the 40 x 40 m arena as a dark green plate with a
+                  white line every 5 m on plain ground, without the runway
+                  visuals (the ground collision is the same), and open the
+                  Gazebo view straight down on it with a stats overlay
+                  (default false; for video; use with gui:=true)
   spacing         spawn spacing along x, m (default 5.0)
   physics_step    Gazebo max_step_size, s: 0.002 (default, with a 250 Hz
                   autopilot loop) or 0.001 (upstream, 400 Hz loop)
@@ -84,6 +89,7 @@ Launch args:
                   RTF ~0.3 the EKF takes minutes of wall time to settle)
 """
 
+import re
 import tempfile
 from pathlib import Path
 from typing import NamedTuple
@@ -170,19 +176,108 @@ def _iris_sdf(robot_name: str) -> str:
     return out.name
 
 
-def _world(step: str) -> Path:
-    """The runway world, copied with a new max_step_size unless it is 1 ms."""
+# Same collision plane as upstream's runway model, a plain visual on top.
+_PLAIN_GROUND_SDF = (
+    '<model name="ground"><static>true</static><link name="link">'
+    '<collision name="collision"><geometry><plane><normal>0 0 1</normal>'
+    '</plane></geometry></collision>'
+    '<visual name="ground"><cast_shadows>false</cast_shadows><geometry><plane>'
+    '<normal>0 0 1</normal><size>400 400</size></plane></geometry>'
+    '<material><ambient>0.6 0.6 0.55 1</ambient><diffuse>0.6 0.6 0.55 1'
+    '</diffuse></material></visual></link></model>')
+
+
+def _arena_gui_sdf(size: float = 40.0) -> str:
+    """A <gui> block: the 3D view looking straight down at the arena centre,
+    plus the stats overlay (sim time, real time, RTF). It replaces Gazebo's
+    default panels, which suits a recording. Height fits the arena at the
+    scene camera's default 60 degree horizontal field of view with a margin.
+    """
+    half = size / 2
+    height = round(size * 1.2, 1)
+    return (
+        '<gui fullscreen="0">'
+        '<plugin filename="GzScene3D" name="3D View"><gz-gui>'
+        '<title>3D View</title>'
+        '<property type="bool" key="showTitleBar">false</property>'
+        '<property type="string" key="state">docked</property></gz-gui>'
+        '<engine>ogre2</engine><scene>scene</scene>'
+        '<ambient_light>0.4 0.4 0.4</ambient_light>'
+        '<background_color>0.8 0.8 0.8</background_color>'
+        f'<camera_pose>{half} {half} {height} 0 1.5707 0</camera_pose>'
+        '</plugin>'
+        '<plugin filename="WorldStats" name="World stats"><gz-gui>'
+        '<title>World stats</title>'
+        '<property type="bool" key="showTitleBar">false</property>'
+        '<property type="bool" key="resizable">false</property>'
+        '<property type="double" key="height">110</property>'
+        '<property type="double" key="width">290</property>'
+        '<property type="double" key="z">1</property>'
+        '<property type="string" key="state">floating</property>'
+        '<anchors target="3D View"><line own="right" target="right"/>'
+        '<line own="bottom" target="bottom"/></anchors></gz-gui>'
+        '<sim_time>true</sim_time><real_time>true</real_time>'
+        '<paused>false</paused><iterations>false</iterations></plugin>'
+        '</gui>')
+
+
+def _arena_view_sdf(size: float = 40.0, cell: float = 5.0) -> str:
+    """A visual-only model: green plate over the arena with a line every cell.
+
+    No collision and static, so physics and the planners are untouched. The
+    arena is the region [0, size] x [0, size] of the world frame (D39).
+    """
+    half = size / 2
+    n = round(size / cell)
+    line = 0.15
+
+    def box(name, x, y, sx, sy, z, rgb):
+        return (f'<visual name="{name}"><pose>{x} {y} {z} 0 0 0</pose>'
+                f'<cast_shadows>false</cast_shadows>'
+                f'<geometry><box><size>{sx} {sy} 0.01</size></box></geometry>'
+                f'<material><ambient>{rgb}</ambient><diffuse>{rgb}</diffuse>'
+                f'</material></visual>')
+
+    visuals = [box('plate', half, half, size, size, 0.03, '0.08 0.27 0.07 1')]
+    for i in range(n + 1):
+        at = i * cell
+        visuals.append(box(f'lx{i}', at, half, line, size, 0.04, '1 1 1 1'))
+        visuals.append(box(f'ly{i}', half, at, size, line, 0.04, '1 1 1 1'))
+    return ('<model name="arena_view"><static>true</static>'
+            '<link name="link">' + ''.join(visuals) + '</link></model>')
+
+
+def _world(step: str, arena_view: bool = False) -> Path:
+    """The runway world, copied with a new max_step_size unless it is 1 ms.
+
+    With arena_view the copy also gets the arena_view visual model.
+    """
     world = Path(get_package_share_directory('ardupilot_gz_gazebo'),
                  'worlds', f'{WORLD}.sdf')
-    if step == '0.001':
+    if step == '0.001' and not arena_view:
         return world
     sdf = world.read_text()
-    old = '<max_step_size>0.001</max_step_size>'
-    if sdf.count(old) != 1:
-        raise RuntimeError(f'expected one {old} in {world}')
+    if step != '0.001':
+        old = '<max_step_size>0.001</max_step_size>'
+        if sdf.count(old) != 1:
+            raise RuntimeError(f'expected one {old} in {world}')
+        sdf = sdf.replace(old, f'<max_step_size>{step}</max_step_size>')
+    if arena_view:
+        # The runway model is the world's only ground (a collision plane), so
+        # swap it for a plain ground with the same collision and drop its
+        # runway and airfield visuals.
+        sdf, n = re.subn(r'<include>\s*<uri>model://runway</uri>.*?</include>',
+                         _PLAIN_GROUND_SDF, sdf, flags=re.S)
+        if n != 1 or sdf.count('</world>') != 1:
+            raise RuntimeError(f'expected one runway include and </world> '
+                               f'in {world}')
+        if '<gui' in sdf:
+            raise RuntimeError(f'{world} already has a <gui> block')
+        sdf = sdf.replace('</world>',
+                          _arena_view_sdf() + _arena_gui_sdf() + '</world>')
     # Same file name in a temp dir: the world name inside stays "runway".
     out = Path(tempfile.mkdtemp()) / world.name
-    out.write_text(sdf.replace(old, f'<max_step_size>{step}</max_step_size>'))
+    out.write_text(sdf)
     return out
 
 
@@ -209,7 +304,7 @@ def _sim_actions(context, drones):
     if step not in STEP_PARMS:
         raise RuntimeError(f'physics_step must be one of {list(STEP_PARMS)}, '
                            f'got {step}')
-    world = _world(step)
+    world = _world(step, _arg(context, 'arena_view').lower() == 'true')
     camera = _arg(context, 'camera').lower() == 'true'
     gui = _arg(context, 'gui').lower() == 'true'
     bridge_files = {
@@ -403,6 +498,7 @@ def generate_launch_description():
         DeclareLaunchArgument('followers', default_value='true'),
         DeclareLaunchArgument('camera', default_value='false'),
         DeclareLaunchArgument('gui', default_value='false'),
+        DeclareLaunchArgument('arena_view', default_value='false'),
         DeclareLaunchArgument('spacing', default_value='5.0'),
         DeclareLaunchArgument('physics_step', default_value='0.002'),
         DeclareLaunchArgument('datum_lat', default_value='-35.3632621'),
