@@ -2,7 +2,7 @@
 
 Session 12, 2026-11-22. No sim. This checks the roadmap's "Contribution claim" against published work before the LLM layer (Dec 10) and before anything goes into the README.
 
-**Verdict in one line: novel only in the eval.** No paper found runs the whole chain. Every link in it is established, though, and three preprints from Oct-Nov 2026 each cover three or four of them. What nobody has measured is the cost of a *wrong* language-derived prior in a multi-UAV search whose map learns from empty views and whose leader always sweeps the whole area. The claim's current wording also says more than the system does (see "Wording problems"). A reworded claim is proposed below for the user to accept or not. The roadmap's wording is unchanged until then.
+**Verdict in one line: novel only in the eval.** No paper found runs the whole chain. Every link in it is established, though, and three preprints from Oct-Nov 2026 each cover three or four of them. What nobody has measured is the cost of a *wrong* language-derived prior in a multi-UAV search whose map learns from empty views and whose leader always sweeps the whole area. The claim's current wording also says more than the system does (see "Wording problems"). A reworded claim is proposed below. The user accepted it and the fourth eval arm on 2026-11-22, and both are now in the roadmap.
 
 ## How the check was done
 
@@ -102,11 +102,11 @@ The roadmap's chain says "Bayesian posterior with negative evidence -> distribut
 3. **"Bayesian posterior"** is fair but loose: it is a log-odds occupancy grid whose updates are capped per look (D40), an approximation to Bayes. "Log-odds belief map with negative evidence" is accurate.
 4. **"The eval is the contribution"** is right, and should come first, ahead of the pipeline.
 
-## Proposed claim (plan-level; needs the user's yes before the roadmap changes)
+## Proposed claim (plan-level; accepted by the user 2026-11-22, now in the roadmap)
 
 > **What a wrong language-derived search prior costs, measured.** An LLM's only output is a prior map written from an operator's field report. Every camera view without a detection lowers the map, a leader always completes a full sweep, and each follower independently flies to the best open sector on the shared map. On that system we compare uniform, accurate and misleading clues (time to first find, time to all found with censoring, coverage at timeout). The pipeline is assembled from known parts (cite LMPath, Language as a Sensor, arXiv 2611.16524, Bourgault-style Bayesian search, 2611.12317). The eval is the contribution.
 
-**A separate plan-level suggestion (also needs a yes):** add a fourth arm, *misleading clue with negative evidence turned off* (the prior never fades). This is the condition 2611.12317 measured. With it, the eval can say how much of any robustness comes from negative evidence and how much from the sweep, instead of only showing that the misleading arm did well or badly. In the 2D sim it costs 20 more runs, and turning negative evidence off is one existing parameter (`BeliefParams.p_miss = 0.5`, so an empty look adds 0 log-odds). It does not change D37-D41.
+**A separate plan-level suggestion (accepted 2026-11-22):** add a fourth arm, *misleading clue with negative evidence turned off* (the prior never fades). This is the condition 2611.12317 measured. With it, the eval can say how much of any robustness comes from negative evidence and how much from the sweep, instead of only showing that the misleading arm did well or badly. In the 2D sim it costs 20 more runs, and turning negative evidence off is one existing parameter (`BeliefParams.p_miss = 0.5`, so an empty look adds 0 log-odds). It does not change D37-D41.
 
 ## README sentence the evidence supports
 
@@ -118,7 +118,7 @@ The roadmap's chain says "Bayesian posterior with negative evidence -> distribut
 
 ## What changes, and what is not shown
 
-**Plan-level (pending the user):** the claim's wording (proposal above) and the optional fourth eval arm. The roadmap's "Contribution claim" wording is unchanged. Its status line now points here.
+**Plan-level (accepted by the user 2026-11-22, applied the same day):** the claim's wording (proposal above) and the fourth eval arm. The roadmap's "Contribution claim" and eval conditions now carry both, and the old wording is kept there for the record.
 
 **Documentation (done this session):** this file, the roadmap's claim status line and literature-check milestone row, and the session-13 prompt.
 

@@ -6,7 +6,7 @@ Paste the block below to open the next session. Replace this file after each ses
 
 Session 12 is done (2026-11-22, no sim): the literature check is in `docs/literature-check.md`. **Verdict: novel only in the eval.** No paper runs the whole chain, but every link has direct prior work, and the closest systems are from Oct-Nov 2026 (LMPath 2605.13782, Language as a Sensor 2606.08666, the LLM drone scheduler 2611.16524). Nobody tests a misleading language clue against uniform and accurate ones in multi-UAV search. 2611.12317 found that a strongly biased map did about half as well as no map, for a planner whose map never updates. The claim's wording also overstated the system ("distributed information-seeking": fusion has one owner, and the rule is best open sector).
 
-**Two plan-level items await the user's yes** (both in the literature check, neither applied): (1) the reworded contribution claim, and (2) an optional fourth eval arm, misleading clue with negative evidence off (`BeliefParams.p_miss = 0.5`, 20 more 2D-sim runs). If the user answers at the start of session 13, apply the answer to the roadmap's "Contribution claim" and its eval section, then commit separately.
+**The user accepted both plan-level items the same day, and they are applied:** the roadmap's "Contribution claim" now leads with "What a wrong language-derived search prior costs, measured", and the eval has a fourth arm, misleading clue with negative evidence off (`BeliefParams.p_miss = 0.5`, 20 seeds x 4 conditions = 80 runs).
 
 Session 11 met the Nov 24 milestone. Two cold headless missions ended DONE from one command (`swarm.launch.py leader:=true num_followers:=3`), and one ended TIMED_OUT. `python3 -m pytest src`: 207 passed.
 
@@ -19,7 +19,7 @@ What is left before Nov 30: the go/no-go (leader + 3 followers complete a missio
 | **13 (this prompt)** | GUI option for `swarm.launch.py`, a dress run with the Gazebo GUI, video v1, README and stack-overview status brought up to date | **Nov 30 go/no-go** | Sonnet | Mostly running and recording; one small launch change | ~2 h |
 | 14 (estimate) | CI smoke test (1 leader + 1 follower, ground-truth detector, headless) | Dec 8 | Sonnet | Boilerplate workflow | ~2 h |
 | 15-16 (estimate) | `mission_prior_node`, landmark file, replay provider, rasterization rule, first mission driven by a clue | Dec 10 | Opus for 15 (open questions: rasterization, multi-target clues), Sonnet for 16 | Design, then wiring | ~4 h |
-| 17-18 (estimate) | 2D eval sim, 20 seeds x 3 (or 4) conditions, results table, video v2, re-run the literature search | Dec 20 | Opus | Eval design and honest reporting | ~4-5 h |
+| 17-18 (estimate) | 2D eval sim, 20 seeds x 4 conditions, results table, video v2, re-run the literature search | Dec 20 | Opus | Eval design and honest reporting | ~4-5 h |
 
 At about one session every one or two days, Nov 30 is likely met (one session left). Dec 10 is tight: three sessions in about eight days after the go.
 
@@ -32,7 +32,6 @@ Continuing the multi-agent UAV ROS 2 rebuild: session 13, the go/no-go dress run
 - `docs/roadmap.md`: milestones (the Nov 30 go/no-go criteria) and the "Contribution claim" status line.
 - `docs/planner-decisions.md`, session 11 notes (D41, how a mission ends, the report).
 - `docs/docker-notes.md` gotchas 31-33 (login shell, `/clock`), 42/46 (WinBoat), 54-60 (RTF from `/stats`, latched topics, `python3 -u`), 57 (Wayland `XAUTHORITY` after a reboot, which matters for the GUI).
-- If the user has answered the two pending items from session 12, apply them first (see "Where the plan stands").
 
 ## Task
 
@@ -53,10 +52,10 @@ Record the outcome in the roadmap and rewrite this file for session 14.
 
 ## Done means
 
-GUI option built; one cold DONE mission with the GUI (or a stated reason why not, plus a headless DONE run); video v1 saved, with where it lives stated; README and stack-overview current; the go/no-go outcome in the roadmap; this file rewritten for session 14. Say plainly which changes are code (the launch argument), which are plan-level (the go/no-go outcome, and the claim wording if the user answered), and which are documentation. For each "not shown" gap, say whether it was in scope and where it now lives.
+GUI option built; one cold DONE mission with the GUI (or a stated reason why not, plus a headless DONE run); video v1 saved, with where it lives stated; README and stack-overview current; the go/no-go outcome in the roadmap; this file rewritten for session 14. Say plainly which changes are code (the launch argument), which are plan-level (the go/no-go outcome), and which are documentation. For each "not shown" gap, say whether it was in scope and where it now lives.
 
 ## Working agreements
 
 - The user has high-level ROS understanding, not deep. Explain new terms in one paragraph the first time.
-- Settled decisions stay settled (stack, D37-D41, including the session-11 amendments). The contribution claim's wording changes only with the user's yes.
+- Settled decisions stay settled (stack, D37-D41, including the session-11 amendments). The contribution claim was reworded with the user's yes in session 12; it changes again only with another yes.
 - Do not push without asking.

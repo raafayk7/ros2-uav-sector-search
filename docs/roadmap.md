@@ -8,15 +8,17 @@ Public-safe extract of the project plan: architecture, algorithms, eval and mile
 
 An operator types a field report ("two hikers last seen near the river, heading north, one injured"). An LLM turns it into a structured prior probability map. Follower drones launch straight into the high-prior areas while the leader is still sweeping, and the leader's detections update the map as they arrive. Low-level flight stays classical: each follower independently picks the best open sector on the shared map and ArduPilot flies it there, with the thesis's overlap penalty and per-drone altitude layers keeping drones apart. The thesis's distributed gradient ascent (DGA) and BLL remain as measured baselines (see `docs/planner-decisions.md`). The LLM runs at mission speed (seconds), so its latency does not matter.
 
-## Contribution claim (narrowed; verify against literature before publishing)
+## Contribution claim (reworded after the literature check, 2026-11-22; re-check before publishing)
 
-Never "nobody has combined LLMs with classical drone control" (false; the area is busy). The claim is the specific chain:
+Never "nobody has combined LLMs with classical drone control" (false; the area is busy). The claim is the measured eval on a specific system:
 
-**natural-language incident report -> spatial probabilistic prior -> Bayesian posterior with negative evidence -> distributed multi-UAV information-seeking controller, with the LLM kept out of flight-critical control**, plus a *measured* comparison of uniform vs accurate vs misleading clues. **The eval is the contribution, not the LLM.**
+**What a wrong language-derived search prior costs, measured.** An LLM's only output is a prior map written from an operator's field report. Every camera view without a detection lowers the map, a leader always completes a full sweep, and each follower independently flies to the best open sector on the shared map. On that system we compare uniform, accurate and misleading clues, plus a misleading clue with negative evidence off (time to first find, time to all found with censoring, coverage at timeout). The pipeline is assembled from known parts (cite LMPath, Language as a Sensor, arXiv 2611.16524, Bourgault-style Bayesian search, 2611.12317). **The eval is the contribution, not the LLM.**
+
+Replaced wording (session 12, kept for the record): "natural-language incident report -> spatial probabilistic prior -> Bayesian posterior with negative evidence -> distributed multi-UAV information-seeking controller". It overstated the system: fusion has one owner, so the posterior is not distributed, and the follower rule is best open sector, not information gain.
 
 Closest prior pattern to cite, not hide: "Bootstrapped LLM Semantics for Context-Aware Path Planning" (arXiv 2511.11967), where the LLM acts as a stochastic semantic sensor feeding a classical planner (single robot, per-class risk, not search).
 
-**Status (literature check done 2026-11-22, session 12, `docs/literature-check.md`): novel only in the eval.** No paper runs the whole chain, but every link has direct prior work, and the closest systems are from Oct-Nov 2026 (LMPath 2605.13782, Language as a Sensor 2606.08666, the LLM drone scheduler 2611.16524). No paper tests a misleading language clue against uniform and accurate ones in multi-UAV search. 2611.12317 found that a strongly biased map did about half as well as no map, for a planner whose map never updates. The wording above also overstates the system: fusion has one owner, so the posterior is not distributed, and the follower rule is best open sector, not information gain. A reworded claim and an optional fourth eval arm (misleading clue with negative evidence off) are proposed in the literature check and **await the user's yes**; until then the wording above stands. Re-run the search before any README claim (Dec 20 write-up).
+**Status (literature check done 2026-11-22, session 12, `docs/literature-check.md`): novel only in the eval.** No paper runs the whole chain, but every link has direct prior work, and the closest systems are from Oct-Nov 2026 (LMPath 2605.13782, Language as a Sensor 2606.08666, the LLM drone scheduler 2611.16524). No paper tests a misleading language clue against uniform and accurate ones in multi-UAV search. 2611.12317 found that a strongly biased map did about half as well as no map, for a planner whose map never updates. **The user accepted the reworded claim above and the fourth eval arm on 2026-11-22** (both from the literature check). Re-run the search before any README claim (Dec 20 write-up).
 
 ## Architecture (ROS 2 Jazzy workspace)
 
@@ -60,7 +62,7 @@ A cell's starting belief = alpha * prior_LLM + (1 - alpha) * 0.5, converted to l
 
 - Lightweight 2D kinematic sim (point-mass drones, camera footprint model, same planner/fusion library), faster than real time. Gazebo is used for 3 showcase runs for video, not for statistics.
 - 20 seeds, 1-3 targets each, placed relative to landmarks in a fixed world.
-- Conditions: uniform, accurate clue, misleading clue (same template, wrong landmark), alpha = 0.5.
+- Conditions: uniform, accurate clue, misleading clue (same template, wrong landmark), and misleading clue with negative evidence off, all at alpha = 0.5. The fourth arm sets `BeliefParams.p_miss = 0.5`, so an empty look adds 0 log-odds while detections (`p_hit`) are unchanged. It is the condition 2611.12317 measured (a fixed map), and it separates how much robustness comes from negative evidence and how much from the sweep (added 2026-11-22, session 12). 20 seeds x 4 conditions = 80 runs.
 - Found (scoring only, since a running system lacks true positions) = a detection within 2 m of the true position. Timeout 15 sim-minutes; unfound targets are censored and counted.
 - Report median time-to-first-find, time-to-all-found (with censor count) and coverage at timeout.
 
@@ -76,11 +78,11 @@ Smoke test: 1 leader + 1 follower, ground-truth detector (no camera rendering, s
 | **Nov 15** | **3 followers each holding a different peak on the 8x8 stub map in SITL** (cut-order trigger). **Met 2026-11-12**, 3 cold runs, RTF about 0.3-0.44 |
 | Nov 20 | One follower completes the search loop: observes, map updates, departs, finds a target. **Met 2026-11-18**, 2 cold runs: leader + 1 follower, all 3 targets confirmed before the sweep ended |
 | Nov 24 | Mission state machine end to end. Build order from Nov 16: camera to nadir (2 h timebox, done Nov 16) and sim speed (2 h timebox, done Nov 16: a 2 ms physics step doubles RTF, now the swarm default, D37); ground-truth detector (done Nov 17); sweep controller (done Nov 17, D39); `belief_map_node` + footprints (done Nov 18, D40); Nov 20 checkpoint (met Nov 18); state machine (designed Nov 20, D41; `mission_node` built and flown end to end on Nov 20, session 11: **met**, DONE from one command with a correct report) |
-| Nov 25-29 | Literature check on the narrowed contribution claim (scheduled 2026-11-18): closest prior work, whether the claim holds, rewording if needed, in `docs/literature-check.md`. Before the LLM layer and any README claim. **Done 2026-11-22** (session 12): novel only in the eval; rewording proposed, awaiting the user |
+| Nov 25-29 | Literature check on the narrowed contribution claim (scheduled 2026-11-18): closest prior work, whether the claim holds, rewording if needed, in `docs/literature-check.md`. Before the LLM layer and any README claim. **Done 2026-11-22** (session 12): novel only in the eval; the user accepted the rewording and the fourth eval arm the same day |
 | **Nov 30** | **Go/no-go:** leader + 3 followers complete a mission in Gazebo (ground-truth detector) from one command; video v1 |
 | Dec 8 | CI green |
 | Dec 10 | Language prior drives a mission end to end |
-| Dec 20 | Results table over 20 scenarios x 3 conditions, 3 Gazebo showcase runs, video v2 |
+| Dec 20 | Results table over 20 scenarios x 4 conditions, 3 Gazebo showcase runs, video v2 |
 
 No-go on Nov 30 means weeks 6-7 finish the base system, a second check on Dec 14 applies the same criteria, and the LLM layer moves out.
 
