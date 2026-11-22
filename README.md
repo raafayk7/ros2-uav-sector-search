@@ -2,7 +2,7 @@
 
 **Work in progress.** A leader drone sweeps an area and builds a probability map of where targets are; follower drones each fly, independently, to the best open sector on that map. This repo is a ROS 2 / Gazebo Harmonic rebuild of the LUMS senior project *"Distributed Autonomous Surveillance and Rescue Architecture Integrating Computer Vision within Multi-Agent Drone Coordination"* (Anwer, Moeez, Tahir, Kazmi — Spring 2025). The original ran on ROS Noetic + Gazebo 11; this version targets a modern stack and the future-work items the original team listed (true decentralization, scale beyond two followers, more robust perception).
 
-What flies today: a leader sweeping the arena and **three followers** finding every target on a shared map, in simulation. The mission's start-and-stop logic is not finished. Read [Status](#status) before expecting more.
+What flies today: from one command, a leader sweeping the arena and **three followers** finding every target on a shared map, in simulation, with a mission that starts the search, decides when it is over and reports the finds. Read [Status](#status) before expecting more.
 
 ## How it is meant to work
 
@@ -86,21 +86,22 @@ python3 -m pytest src
 
 ## Status
 
-Verified in headless SITL, 2026-11-20, in two cold runs with a leader and three followers (`swarm.launch.py leader:=true num_followers:=3`, real-time factor about 0.55):
+Verified in SITL, 2026-11-22, in cold runs from one command with a leader and three followers (`swarm.launch.py leader:=true num_followers:=3`, headless real-time factor about 0.59, 0.27-0.41 with the Gazebo window open):
 
-- The leader flies a lawnmower sweep over the 40 x 40 m arena (8 x 8 sectors at 5 m) in 68-76 s. Followers launch with it and fly to whatever the shared map currently rates highest.
-- All 3 targets were confirmed in both runs, 15-34 s into the sweep, with no false confirmations. In one run each follower found a different target. Empty sectors ended at 3-5 %.
-- A target 0.3 m inside a sector edge was confirmed in the right sector.
+- The leader flies a lawnmower sweep over the 40 x 40 m arena (8 x 8 sectors at 5 m). Followers launch with it and fly to whatever the shared map currently rates highest. The lanes cover all 64 sectors with about 1 m to spare at the edges (computed from the camera model).
+- A mission state machine starts the planners, ends the run when the sweep is complete and nothing is above 50 % for 30 s (or after a timeout), and publishes a report of the finds with the drone that made each. A headless run ended DONE after 142 s of wall time (74.6 s of sim time) with all 3 targets found by 3 different drones and nothing left open.
+- After the end, each finder flies to hover over its find. In a full run all three were within 0.1 m of their find 19 s later.
 - Detection is a ground-truth stand-in for YOLO: Gazebo target positions with misses (20 %), false alarms (5 % per frame) and 5 px noise, on a camera held straight down.
+- `gui:=true` opens the Gazebo window. `arena_view:=true` adds a video look: the arena drawn as a green plate with a line per sector, a top-down view, coloured drones and a marker on the ground under each.
 
-Earlier milestones, still true: one follower flies to a sector and reports `ARRIVED`, and `planner_enable` false holds it (2026-11-08). Three followers each hold a different stub-map peak, and a silent follower's peak is released about 5.6 sim seconds later (2026-11-12). 198 tests pass: the planner, sweep, belief map and mission libraries, the DGA/BLL baselines, a 200-seed coordination harness and the shared-datum localization.
+Earlier milestones, still true: one follower flies to a sector and reports `ARRIVED`, and `planner_enable` false holds it (2026-11-08). Three followers each hold a different stub-map peak, and a silent follower's peak is released about 5.6 sim seconds later (2026-11-12). Two cold runs found all 3 targets before the sweep ended, including one 0.3 m inside a sector edge (2026-11-20). 225 tests pass: the planner, sweep, belief map and mission libraries, the DGA/BLL baselines, a 200-seed coordination harness, the shared-datum localization and the mission node, run with no simulator up.
 
 **Not done yet:**
 
-- **Mission start and end.** The state machine that switches the followers on, decides the search is over (sweep complete and nothing above 50 % for 30 s, or a timeout) and reports the finds is designed and its library is tested, but its ROS node is not built. Today a run is ended by hand.
+- **A recorded demo.** No video exists yet.
 - **Perception.** YOLO26 is a stretch goal; the noisy ground-truth detector stands in.
-- **Landing.** Precision landing (colour masking + PID in the original) is not rebuilt; a find ends in a hover.
-- **Scale beyond four drones** and **re-enabling after a disable** have not been run.
+- **Landing.** Precision landing (colour masking + PID in the original) is not rebuilt and is in no milestone; a find ends in a hover.
+- **Scale beyond four drones** and **re-enabling after a disable** have not been run. A four-drone run holds about 30 DDS participants, close to the 32 the default RMW allows (`docs/docker-notes.md`, gotcha 61).
 
 Known issues and measured quirks are logged in [`docs/docker-notes.md`](docs/docker-notes.md) and [`TODOS.md`](TODOS.md).
 

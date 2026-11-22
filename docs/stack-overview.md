@@ -28,19 +28,25 @@ stacks on.
 
 ## Where the project is right now
 
-- **The search loop works in simulation with four drones.** A leader sweeps the
-  40 x 40 m arena at 8 m; three followers fly to the best open sectors on one
-  shared map; all 3 targets were confirmed in both cold runs on 2026-11-20.
+- **A whole mission runs from one command with four drones.** `swarm.launch.py
+  leader:=true num_followers:=3`: a leader sweeps the 40 x 40 m arena at 8 m,
+  three followers fly to the best open sectors on one shared map, and a mission
+  state machine starts them, decides when the search is over and reports the
+  finds (2026-11-20 to 2026-11-22: all 3 targets found in every cold run). After
+  the end each finder flies back to hover over its find.
 - **Nodes that exist and have flown:** `localization_node` (GPS to a shared
   arena frame), `sweep_node` (the leader's lawnmower), `ground_truth_detector`
   (a noisy stand-in for YOLO, one per drone), `belief_map_node` (the one
-  shared map: every drone's detections and empty looks), and
-  `follower_planner_node` (one per follower). `leader_node` is the older
-  one-drone map, kept as a reference.
-- **Next:** `mission_node`, the state machine that switches the followers on,
-  decides when the search is over and reports the finds. Its rules are built
-  and tested as a plain-Python library (`uav_planning/core/mission.py`, D41).
-- **Not built:** YOLO (stretch) and precision landing.
+  shared map: every drone's detections and empty looks), `follower_planner_node`
+  (one per follower) and `mission_node` (start, end, report, return to find).
+  `leader_node` is the older one-drone map, kept as a reference. For video,
+  `ground_marker_node` keeps a marker on the ground under each drone.
+- **Looking at it:** `gui:=true` opens the Gazebo window; `arena_view:=true`
+  draws the arena, looks straight down on it and colours the drones.
+- **Next:** the video for the Nov 30 go/no-go, a CI smoke test, then the
+  language prior (the roadmap's Dec 10 milestone).
+- **Not built:** the language prior, YOLO (stretch) and precision landing (in
+  no milestone).
 
 ---
 
@@ -187,8 +193,12 @@ What changed in your picture of the system:
   camera footprint itself, caps how much one look can change a cell, and
   confirms a target when a follower over that sector sees it on 3
   consecutive frames. A confirmed sector reads 0, so followers move on.
-- **The mission state machine is designed** (D41, session 10) and its
-  library is tested; the node that runs it is session 11.
+- **The mission state machine runs the search** (D41). It switches the
+  followers on, ends the search when the leader's sweep is done and nothing on
+  the map is above 50 % for 30 s (or after a timeout), reports the finds, then
+  sends each finder back to hover over its find. The followers start with the
+  sweep, not after it: the thesis flew the leader first, but the language
+  prior only pays off while the map is still empty (D42).
 
 ---
 

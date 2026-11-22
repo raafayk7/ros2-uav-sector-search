@@ -28,6 +28,8 @@ Status: decided. `mission_node` is built and flew two whole missions to DONE fro
 | Belief map | One `belief_map_node` fuses every drone's detections + pose (it computes footprints itself); per drone, cell and look, evidence is capped at +-0.85 log-odds, a new look after 1 s out of view or every 4 s | D40 |
 | Mission end | Sweep done and all unsuppressed sectors under 0.5 for 30 s, or timeout; decided by the mission state machine | D14 |
 | Mission | `mission_node` in `uav_planning` (`core/mission.py`): WAITING -> SEARCHING -> DONE or TIMED_OUT; planners launch disabled and the mission enables them; at the end it disables them (D29 hold); wall-clock node, timeout 600 sim-s; latched `/mission_state` and `/mission_report` | D41 |
+| Follower start | Followers are enabled when the mission starts, together with the leader's sweep, not after it. The thesis flew the leader first and the followers second. On a flat map a follower holds until the leader's footprints or detections give it something to choose | D42 |
+| Return to find | After DONE, each find's finder flies to hover over it at its own layer. A drone with two finds keeps the earlier one and the other find goes to the nearest drone without one. Skipped on TIMED_OUT. Latched `/mission_return` (RETURNING, AT_FINDS, TIMED_OUT) | D41 amended |
 | Milestone map | New stub publisher, 8x8 at 5 m, multiple peaks | D19 |
 | Camera | Required before footprints: gimbal to nadir, proven with the marker test, 2 h timebox | D30 |
 | Sim speed | 2 h timebox after Nov 15, before Nov 24 (ran 2026-11-16: Gazebo's main thread is the limit; a 2 ms step doubles RTF and is the swarm default) | D23, D37 |
@@ -1684,6 +1686,59 @@ Finds: (6, 1) by iris_4 at +56.0 wall-s (sim +26.2), (4, 5) by iris_2 and (1, 2)
 
 **Plan-level versus code.** Code: `mission_node` (including the pose-stamp sim time), the core helpers, the launch wiring, tests. Plan-level: D41's clock row (sim time from pose stamps, decided by the user). Decided by the user (2026-11-20): the report is not republished when finds arrive after the end; it describes the state at the end.
 
+## Implementation notes (session 13, 2026-11-22)
+
+Ran: the Nov 30 go/no-go dress run, most of it with the user watching the Gazebo window and calling the look. Two decisions by the user, below (D41 amended, D42); the rest is code, measurements and documentation. The video is **not** recorded: the go/no-go is half met.
+
+**What was built (code), all in `uav_planning` and `docker/`.**
+
+- `swarm.launch.py gui:=true` opens the Gazebo window (drops the server-only `-s`). `arena_view:=true` is a video look, off by default: the runway model is swapped for a plain ground with the same collision plane (the runway model is the world's only ground, so removing it would drop the drones), a dark-green plate with a white line every 5 m over the 40 x 40 m arena, no shadows (the sun is the only light), the 3D view straight down on the arena with the origin bottom-left (+x right, +y up) and a stats overlay, the leader's propellers yellow and the followers' cyan (upstream paints two blue and two green, like the targets), and a translucent 1.6 m halo above each drone. All visual: materials and visuals only, no mass or collision.
+- `ground_marker_node` and a `ros_gz_bridge` set_pose service bridge (started by `arena_view`): a static disc per drone on the ground, moved to the drone's x and y at 5 Hz when it has moved 5 cm. A hovering follower's marker was within 0.01 m; a leader flying at 5 m/s trails by up to about 1 m.
+- Return to find (D41 amended, below): `core/mission.py` gained `assign_returns`, `cell_centre` and `parse_pairs`; `mission_node` gained the return phase and `/mission_return`; `swarm.launch.py return_to_finds:=true` (default true; the node's own default is false).
+- `docker/docker-compose.yml`: `CYCLONEDDS_URI` raises the DDS participant limit (docker-notes gotcha 61).
+- Tests: 225 pass, run with no sim up or on an isolated `ROS_DOMAIN_ID` (213 before the return step: 6 for the marker node and world, 12 for the return step).
+
+**D41 amended: return to find (decided by the user, 2026-11-22).** At DONE no drone was over a target: each follower leaves a find (the sector reads 0, D13) and flies on to the next open sector, and the planners hold wherever they are at the end. The thesis drones ended on the flags. One tick after DONE (so each planner's D29 hold goes first) the node asks `assign_returns` for follower -> find: a finder keeps its own find, the earliest if it found several; any other find goes to the nearest follower without one (ties by name); a find with no free follower is left out. It then sends `cmd_gps_pose` (the planners' own message, D8) to each at 1 Hz, at that drone's layer (10 + 2 k, D5), until all are within 2.0 m or 120 wall-s pass. The report is unchanged; progress is on latched `/mission_return`. TIMED_OUT skips it (the report then describes the state at the end, as decided in session 11). Cost: the node now needs the datum, each follower's sysid and layer.
+
+**D42: followers start with the sweep (decided by the user, 2026-11-22, on my recommendation).** The thesis ran Phase 1, the leader's full traversal and a final heatmap, then Phase 2, the followers. Ours has had followers enabled at t0 since the roadmap of 2026-11-03 ("Followers launch immediately"), and the Nov 20 checkpoint was built on it; no entry singled it out as a decision until now. Reason it stays: the project's contribution is a language-derived prior that lets followers go before the map exists. With the thesis timing the map would be complete before any follower flew, the prior would only reorder the leader's lanes, and a wrong clue would barely matter, so the eval's questions (what a wrong clue costs, and with negative evidence off) would have nothing to measure. The leader's guaranteed full sweep still bounds the damage of a wrong clue. Without a clue (every run so far) the map starts flat, so followers hold, then chase what the leader's footprints reveal: the "flat prior" baseline, same timing. Not added: a thesis-timing arm (followers after COMPLETE). It would grow the 80-run plan with the dates already tight; it is cheap in the 2D sim if time is left. Video v1 should say plainly that no clue is in play yet.
+
+**Measurements** (cold, `swarm.launch.py leader:=true num_followers:=3 detector_seed:=1`, targets from `belief_live_check.py`; RTF from `rtf_windows.sh`).
+
+| Run | Result | Wall / sim s | Finds (cell, drone, wall s) | RTF, three 30 s windows |
+|---|---|---|---|---|
+| Headless | DONE | 142 / 74.6 | (6,1) iris_4 61, (4,5) iris_2 68, (1,2) iris_3 69 | 0.584, 0.589, 0.590 |
+| `gui:=true`, default view | DONE | 203 / 71.4 | (6,1) iris_3 88, (1,2) iris_2 89, (4,5) iris_2 109 | 0.266, 0.342, 0.335 |
+| `gui` + `arena_view` + markers | DONE, AT_FINDS | 184 / 67.2 | (6,1) iris_3 84, (1,2) iris_2 86, (4,5) iris_3 100 | 0.405, 0.417, 0.408 |
+| Full mission with return | DONE, AT_FINDS | | (6,1) iris_3 77, (1,2) iris_2 79, (4,5) iris_4 79 | not measured |
+
+The return finished 19 s after its plan; the three finders ended within 0.1 m of their cell centres, at layers 10, 12 and 14 m. The window costs RTF (0.59 to 0.27-0.34 in the default view). An earlier reading of 0.466, 0.468 and 0.457 for the `arena_view` view was taken in a run where `belief_map_node` and one planner had died (the participant limit, below) and is not valid; this row is a healthy run. The `arena_view` run differs from the default view in more than the markers (no shadows, plain ground, fewer panels), so what the markers cost alone was not measured. Every run above had no participant error and no dead process; one cold start hit gotcha 33 (silent `/clock`) and was relaunched.
+
+**Sweep coverage, from the core's own numbers** (`core/sweep.py`, camera 640 x 480, fx 205.47, 8 m): footprint 24.9 x 18.7 m, lane half-width 7.48 m, 3 lanes at 8.3, 20.0 and 31.7 m, waypoints (8.3, 2.5) (8.3, 37.5) (20, 37.5) (20, 2.5) (31.7, 2.5) (31.7, 37.5). With the worst-case square footprint of the short side (valid at any heading) all 64 cells are 100 % covered, with about 1 m of margin at the arena's x edges against a pointing error of about 0.27 m (session 8: 3 px median, 7 px max). This is the geometric ideal for the path, not a leader-only live measurement; the live `known 64` in the probe includes the followers' cameras. The leader-alone result is session 8's (one sweep left no unknown cells).
+
+**What went wrong on the way (and was fixed).**
+
+- The two new `arena_view` nodes pushed the sim past the RMW's 32 DDS participants; `belief_map_node` and one planner died at start and the followers never moved. Cause, count and fix in docker-notes gotcha 61. The ROS-based tests failing while a sim was up was the same limit.
+- A halo's `transparency` inside `<material>` is not SDF (it belongs on the `<visual>`); Gazebo warned and the discs were opaque. Moved.
+- `colcon build --symlink-install` failed again after the container recreate (stray setuptools, gotcha 58): two uninstalls to 68.1.2.
+
+**Findings that changed nothing yet.**
+
+- Under a perspective camera 48 m up a drone at 8-14 m appears shifted outward from the centre by 48 / (48 - height) (1.2, 1.26, 1.33, 1.41, measured 1.20, 1.29, 1.34, 1.43). The user read this as "drones not in their sectors"; the ground markers show they are. The orthographic controller exists (`/gui/camera/view_control` with `"ortho"`) but its zoom could not be controlled from a pose call, so it was dropped. A camera at 80 m would cut the shift to about 1.2 for a 14 m drone and shrink the arena to about 60 % of the frame (arithmetic, not tried).
+- The user has not decided whether to drop the airborne halos in favour of the ground markers alone.
+
+**Not shown, scope and home.**
+
+| Gap | In scope this session? | Home |
+|---|---|---|
+| Video v1 recorded; OBS 30.0.2 is installed and the portal is there, but no capture was tried, so its RTF cost is unknown | yes, not done | session 14 |
+| Nov 30 go/no-go call | yes, waits on the video | session 14 |
+| Return to find with a TIMED_OUT mission and with more finds than followers | no | unit-tested only; not flown (TODOS.md). A drone that found two targets was flown once, in the `arena_view` run above: iris_3 found (6,1) and (4,5), kept (6,1), and iris_4, the nearest free drone, took (4,5); AT_FINDS |
+| Halo kept or dropped; orthographic or a higher camera | found here | the user's call; `arena_view` options |
+| Landing, YOLO | no | not in any milestone (YOLO is a stretch goal, the roadmap's out-of-scope line; landing is in neither list). See the roadmap's open questions |
+| Cost of one more drone in DDS participants | no | gotcha 61: measure before a larger swarm run |
+
+**Plan-level versus code.** Code: everything under "What was built". Plan-level, decided by the user: D41 amended (return to find) and D42 (concurrent timing). Documentation: this section, the README, the stack overview, the roadmap, docker-notes 61 and 62, `CLAUDE.md`, the skill's build status and the next-session prompt.
+
 ## NOT in scope
 
 - Potential-field layer: altitude layers cover the sim (D5); revisit if a same-altitude flight is ever needed.
@@ -1798,12 +1853,22 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Files: `src/uav_planning/uav_planning/core/mission.py`, `mission_node.py`, `launch/swarm.launch.py`
   - Verify: done 2026-11-20, one cold run from one command: DONE 31.3 s after the sweep, report lists all 3 finds with the right drones (session 11 notes)
   - Verify: leader + 3 followers, one command, ends DONE about 30 s after the sweep with a `/mission_report` listing every find with drone and time (Nov 24)
+  - [x] Return to find (D41 amended, session 13, 2026-11-22): `assign_returns` in `core/mission.py`, the node's return phase and `/mission_return`; done in one cold run, three finders within 0.1 m of their finds 19 s after DONE; 12 tests
+
+- [x] **T10 (P2, CC: ~2h)** — uav_planning, docker — the video look and the dress run (session 13): `gui:=true`, `arena_view:=true` (plain ground, arena plate, top-down view, colours, halos, no shadows), `ground_marker_node` and its bridge, and the DDS participant limit (gotcha 61)
+  - Files: `launch/swarm.launch.py`, `uav_planning/ground_marker_node.py`, `test/test_arena_view.py`, `docker/docker-compose.yml`
+  - Verify: done 2026-11-22: DONE headless and with the window, markers within 0.01 m of hovering drones, 225 tests
+
+- [ ] **T11 (P1, CC: ~1h)** — video v1 for the Nov 30 go/no-go: record one full mission (leader sweep, followers moving, finds, return to find, `/mission_report`) with OBS, about 90 s, sped up if RTF is low; saved outside the repo unless the user wants it committed
+  - Surfaced by: the roadmap's Nov 30 row
+  - Files: none (a video file)
+  - Verify: the file exists and shows a full mission; the go/no-go outcome is written in the roadmap
 
 Effort assumes features at about 30x and tests at about 50x human-to-CC time, adjusted down for ROS integration.
 
 ## Unresolved decisions
 
-None (D41, the mission state machine, was decided 2026-11-20). D40 set D32's N to 3 (untested against a correlated detector); the D14 thresholds remain provisional values by decision, not open questions, and session 11 measures them live (session 10's probe: worst false alarm after the sweep 23 %). D24's yield cost about 13 s once in session 10, with an arrived drone giving way; that is an observation, not an open decision, unless it recurs.
+None blocking (D41, the mission state machine, was decided 2026-11-20 and amended 2026-11-22; D42, concurrent timing, 2026-11-22). Open for the user, none blocking: whether to keep the airborne halos or use the ground markers alone, whether precision landing is scheduled or out of scope (it is in no milestone), and the eval's optional thesis-timing arm (D42). D40 set D32's N to 3 (untested against a correlated detector); the D14 thresholds remain provisional values by decision, not open questions, and session 11 measures them live (session 10's probe: worst false alarm after the sweep 23 %). D24's yield cost about 13 s once in session 10, with an arrived drone giving way; that is an observation, not an open decision, unless it recurs.
 
 ## Completion summary
 

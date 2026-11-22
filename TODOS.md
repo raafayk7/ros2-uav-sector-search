@@ -43,3 +43,40 @@
 **Depends on:** `belief_map_node` design (detector noise settings exist since 2026-11-17)
 
 **Done:** `belief_map_node` caps each drone's look at a cell at +-0.85 log-odds, a new look after 1 s out of view or every 4 s (`uav_mapping/core/belief.py`, session 9 notes).
+
+## Sim and video
+
+### Count DDS participants per drone before a larger swarm
+
+**What:** Measure how many DDS participants one more follower adds (count unicast discovery sockets in `/proc/net/udp`, docker-notes 61), and note where the raised limit of 120 ends.
+
+**Why:** A leader and 3 followers with `arena_view` hold about 30 against the RMW's default 32. A swarm run that passes the limit loses nodes at start without an obvious error; the scale-beyond-two-followers goal runs into it first.
+
+**Context:** `docker-compose.yml` sets `CYCLONEDDS_URI` (119 is the most a domain holds). Not measured: the cost per added drone.
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** a 5 or 6 drone launch
+
+### Return to find: the cases only unit tests cover
+
+**What:** Fly the return step with a TIMED_OUT mission (it is skipped by design) and with more finds than followers.
+
+**Why:** Session 13 flew two cases: three finders with one find each, and one drone that found two targets. The other assignments are tested in `core/mission.py` only.
+
+**Context:** `assign_returns`, `mission_node._return_tick`, D41 amended in `docs/planner-decisions.md`.
+
+**Effort:** S
+**Priority:** P3
+
+### Video view: halos, markers and projection
+
+**What:** Settle whether the airborne halos stay or the ground markers stand alone, and whether to use a higher camera or the orthographic controller (its zoom could not be set from a pose call).
+
+**Why:** A perspective camera at 48 m shifts a drone at 8-14 m outward by a factor of 1.2-1.4, which reads as a drone off its sector.
+
+**Context:** docker-notes gotcha 62 (e) and (g); `arena_view` in `swarm.launch.py`. The marker trails a leader at 5 m/s by up to 1 m at the node's 5 Hz.
+
+**Effort:** S
+**Priority:** P3
+
