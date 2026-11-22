@@ -33,7 +33,7 @@ In `<repo>/docs/`:
 | ROS ↔ ArduPilot link | AP_DDS (native, ArduPilot 4.5+) | Replaces MAVROS for the main control loop; cleaner topic interface |
 | Perception | Ultralytics YOLO26 | Released Jan 14 2026, small-object detection improvements over YOLOv8 |
 | Vision wrapper | `mgonzs13/yolo_ros` or `Alpaca-zip/ultralytics_ros` | Standard ROS 2 nodes around Ultralytics |
-| Algorithm | Each follower flies to the best open sector on the shared map, using the thesis's overlap penalty; thesis DGA and BLL are library baselines | Changed 2026-11-04 on measured evidence: the leader's spiky log-odds map has no gradient for 8-neighbour ascent to climb. See `docs/planner-decisions.md` |
+| Algorithm | Each follower flies to the best open sector on the shared map, skipping sectors its peers have claimed or are parked on (D11, D24, D25; the thesis's graded overlap penalty is not used); thesis DGA and BLL are library baselines | Changed 2026-11-04 on measured evidence: the leader's spiky log-odds map has no gradient for 8-neighbour ascent to climb. See `docs/planner-decisions.md` |
 
 **What this project explicitly does NOT use anymore**, even though the original Noetic implementation did:
 

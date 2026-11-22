@@ -4,6 +4,12 @@
 
 What flies today: from one command, a leader sweeping the arena and **three followers** finding every target on a shared map, in simulation, with a mission that starts the search, decides when it is over and reports the finds. Read [Status](#status) before expecting more.
 
+## Demo
+
+[![Mission video: leader and three followers, top-down view](docs/media/uav-v1-poster.jpg)](docs/media/uav-v1.mp4)
+
+One mission, 72 s at 4x speed: the leader (yellow) sweeps the arena, the three followers (cyan) go to the best open sectors on the shared map, each finder ends over its find. Simulation, one command, ground-truth detection (not YOLO), no language clue yet. Click the picture to play the file.
+
 ## How it is meant to work
 
 ```
@@ -18,7 +24,7 @@ What flies today: from one command, a leader sweeping the arena and **three foll
 ```
 
 - **Shared map:** a grid of per-sector probabilities, owned by one `belief_map_node`. Every drone's detections raise cells, and every camera footprint with no detection lowers them. A follower confirms a target when it hovers over a sector and sees it on 3 consecutive frames; that sector then drops out of the search.
-- **Followers decide on their own.** Each one scores every sector on the map, subtracts an overlap penalty for sectors peers have claimed (peers broadcast their goal sector and pose), and flies to the best open one. There is no central planner. Followers fly at different altitude layers so transit crossings stay separated.
+- **Followers decide on their own.** Each one flies to the best open sector on the map, skipping sectors its peers have claimed or are parked on (peers broadcast their goal sector and pose; when two goals conflict, the lower sysid keeps it). There is no central planner. Followers fly at different altitude layers so transit crossings stay separated.
 - **Baselines:** the thesis's Distributed Gradient Ascent (DGA) and Bilinear Log-Linear (BLL) are kept as library baselines to measure the sector planner against.
 - **Library first:** the planner, the follower logic and the baselines are plain Python with no ROS import (`src/uav_planning/uav_planning/core/`). The ROS nodes are thin wrappers, so the same code can be tested and evaluated without a simulator.
 
@@ -92,13 +98,12 @@ Verified in SITL, 2026-11-22, in cold runs from one command with a leader and th
 - A mission state machine starts the planners, ends the run when the sweep is complete and nothing is above 50 % for 30 s (or after a timeout), and publishes a report of the finds with the drone that made each. A headless run ended DONE after 142 s of wall time (74.6 s of sim time) with all 3 targets found by 3 different drones and nothing left open.
 - After the end, each finder flies to hover over its find. In a full run all three were within 0.1 m of their find 19 s later.
 - Detection is a ground-truth stand-in for YOLO: Gazebo target positions with misses (20 %), false alarms (5 % per frame) and 5 px noise, on a camera held straight down.
-- `gui:=true` opens the Gazebo window. `arena_view:=true` adds a video look: the arena drawn as a green plate with a line per sector, a top-down view, coloured drones and a marker on the ground under each.
+- `gui:=true` opens the Gazebo window. `arena_view:=true` adds a video look: the arena drawn as a green plate with a line per sector, a top-down view, coloured drones and a marker on the ground under each. The demo above was recorded this way.
 
 Earlier milestones, still true: one follower flies to a sector and reports `ARRIVED`, and `planner_enable` false holds it (2026-11-08). Three followers each hold a different stub-map peak, and a silent follower's peak is released about 5.6 sim seconds later (2026-11-12). Two cold runs found all 3 targets before the sweep ended, including one 0.3 m inside a sector edge (2026-11-20). 225 tests pass: the planner, sweep, belief map and mission libraries, the DGA/BLL baselines, a 200-seed coordination harness, the shared-datum localization and the mission node, run with no simulator up.
 
 **Not done yet:**
 
-- **A recorded demo.** No video exists yet.
 - **Perception.** YOLO26 is a stretch goal; the noisy ground-truth detector stands in.
 - **Landing.** Precision landing (colour masking + PID in the original) is not rebuilt and is in no milestone; a find ends in a hover.
 - **Scale beyond four drones** and **re-enabling after a disable** have not been run. A four-drone run holds about 30 DDS participants, close to the 32 the default RMW allows (`docs/docker-notes.md`, gotcha 61).

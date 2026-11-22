@@ -43,8 +43,8 @@ stacks on.
   `ground_marker_node` keeps a marker on the ground under each drone.
 - **Looking at it:** `gui:=true` opens the Gazebo window; `arena_view:=true`
   draws the arena, looks straight down on it and colours the drones.
-- **Next:** the video for the Nov 30 go/no-go, a CI smoke test, then the
-  language prior (the roadmap's Dec 10 milestone).
+- **Next:** a CI smoke test, then the language prior (the roadmap's Dec 10
+  milestone). The Nov 30 go/no-go is a GO: video v1 is in `docs/media/`.
 - **Not built:** the language prior, YOLO (stretch) and precision landing (in
   no milestone).
 

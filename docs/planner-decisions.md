@@ -1730,14 +1730,47 @@ The return finished 19 s after its plan; the three finders ended within 0.1 m of
 
 | Gap | In scope this session? | Home |
 |---|---|---|
-| Video v1 recorded; OBS 30.0.2 is installed and the portal is there, but no capture was tried, so its RTF cost is unknown | yes, not done | session 14 |
-| Nov 30 go/no-go call | yes, waits on the video | session 14 |
+| Video v1 recorded, and OBS's RTF cost | yes, not done in session 13 | done in session 14 (notes above): the cost was about half the sim's speed |
+| Nov 30 go/no-go call | yes, waited on the video | GO in session 14 |
 | Return to find with a TIMED_OUT mission and with more finds than followers | no | unit-tested only; not flown (TODOS.md). A drone that found two targets was flown once, in the `arena_view` run above: iris_3 found (6,1) and (4,5), kept (6,1), and iris_4, the nearest free drone, took (4,5); AT_FINDS |
-| Halo kept or dropped; orthographic or a higher camera | found here | the user's call; `arena_view` options |
+| Halo kept or dropped; orthographic or a higher camera | found here | halos and markers both stay (session 14); orthographic dropped; a higher camera not tried |
 | Landing, YOLO | no | not in any milestone (YOLO is a stretch goal, the roadmap's out-of-scope line; landing is in neither list). See the roadmap's open questions |
 | Cost of one more drone in DDS participants | no | gotcha 61: measure before a larger swarm run |
 
 **Plan-level versus code.** Code: everything under "What was built". Plan-level, decided by the user: D41 amended (return to find) and D42 (concurrent timing). Documentation: this section, the README, the stack overview, the roadmap, docker-notes 61 and 62, `CLAUDE.md`, the skill's build status and the next-session prompt.
+
+## Implementation notes (session 14, 2026-11-22)
+
+Ran: OBS setup, one recorded mission, video v1, the go/no-go call, `/verify`, and a doc audit (same working day as session 13, with the user). Code: one line in `CLAUDE.md` (the `/verify` command). Plan-level, decided by the user: GO on the Nov 30 go/no-go; halos and ground markers both stay; the video says which planner runs and the video goes in the README.
+
+**The go/no-go: GO.** Criteria from the roadmap: leader + 3 followers complete a mission in Gazebo (ground-truth detector) from one command, and video v1 exists. The first was met repeatedly in session 13 (headless 142 s, with the window 203 s, `arena_view` 184 s and 293 s while OBS recorded); the second is `docs/media/uav-v1.mp4` (72 s, 1920x994, 30 fps, no audio, 1.0 MB) with a poster. It is cut from one recording of a full cold run to DONE and AT_FINDS: starts 100 s in (the arming and climb), 4x speed, title bars cropped, a title card, a legend in the right margin and a Mission DONE panel built from that run's `/mission_report` (61.6 s of sim time, 3 of 3 finds). ffmpeg did the cut (`crop`, `setpts`, `drawtext`, `fade`).
+
+**OBS cost the sim about half its speed.** Not an A/B in one run: the recorded run against three earlier runs of the same `arena_view` + window setup, plus the user setting OBS up at the start.
+
+| Run | Mission wall s | Arming to sweep start | Sweep wall s | sim s / wall s |
+|---|---|---|---|---|
+| OBS recording (1080p, 60 fps) | 293 | 92 | 171 | 0.21 |
+| `arena_view` run, no recording | 184 | 62 | 92 | 0.37 |
+| `arena_view` run, no recording | 176 | 56 | 89 | 0.39 |
+| `arena_view` run, no recording | 175 | 54 | 90 | 0.40 |
+
+At hover with OBS open (preview on) and not recording, RTF read 0.341, 0.351, 0.341 (a first set read 0.224, 0.350, 0.364, the 0.224 overlapping the return flight and the OBS setup). Not measured: RTF with recording at 30 fps and 720p, or which encoder OBS used (a 3 s VAAPI test clip encoded fine with ffmpeg, so `Hardware (VAAPI, H264)` should work). The mission was correct at 0.21: DONE, 3 of 3, AT_FINDS. The cost is wall time, and fewer detector frames per sim second (the detectors run on wall time); the session-10 floor of 0.4 was not held. The recording also carried a silent AAC track (-91 dB; devices disabled still write a track) and the world-stats overlay did not show (only a "‹" tab), so there is no on-screen clock.
+
+**Video decisions (the user).** Halos and ground markers both stay. The default Gazebo grid patch at the bottom left is fine for this recording and goes for future ones (`<grid>false</grid>` in the world's `<scene>`, untested). The legend names the planner (best open sector, skipping sectors peers claimed; BLL and DGA are baselines, not used) because a thesis reader would assume BLL. The README shows the video (the file and a poster in `docs/media/`).
+
+**Which algorithm flies.** `follower_planner_node` calls `follower_tick`, which calls `choose_goal` in `core/planner.py`: the best open sector anywhere on the grid, a stay margin, ties to the nearest, with sectors blocked by peers (a lower-sysid peer's goal zone, an arrived peer's parked zone; D11, D24, D25) valued 0. The thesis's DGA (`thesis_dga_step`) and BLL (`bll_step`) exist only in the library for tests and the eval baselines. Several docs said "using the thesis's overlap penalty", which is not what the code does (a hard block, not a graded penalty); corrected in README, CLAUDE.md, the roadmap's Followers row and the skill.
+
+**`/verify` on this repo.** The host has no `rclpy` or `pytest`, so `gstack-checks` could not run the tests there (ENV). `CLAUDE.md` now carries a `gstack:verify:` line that runs pytest in the container (it must be up); that check passed, 225 tests, 23.9 s. The check's second stage, the pregate's per-file test selection, still reports ENV (no `pytest` on the host) and lists 8 touched files with no test lane, so `gstack-checks status` stays NOT_READY. Not fixed: a `.gstack/pregate.json` mapping the files, and a runner that goes through the container.
+
+**Not shown, scope and home.**
+
+| Gap | In scope this session? | Home |
+|---|---|---|
+| RTF with recording at 30 fps / 720p, and the encoder OBS used | no (the video was cut from the 60 fps recording) | before a re-record; docker-notes 63 |
+| A re-record without the grid patch, with the stats overlay | no | optional; only if the video is redone (TODOS.md, video view) |
+| `/verify`'s pregate stage (host runner, test lanes for 8 files) | no | TODOS.md |
+
+**Plan-level versus code.** Plan-level, by the user: GO, halos and markers both, the planner line, the README video. Code: only the `CLAUDE.md` `gstack:verify:` line. Documentation: this section, the README, the roadmap, the stack overview, docker-notes 63, TODOS, the next-session prompt.
 
 ## NOT in scope
 
@@ -1859,7 +1892,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Files: `launch/swarm.launch.py`, `uav_planning/ground_marker_node.py`, `test/test_arena_view.py`, `docker/docker-compose.yml`
   - Verify: done 2026-11-22: DONE headless and with the window, markers within 0.01 m of hovering drones, 225 tests
 
-- [ ] **T11 (P1, CC: ~1h)** — video v1 for the Nov 30 go/no-go: record one full mission (leader sweep, followers moving, finds, return to find, `/mission_report`) with OBS, about 90 s, sped up if RTF is low; saved outside the repo unless the user wants it committed
+- [x] **T11 (P1, CC: ~1h)** — video v1 for the Nov 30 go/no-go (done 2026-11-22, session 14: `docs/media/uav-v1.mp4`, GO): record one full mission (leader sweep, followers moving, finds, return to find, `/mission_report`) with OBS, about 90 s, sped up if RTF is low; saved outside the repo unless the user wants it committed
   - Surfaced by: the roadmap's Nov 30 row
   - Files: none (a video file)
   - Verify: the file exists and shows a full mission; the go/no-go outcome is written in the roadmap
@@ -1868,7 +1901,7 @@ Effort assumes features at about 30x and tests at about 50x human-to-CC time, ad
 
 ## Unresolved decisions
 
-None blocking (D41, the mission state machine, was decided 2026-11-20 and amended 2026-11-22; D42, concurrent timing, 2026-11-22). Open for the user, none blocking: whether to keep the airborne halos or use the ground markers alone, whether precision landing is scheduled or out of scope (it is in no milestone), and the eval's optional thesis-timing arm (D42). D40 set D32's N to 3 (untested against a correlated detector); the D14 thresholds remain provisional values by decision, not open questions, and session 11 measures them live (session 10's probe: worst false alarm after the sweep 23 %). D24's yield cost about 13 s once in session 10, with an arrived drone giving way; that is an observation, not an open decision, unless it recurs.
+None blocking (D41, the mission state machine, was decided 2026-11-20 and amended 2026-11-22; D42, concurrent timing, 2026-11-22). Open for the user, none blocking: whether precision landing is scheduled or out of scope (it is in no milestone), and the eval's optional thesis-timing arm (D42). Decided 2026-11-22: halos and ground markers both stay. D40 set D32's N to 3 (untested against a correlated detector); the D14 thresholds remain provisional values by decision, not open questions, and session 11 measures them live (session 10's probe: worst false alarm after the sweep 23 %). D24's yield cost about 13 s once in session 10, with an arrived drone giving way; that is an observation, not an open decision, unless it recurs.
 
 ## Completion summary
 

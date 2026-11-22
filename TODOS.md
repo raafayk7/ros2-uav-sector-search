@@ -71,11 +71,22 @@
 
 ### Video view: halos, markers and projection
 
-**What:** Settle whether the airborne halos stay or the ground markers stand alone, and whether to use a higher camera or the orthographic controller (its zoom could not be set from a pose call).
+**What:** For a re-record: turn the default Gazebo grid off (`<grid>false</grid>` in the world's `<scene>`, untested), try a higher camera (the orthographic controller's zoom could not be set from a pose call), and record at 30 fps and 720p with the encoder checked. Halos and markers both stay (decided 2026-11-22).
 
 **Why:** A perspective camera at 48 m shifts a drone at 8-14 m outward by a factor of 1.2-1.4, which reads as a drone off its sector.
 
 **Context:** docker-notes gotcha 62 (e) and (g); `arena_view` in `swarm.launch.py`. The marker trails a leader at 5 m/s by up to 1 m at the node's 5 Hz.
+
+**Effort:** S
+**Priority:** P3
+
+### `/verify` on the host
+
+**What:** Make `gstack-checks` green: a `.gstack/pregate.json` that maps the 8 touched files to tests and a runner that goes through the container, or declare the files uncoverable.
+
+**Why:** The declared container check passes (225 tests), but the pregate's per-file stage reports ENV (no `pytest` on the host) and `status` stays NOT_READY.
+
+**Context:** `CLAUDE.md` has the `gstack:verify:` line; planner-decisions, session 14 notes.
 
 **Effort:** S
 **Priority:** P3

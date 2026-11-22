@@ -23,7 +23,7 @@ Primary machine: now Ubuntu 24.04 (was Debian Trixie); Docker data lives on a US
 - **Drone harness:** `ArduPilot/ardupilot_gz` with `multiagent.launch.py`
 - **ROS ↔ ArduPilot:** AP_DDS (native, ArduPilot 4.5+) — not MAVROS
 - **Perception:** Ultralytics YOLO26
-- **Algorithm:** each follower independently flies to the best open sector on the shared map, using the thesis's overlap penalty; thesis Distributed Gradient Ascent (DGA) and Bilinear Log-Linear (BLL) are library baselines (changed 2026-11-04 on measured evidence, see `docs/planner-decisions.md`)
+- **Algorithm:** each follower independently flies to the best open sector on the shared map, skipping sectors its peers have claimed or are parked on (D11, D24, D25; the thesis's graded overlap penalty is not used); thesis Distributed Gradient Ascent (DGA) and Bilinear Log-Linear (BLL) are library baselines (changed 2026-11-04 on measured evidence, see `docs/planner-decisions.md`)
 
 Things explicitly NOT in the rebuild even though the original used them: MAVROS as primary bridge, MAVProxy in the runtime path, iq_sim launch files, Gazebo Classic 11, hand-rolled UDP broadcast, Ubuntu 20.04, central-planner hack ("Drone 1 computes for Drone 2"). See the assessment doc §5 and the "do not use" list in the `multi-agent-uavs` skill for the replacements.
 
@@ -88,6 +88,9 @@ Multi-drone and actuation facts (verified 2026-11-04, see `docs/planner-decision
 ## Testing
 
 Run in the container (`source /usr/local/bin/entrypoint.sh` first in a non-interactive shell): `python3 -m pytest src` from the repo root. pytest 7.4.4; each package has a `conftest.py` so tests import without installing. `uav_planning/core` needs no ROS; the datum tests and one planner round-trip test need ROS sourced.
+
+<!-- gstack:verify: docker compose -f docker/docker-compose.yml exec -T ros2 bash -lc 'source /usr/local/bin/entrypoint.sh >/dev/null 2>&1; cd /workspaces/multi-agent-uavs && source install/setup.bash && python3 -m pytest src -q' -->
+The line above is what `/verify` runs: the project's tests inside the ros2 container, which must be up (the host has neither rclpy nor pytest).
 
 Skill source-of-truth is `skills/multi-agent-uavs/SKILL.md`. `.claude/skills/multi-agent-uavs` is a symlink to that directory so Claude Code picks it up automatically when run in this project. `skills/multi-agent-uavs.skill` is the packaged ZIP bundle for installing the same skill into Cowork — **after editing `SKILL.md`, run `skills/pack.sh` before committing** so the bundle stays in sync with the source (Claude Code reads the source directly, but anyone installing the skill from this repo's `.skill` file gets whatever the bundle contains, so a stale bundle silently ships an old skill). To make local Cowork sessions pick up edits to `SKILL.md` without re-installing on every change, replace the Cowork-installed skill directory with a symlink to this repo's `skills/multi-agent-uavs/` (one-time setup — see `docs/docker-notes.md` adjacent or the project README).
 
