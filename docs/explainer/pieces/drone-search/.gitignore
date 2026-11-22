@@ -1,0 +1,5 @@
+# generated: frames are hundreds of MB; audio stems, renders and review sheets are rebuilt by the tools
+frames/
+frames-*/
+renders/
+review/

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How a drone search team works</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #050506; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { max-width: 100vw; max-height: 100vh; width: auto; height: auto; display: block; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+"use strict";
+// =====================================================================
+//  HOW A DRONE SEARCH TEAM WORKS — 16:9, 146 s @ 120 BPM, 24fps, math style (motion on 1s), no voice.
+//  A locked-off build: one fixed stage, the 8 x 8 sector grid of the arena; each idea is a layer drawn onto it,
+//  with a definition card on the right (term, one plain sentence, "linked to" line) and a step counter.
+//  Colour code (one meaning, everywhere): yellow = the leader, blue = the followers, orange = the chance a
+//  target is in a sector, red = a target, green = a confirmed find, grey = unknown. Schematic timing.
+//  Facts come from the project's own docs (docs/explainer/brief.md names them), not the web.
+//  Build: node <skill>/tools/build.mjs <this piece dir>
+// =====================================================================
+const FPS = 24, W = 1920, H = 1080;
+const BPM = typeof BEATS !== 'undefined' ? BEATS.bpm : 120, GRID0 = typeof BEATS !== 'undefined' ? BEATS.offset : 0;
+const BEAT = 60 / BPM, E8 = BEAT / 2, E16 = BEAT / 4;     // 0.5 / 0.25 / 0.125 s = 12 / 6 / 3 frames
+const DURATION = 146.0;
+const NFRAMES = Math.round(DURATION * FPS);
+const LOOP_T = NFRAMES / FPS;
+const SAFE = { top: 40, bottom: 40, right: 60 };
+const HAND = 'Cambria, "Cambria Math", "Latin Modern Roman", "CMU Serif", "STIX Two Text", "Times New Roman", Georgia, serif';   // the storyboard's title font
+const CX = 1420;                                          // caption centre x: the middle of the card column
+
+// scene times (s): the step counter and the cards follow these
+const S = { title: 0, arena: 5, map: 13, leader: 21, evidence: 33, detector: 45, followers: 56, confirm: 67, mission: 75, now: 83, prior: 91, priorWhen: 103, novel: 115, question: 128, close: 140 };
+const ERA_LIST = [[0, DURATION, () => sceneAll()]];
+const SHOTS = [
+  ['title',     0, S.title,    S.arena,    'the grid draws itself; the title'],
+  ['arena',     0, S.arena,    S.map,      'arena and sector: 40 m square, 8 x 8 sectors of 5 m'],
+  ['map',       0, S.map,      S.leader,   'belief map: a chance for each sector; unseen counts as 50%'],
+  ['leader',    0, S.leader,   S.evidence, 'leader, sweep, footprint: 3 lanes, a 25 m by 19 m patch'],
+  ['evidence',  0, S.evidence, S.detector, 'evidence: empty looks 50, 30, 15, 7, 3; hits 50, 70, 85, 93'],
+  ['detector',  0, S.detector, S.followers, 'detector: a stand-in that misses 1 in 5 and invents 1 in 20'],
+  ['followers', 0, S.followers, S.confirm, 'followers and the planner: brightest unclaimed sector, layers 10/12/14 m'],
+  ['confirm',   0, S.confirm,  S.mission,  'confirmed find: 3 frames in a row within 2 m; the sector drops to 0'],
+  ['mission',   0, S.mission,  S.now,      'mission: ends on 30 s of quiet, reports, finders return over their finds'],
+  ['now',       0, S.now,      S.prior,    'where it stands: simulation, 3 of 3; what is not done'],
+  ['prior',     0, S.prior,    S.priorWhen, 'language prior (planned): a language model turns a field report into regions'],
+  ['priorWhen', 0, S.priorWhen, S.novel,   'when: once, at the start; the leader and followers start together; evidence corrects it'],
+  ['novel',     0, S.novel,    S.question, 'what is new: only the measurement of what a wrong clue costs'],
+  ['question',  0, S.question, S.close,    'the evaluation (planned): four conditions, 80 runs, three measures'],
+  ['close',     0, S.close,    DURATION,   'one map: look, decide, manage'],
+];
+const TIMELINE = {
+  width: W, height: H, fps: FPS, bpm: BPM, gridOffset: GRID0, duration: DURATION, frames: NFRAMES, loop: LOOP_T, safe: SAFE, aspect: '16:9',
+  format: 'morph-chain',
+  shots: SHOTS.map(([key, era, t0, t1, title], i) => ({ id: i + 1, key, era, t0, t1, title })),
+  cuts: [],
+  morphs: [],
+  // cue times used by the scenes (s)
+  cues: { sweep0: 22.0, sweep1: 74.0, hit: 70.1, done: 77.0, silence0: 67.4 },
+  acts: [
+    { name: '1 Ideas',         role: 'build',   t0: 0.0,  t1: 67.4 },
+    { name: '2 Silence',       role: 'silence', t0: 67.4, t1: 70.1 },
+    { name: '3 The find',      role: 'gift',    t0: 70.1, t1: 83.0 },
+    { name: '4 Where next',    role: 'goodbye', t0: 83.0, t1: 146.0 },
+  ],
+  board: [
+    { t: 4.0,   title: 'the grid draws itself', sound: 'a thin pad', next: 'the arena is cut into sectors' },
+    { t: 11.0,  title: 'arena and sector', sound: 'a chime per lit cell', next: 'every sector gets a number' },
+    { t: 19.0,  title: 'belief map', sound: 'soft blips', next: 'the leader looks' },
+    { t: 28.0,  title: 'leader, sweep, footprint', sound: 'a gliding tone', next: 'what a look does to a number' },
+    { t: 41.0,  title: 'evidence', sound: 'steps down and up', next: 'where a hit comes from' },
+    { t: 52.0,  title: 'detector', sound: 'a flicker', next: 'followers read the map' },
+    { t: 63.0,  title: 'followers and the planner', sound: 'a thickening pad', next: 'one arrives over a target' },
+    { t: 71.0,  title: 'confirmed find', sound: 'silence, then the loudest hit', next: 'the others move on' },
+    { t: 80.0,  title: 'mission', sound: 'a warm flat chord', next: 'where it stands' },
+    { t: 87.0,  title: 'where it stands', sound: 'a slow decay', next: 'what comes next' },
+    { t: 99.5,  title: 'language prior (planned)', sound: 'a rising line, one note per box', next: 'when it is used' },
+    { t: 111.0, title: 'when: once, at the start', sound: 'a held pad', next: 'the question' },
+    { t: 124.0, title: 'what is new: the measurement', sound: 'a held pad, one note per row', next: 'the evaluation' },
+    { t: 134.0, title: 'the evaluation (planned)', sound: 'held', next: 'the close' },
+    { t: 144.0, title: 'one map', sound: 'a decay', next: 'loops to the empty grid' },
+  ],
+  narration: [],
+};
+window.TIMELINE = TIMELINE;

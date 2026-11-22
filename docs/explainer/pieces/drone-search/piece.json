@@ -1,0 +1,31 @@
+{
+  "name": "drone-search",
+  "title": "How a drone search team works",
+  "format": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 24,
+    "bpm": 120,
+    "duration": 146.0,
+    "frames": 3504
+  },
+  "formats": [
+    "16:9"
+  ],
+  "storyFormat": "locked-off build (fixed stage, F2 family), no morphs",
+  "style": "math",
+  "review": {
+    "safe": {
+      "top": 40,
+      "bottom": 40,
+      "right": 60
+    },
+    "refs": {},
+    "deadMax": 6
+  },
+  "scenes": [
+    "src/model.js",
+    "src/draw.js",
+    "src/scenes.js"
+  ]
+}
