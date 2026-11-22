@@ -14,7 +14,7 @@ Open for the user, none blocking: whether precision landing is scheduled or decl
 |---|---|---|---|---|---|
 | 1-14 (done 2026-11-07 to 11-22) | Datum through the go/no-go and video v1 | Nov 10, 15, 20, 24, 30 | mixed | see git history | ~32 h |
 | **15 (this prompt)** | CI smoke test (1 leader + 1 follower, ground-truth detector, headless) | Dec 8 | Sonnet | Boilerplate workflow | ~2 h |
-| 16-17 (estimate) | `mission_prior_node`, landmark file, replay provider, rasterization rule, first mission driven by a clue | Dec 10 | Opus for 16 (open questions: rasterization, multi-target clues), Sonnet for 17 | Design, then wiring | ~4 h |
+| 16-17 (estimate) | `mission_prior_node`, landmark file, replay provider, rasterization rule, first mission driven by a clue | Dec 10 | Opus for 16 (open questions: rasterization, multi-target clues), Sonnet for 17 | Design, then wiring; then explainer v2 (`docs/explainer/pieces/drone-search-v1`, steps 10-13 become real) | ~4 h |
 | 18-19 (estimate) | 2D eval sim, 20 seeds x 4 conditions, results table, video v2, re-run the literature search | Dec 20 | Opus | Eval design and honest reporting | ~4-5 h |
 
 At about one session every one or two days, Dec 8 is likely met (one session left). Dec 10 is tight: three sessions in about eight days. Video v2 (Dec 20) can use the re-record fixes in `TODOS.md` (grid off, 30 fps and 720p, stats overlay).

@@ -1,4 +1,4 @@
-# Log: drone-search
+# Log: drone-search-v1
 
 ## Run 1 - 2026-11-22
 
@@ -49,3 +49,7 @@
 
 - Timing: the leader's sweep now ends at 74 s (it ended at 66 s before), so the three finds (70.1, 72.3, 73.6 s) land while it is still flying, as in the real runs; follower 2 departs at 60.2 s because its target is only revealed on the third lane; the sweep's background tone stops before the silence.
 - Added in step 6: two bar pairs, "Original project: the followers wait for the leader to finish" (leader bar, then follower bar) and "This project: they start together" (two parallel bars).
+
+## Naming
+
+This piece is v1 (`drone-search-v1`, `docs/media/drone-search-explainer-v1.mp4`). Steps 10 to 13 are plans. When the language prior is built (the Dec 10 milestone), make a new piece, `drone-search-v2`, by copying this folder and replacing those steps with what actually runs; leave v1 as it is.
