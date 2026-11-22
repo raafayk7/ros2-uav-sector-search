@@ -1,56 +1,62 @@
-# Next-session prompt: the literature check (session 12)
+# Next-session prompt: the go/no-go dress run (session 13)
 
 Paste the block below to open the next session. Replace this file after each session.
 
 ## Where the plan stands
 
-Session 11 is done (2026-11-20). `mission_node` is built and wired: `swarm.launch.py leader:=true num_followers:=3` starts it and launches every planner disabled. Two cold missions from one command (detector seeds 1 and 2) ended DONE 31.3 and 31.4 s after the sweep's COMPLETE. Latched `/mission_report` listed all 3 finds with the right drones (iris_3 (6, 1), iris_2 (1, 2) and (4, 5)), every drone held afterwards, and there were no false confirmations. A `mission_timeout:=60` run ended TIMED_OUT with its report. RTF during the search was 0.49-0.52. D14 held: the worst false alarm after the sweep was 5 % (session 10: 23 %). **The Nov 24 milestone is met, four days early.** `python3 -m pytest src`: 207 passed.
+Session 12 is done (2026-11-22, no sim): the literature check is in `docs/literature-check.md`. **Verdict: novel only in the eval.** No paper runs the whole chain, but every link has direct prior work, and the closest systems are from Oct-Nov 2026 (LMPath 2605.13782, Language as a Sensor 2606.08666, the LLM drone scheduler 2611.16524). Nobody tests a misleading language clue against uniform and accurate ones in multi-UAV search. 2611.12317 found that a strongly biased map did about half as well as no map, for a planner whose map never updates. The claim's wording also overstated the system ("distributed information-seeking": fusion has one owner, and the rule is best open sector).
 
-The user then amended D41's clock row: the mission reads sim time from the followers' `/<robot>/pose` stamps instead of `goal_sector`. In run 3 the report's `sim_s` matched Gazebo's `/stats` clock to 0.08 s; before, it ran about 30 % high.
+**Two plan-level items await the user's yes** (both in the literature check, neither applied): (1) the reworded contribution claim, and (2) an optional fourth eval arm, misleading clue with negative evidence off (`BeliefParams.p_miss = 0.5`, 20 more 2D-sim runs). If the user answers at the start of session 13, apply the answer to the roadmap's "Contribution claim" and its eval section, then commit separately.
 
-The other session-11 question is settled by the user: the report is not republished when a find lands after the end (it can only happen after a timeout, when a hold sent while cruising overshoots a few metres).
+Session 11 met the Nov 24 milestone. Two cold headless missions ended DONE from one command (`swarm.launch.py leader:=true num_followers:=3`), and one ended TIMED_OUT. `python3 -m pytest src`: 207 passed.
 
-What is left before Nov 30: the go/no-go (leader + 3 followers complete a mission in Gazebo from one command, video v1). The mission part is already shown once.
+What is left before Nov 30: the go/no-go (leader + 3 followers complete a mission in Gazebo from one command, video v1). The headless mission is shown twice. What is missing is a run you can *see*, and the recording.
 
 | Session | Work | Milestone | Model | Why that model | Time |
 |---|---|---|---|---|---|
-| 1-10 (done 2026-11-07 to 11-20) | Datum through 4 drones live and the mission core | Nov 10, 15, 20 | mixed | see git history | ~25 h |
-| 11 (done 2026-11-20) | `mission_node`, launch wiring, two DONE runs and a TIMED_OUT live, sim time from pose stamps | Nov 24 (met) | Opus | End-to-end integration | ~2 h |
-| **12 (this prompt)** | Literature check on the narrowed contribution claim, in `docs/literature-check.md`. No sim | before the LLM layer (Dec 10) and any README claim | **Opus** | Judging novelty against papers | ~1.5-2 h |
-| 13 | Go/no-go dress run with the Gazebo GUI and video v1 (capture); two headless DONE runs already exist | Nov 30 | Sonnet (session 11 landed clean) | Mostly running and recording | ~2 h |
+| 1-11 (done 2026-11-07 to 11-20) | Datum through the mission end to end | Nov 10, 15, 20, 24 | mixed | see git history | ~27 h |
+| 12 (done 2026-11-22) | Literature check, `docs/literature-check.md`; rewording proposed | before Dec 10 | Opus | Judging novelty | ~1.5 h |
+| **13 (this prompt)** | GUI option for `swarm.launch.py`, a dress run with the Gazebo GUI, video v1, README and stack-overview status brought up to date | **Nov 30 go/no-go** | Sonnet | Mostly running and recording; one small launch change | ~2 h |
+| 14 (estimate) | CI smoke test (1 leader + 1 follower, ground-truth detector, headless) | Dec 8 | Sonnet | Boilerplate workflow | ~2 h |
+| 15-16 (estimate) | `mission_prior_node`, landmark file, replay provider, rasterization rule, first mission driven by a clue | Dec 10 | Opus for 15 (open questions: rasterization, multi-target clues), Sonnet for 16 | Design, then wiring | ~4 h |
+| 17-18 (estimate) | 2D eval sim, 20 seeds x 3 (or 4) conditions, results table, video v2, re-run the literature search | Dec 20 | Opus | Eval design and honest reporting | ~4-5 h |
 
-Session 12 needs no sim, so it can swap with 13 on a day the USB or the sim is unavailable.
+At about one session every one or two days, Nov 30 is likely met (one session left). Dec 10 is tight: three sessions in about eight days after the go.
 
 ---
 
-Continuing the multi-agent UAV ROS 2 rebuild: session 12, the literature check. The search mission now runs end to end from one command (session 11, Nov 24 milestone met). Before the LLM layer (Dec 10) and before any claim in the README, check the narrowed contribution claim against published work.
+Continuing the multi-agent UAV ROS 2 rebuild: session 13, the go/no-go dress run. The mission runs end to end headless (session 11). Session 12's literature check is done (`docs/literature-check.md`). This session makes the run visible and records video v1 for the Nov 30 go/no-go.
 
 ## Read first
 
-- `docs/roadmap.md`: **"Contribution claim"** (the chain to check, and the one paper already named, arXiv 2511.11967), then the eval section and the LLM-layer rows.
-- `docs/assessment-ros2-migration.md` §10 (publication directions).
-- `docs/planner-decisions.md` D40 (belief map with negative evidence) and D41 (mission), only to describe what the system actually does.
-- Do not read `~/Documents/robotics-action-plan.md` into any committed file (CLAUDE.md).
+- `docs/roadmap.md`: milestones (the Nov 30 go/no-go criteria) and the "Contribution claim" status line.
+- `docs/planner-decisions.md`, session 11 notes (D41, how a mission ends, the report).
+- `docs/docker-notes.md` gotchas 31-33 (login shell, `/clock`), 42/46 (WinBoat), 54-60 (RTF from `/stats`, latched topics, `python3 -u`), 57 (Wayland `XAUTHORITY` after a reboot, which matters for the GUI).
+- If the user has answered the two pending items from session 12, apply them first (see "Where the plan stands").
 
 ## Task
 
-1. **Search** for prior work on each link of the chain, and on the whole chain: natural-language incident report -> spatial prior; LLM as a semantic sensor or prior for search (not control); Bayesian search maps with negative evidence for multi-UAV SAR; decentralized information-seeking multi-UAV allocation; and evaluations comparing accurate vs misleading priors. Use `WebSearch` (extended mode for niche items) and read the papers, not only their abstracts, for the closest five or so.
-2. **Write `docs/literature-check.md`**: per link, the closest papers (title, venue or arXiv id, year, one-line what they do, how ours differs), then a verdict on the whole chain: novel as stated, novel only in the eval, or already done. Then a suggested README sentence that the evidence supports. Quote at most one short phrase per paper; summarize the rest in your own words.
-3. **Say what changes**: if the claim must narrow again, propose the new wording to the user; change the roadmap's "Contribution claim" only with their yes.
+1. **Add a GUI option to `swarm.launch.py`.** Today Gazebo starts with `-s` (server only, line ~223). Add `gui:=false` (default unchanged). With `gui:=true`, drop `-s` so the Gazebo client opens. Rebuild (gotcha 32). Code change: keep it small and say so.
+2. **Dress run.** `swarm.launch.py leader:=true num_followers:=3 gui:=true`, cold, from one command. Pass = mission DONE with all 3 finds on `/mission_report` (read with `--qos-durability transient_local`). Measure RTF from `/stats` time deltas, with and without the GUI. The GUI adds rendering, so expect RTF to drop below the headless 0.49-0.52. If it falls so far that a run takes more than about 10 minutes of wall time, note it and decide with the user (a headless run for the record plus a GUI run for the video is acceptable).
+3. **Record video v1.** Use whatever screen recorder works on the host (Wayland: GNOME's built-in recorder or OBS; check what is installed before suggesting anything). Aim for about 90 s, sped up if the RTF is low, showing the leader sweep, followers moving to sectors, and the `/mission_report` at the end. Save it outside the repo unless the user wants it committed (it is a binary, so ask about size).
+4. **Bring the status docs up to date.** `README.md` (intro line and Status still say the mission node is not built, stale since session 10) and `docs/stack-overview.md` ("Where the project is right now" names `mission_node` as next). Add the session-11 mission result and the Nov 30 outcome. Do **not** add any novelty claim to the README. If one is wanted, use only the "now" sentence from `docs/literature-check.md`.
+5. **Go/no-go call.** Record the outcome in the roadmap milestone row. Go = leader + 3 followers complete a mission in Gazebo from one command (already met headless) and video v1 exists.
 
-Record the outcome in the roadmap (the claim's status line) and rewrite this file for session 13.
+Record the outcome in the roadmap and rewrite this file for session 14.
 
 ## Environment
 
-- No sim this session. The Docker stack is not needed; if a test run is wanted, `mount | grep docker-data` first (gotcha 38) and check `docker ps --filter name=WinBoat` (gotchas 42, 46).
+- Before any sim launch: `mount | grep docker-data` (gotcha 38) and `docker ps --filter name=WinBoat` (gotchas 42, 46). If WinBoat is up, tell the user at once.
+- The GUI needs the container's X/Wayland access. After a reboot, `start` can fail on a renamed `XAUTHORITY` file. `up -d` recreates the container, and then check setuptools with `/usr/bin/python3` (gotchas 57-58).
+- `docker compose restart ros2` between sim runs.
 - Commit on `main` after each working sub-task. Do not push without asking.
 
 ## Done means
 
-`docs/literature-check.md` written with sources, a verdict on the narrowed claim, and a supported README sentence; roadmap status updated; this file rewritten for session 13. Say plainly which changes are plan-level (the claim's wording) and which are documentation, and for each "not shown" gap whether it was in scope and where it now lives.
+GUI option built; one cold DONE mission with the GUI (or a stated reason why not, plus a headless DONE run); video v1 saved, with where it lives stated; README and stack-overview current; the go/no-go outcome in the roadmap; this file rewritten for session 14. Say plainly which changes are code (the launch argument), which are plan-level (the go/no-go outcome, and the claim wording if the user answered), and which are documentation. For each "not shown" gap, say whether it was in scope and where it now lives.
 
 ## Working agreements
 
-- The user has high-level ROS understanding, not deep. Explain any research term (for example "information-seeking control", "negative evidence") in one paragraph the first time.
-- Settled decisions stay settled (stack, D37-D41, including the session-11 amendments).
+- The user has high-level ROS understanding, not deep. Explain new terms in one paragraph the first time.
+- Settled decisions stay settled (stack, D37-D41, including the session-11 amendments). The contribution claim's wording changes only with the user's yes.
 - Do not push without asking.
