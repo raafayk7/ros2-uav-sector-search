@@ -76,8 +76,9 @@ Launch args:
                   DISPLAY and an X login file in the container)
   arena_view      draw the 40 x 40 m arena as a dark green plate with a
                   white line every 5 m on plain ground, without the runway
-                  visuals (the ground collision is the same), and open the
-                  Gazebo view straight down on it with a stats overlay
+                  visuals (the ground collision is the same), turn shadows
+                  off, and open the Gazebo view straight down on it with a
+                  stats overlay
                   (default false; for video; use with gui:=true)
   spacing         spawn spacing along x, m (default 5.0)
   physics_step    Gazebo max_step_size, s: 0.002 (default, with a 250 Hz
@@ -188,8 +189,8 @@ _PLAIN_GROUND_SDF = (
 
 
 def _arena_gui_sdf(size: float = 40.0) -> str:
-    """A <gui> block: the 3D view looking straight down at the arena centre,
-    plus the stats overlay (sim time, real time, RTF). It replaces Gazebo's
+    """A <gui> block: the 3D view looking straight down at the arena centre
+    (origin bottom-left, +x right, +y up), plus the stats overlay (sim time, real time, RTF). It replaces Gazebo's
     default panels, which suits a recording. Height fits the arena at the
     scene camera's default 60 degree horizontal field of view with a margin.
     """
@@ -204,7 +205,8 @@ def _arena_gui_sdf(size: float = 40.0) -> str:
         '<engine>ogre2</engine><scene>scene</scene>'
         '<ambient_light>0.4 0.4 0.4</ambient_light>'
         '<background_color>0.8 0.8 0.8</background_color>'
-        f'<camera_pose>{half} {half} {height} 0 1.5707 0</camera_pose>'
+        # Yaw 90 degrees: +x to the right, +y up, origin bottom-left.
+        f'<camera_pose>{half} {half} {height} 0 1.5707 1.5708</camera_pose>'
         '</plugin>'
         '<plugin filename="WorldStats" name="World stats"><gz-gui>'
         '<title>World stats</title>'
@@ -271,8 +273,12 @@ def _world(step: str, arena_view: bool = False) -> Path:
         if n != 1 or sdf.count('</world>') != 1:
             raise RuntimeError(f'expected one runway include and </world> '
                                f'in {world}')
-        if '<gui' in sdf:
-            raise RuntimeError(f'{world} already has a <gui> block')
+        # The sun is the only light: no shadows for the drones either.
+        shadows = '<cast_shadows>true</cast_shadows>'
+        if sdf.count(shadows) != 1 or '<gui' in sdf:
+            raise RuntimeError(f'expected one {shadows} and no <gui> block '
+                               f'in {world}')
+        sdf = sdf.replace(shadows, '<cast_shadows>false</cast_shadows>')
         sdf = sdf.replace('</world>',
                           _arena_view_sdf() + _arena_gui_sdf() + '</world>')
     # Same file name in a temp dir: the world name inside stays "runway".
