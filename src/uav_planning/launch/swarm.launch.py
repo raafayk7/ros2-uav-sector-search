@@ -77,9 +77,10 @@ Launch args:
   arena_view      draw the 40 x 40 m arena as a dark green plate with a
                   white line every 5 m on plain ground, without the runway
                   visuals (the ground collision is the same), turn shadows
-                  off, and open the Gazebo view straight down on it with a
-                  stats overlay
-                  (default false; for video; use with gui:=true)
+                  off, colour the leader's propellers yellow and the
+                  followers' cyan with a matching 1.6 m halo above each, and
+                  open the Gazebo view straight down on it with a stats
+                  overlay (default false; for video; use with gui:=true)
   spacing         spawn spacing along x, m (default 5.0)
   physics_step    Gazebo max_step_size, s: 0.002 (default, with a 250 Hz
                   autopilot loop) or 0.001 (upstream, 400 Hz loop)
@@ -91,6 +92,7 @@ Launch args:
 """
 
 import re
+import shutil
 import tempfile
 from pathlib import Path
 from typing import NamedTuple
@@ -165,12 +167,46 @@ def _bridge_config(camera: str) -> str:
     return out.name
 
 
-def _iris_sdf(robot_name: str) -> str:
+# Propeller colours with arena_view: not the target colours (red, green, blue).
+PROP_COLORS = {'leader': '1 0.8 0', 'follower': '0 0.9 0.9'}
+HALO = ('<visual name="role_halo"><pose>0 0 0.06 0 0 0</pose>'
+        '<cast_shadows>false</cast_shadows><transparency>0.5</transparency>'
+        '<geometry><cylinder><radius>0.8</radius><length>0.01</length>'
+        '</cylinder></geometry>'
+        '<material><ambient>{c} 1</ambient><diffuse>{c} 1</diffuse>'
+        '</material></visual>')
+
+
+def _iris_sdf(robot_name: str, prop_color: str = None) -> str:
     """The iris_with_gimbal SDF renamed for this drone, as iris.launch.py
-    does. robot.launch.py then sets its FDM port from the instance."""
-    sdf = Path(get_package_share_directory('ardupilot_gazebo'),
-               'models', 'iris_with_gimbal', 'model.sdf').read_text()
+    does. robot.launch.py then sets its FDM port from the instance.
+
+    With prop_color ('r g b') the four propellers get that colour and a
+    translucent disc of it floats above the drone (1.6 m across, about three
+    times the airframe), through a copy of the iris_with_standoffs model.
+    Visuals only, so no physics change. Upstream colours two propellers blue
+    and two green."""
+    models = Path(get_package_share_directory('ardupilot_gazebo'), 'models')
+    sdf = (models / 'iris_with_gimbal' / 'model.sdf').read_text()
     sdf = sdf.replace('<name>iris</name>', f'<name>{robot_name}</name>')
+    if prop_color:
+        body = (models / 'iris_with_standoffs' / 'model.sdf').read_text()
+        body, n = re.subn(r'<(ambient|diffuse)>(0 0 1|0 1 0)( 1)?</\1>',
+                          rf'<\1>{prop_color} 1</\1>', body)
+        uri = 'package://ardupilot_gazebo/models/iris_with_standoffs'
+        base = "<visual name='base_visual'>"
+        if n != 8 or sdf.count(uri) != 1 or body.count(base) != 1:
+            raise RuntimeError(f'expected 8 propeller colours, one {uri} and '
+                               f'one {base}, got {n}, {sdf.count(uri)} and '
+                               f'{body.count(base)}')
+        # A translucent disc above the propellers, so the drone shows from
+        # high up. A visual on base_link has no mass or collision.
+        body = body.replace(base, HALO.format(c=prop_color) + base)
+        copy = Path(tempfile.mkdtemp()) / 'iris_with_standoffs'
+        copy.mkdir()
+        (copy / 'model.sdf').write_text(body)
+        shutil.copy(models / 'iris_with_standoffs' / 'model.config', copy)
+        sdf = sdf.replace(uri, f'file://{copy}')
     out = tempfile.NamedTemporaryFile('w', delete=False, suffix='.sdf')
     out.write(sdf)
     out.close()
@@ -310,7 +346,8 @@ def _sim_actions(context, drones):
     if step not in STEP_PARMS:
         raise RuntimeError(f'physics_step must be one of {list(STEP_PARMS)}, '
                            f'got {step}')
-    world = _world(step, _arg(context, 'arena_view').lower() == 'true')
+    arena_view = _arg(context, 'arena_view').lower() == 'true'
+    world = _world(step, arena_view)
     camera = _arg(context, 'camera').lower() == 'true'
     gui = _arg(context, 'gui').lower() == 'true'
     bridge_files = {
@@ -352,7 +389,8 @@ def _sim_actions(context, drones):
             'namespace': name,
             'robot_name': name,
             'world_name': WORLD,
-            'sdf_file': _iris_sdf(name),
+            'sdf_file': _iris_sdf(
+                name, PROP_COLORS[drone.role] if arena_view else None),
             'bridge_config_file': bridge_files[drone.role],
             'command': 'arducopter',
             'use_gz_tf': 'false',
