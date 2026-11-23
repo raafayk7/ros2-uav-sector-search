@@ -29,6 +29,7 @@ Status: decided. `mission_node` is built and flew two whole missions to DONE fro
 | Mission end | Sweep done and all unsuppressed sectors under 0.5 for 30 s, or timeout; decided by the mission state machine | D14 |
 | Mission | `mission_node` in `uav_planning` (`core/mission.py`): WAITING -> SEARCHING -> DONE or TIMED_OUT; planners launch disabled and the mission enables them; at the end it disables them (D29 hold); wall-clock node, timeout 600 sim-s; latched `/mission_state` and `/mission_report` | D41 |
 | Follower start | Followers are enabled when the mission starts, together with the leader's sweep, not after it. The thesis flew the leader first and the followers second. On a flat map a follower holds until the leader's footprints or detections give it something to choose | D42 |
+| CI shape | Two tiers (decided by the user, 2026-11-23, on my recommendation). The 25 GB image cannot be built or pulled on a hosted runner (about 14 GB free). Hosted `ci.yml`: build + unit tests in stock `ros:jazzy`, every push and pull request. Self-hosted `smoke.yml`: the mission (1 leader + 1 follower, targets spawned, needs a find), manual dispatch and pushes to main only, never pull requests, because a self-hosted runner on a public repo runs a fork's code. Rejected: a slim CI image (10+ GB, about 1 h build, no layer cache, GHCR out of scope) and unit-tests-only | D43 |
 | Return to find | After DONE, each find's finder flies to hover over it at its own layer. A drone with two finds keeps the earlier one and the other find goes to the nearest drone without one. Skipped on TIMED_OUT. Latched `/mission_return` (RETURNING, AT_FINDS, TIMED_OUT) | D41 amended |
 | Milestone map | New stub publisher, 8x8 at 5 m, multiple peaks | D19 |
 | Camera | Required before footprints: gimbal to nadir, proven with the marker test, 2 h timebox | D30 |
@@ -1776,7 +1777,7 @@ At hover with OBS open (preview on) and not recording, RTF read 0.341, 0.351, 0.
 
 Ran: the CI work (Dec 8 row), with `/verify` once mid-session. Code: `ci/smoke_test.sh`, `ci/smoke_check.py`, `ci/spawn_targets.sh`, `ci/in_container.sh`, a test-skip marker in `test_arena_view.py`. CI configuration: `.github/workflows/ci.yml`, `smoke.yml`. Plan-level: none (D37-D42 and the stack are untouched). Docs: roadmap, CLAUDE.md, docker-notes 64-66, TODOS.md.
 
-**Decision with the user: two tiers.** The image is 25 GB and a hosted runner has about 14 GB free, so the mission test cannot run there. The user chose a self-hosted job (manual and on pushes to main, never pull requests) over a slim image or unit-tests-only. The hosted job runs build + unit tests in stock `ros:jazzy`.
+**D43, decision with the user: two tiers.** The image is 25 GB and a hosted runner has about 14 GB free, so the mission test cannot run there. The user chose a self-hosted job (manual and on pushes to main, never pull requests) over a slim image or unit-tests-only. The hosted job runs build + unit tests in stock `ros:jazzy`.
 
 **A vacuous pass, caught.** The first smoke run ended `PASS: mission DONE, 0 find(s)`: the launch spawns no targets, the sweep emptied the map and the end rule closed the mission. The checker now needs at least one find and the script spawns the three session-8 targets. Result: DONE with 3 finds, one per target cell, with 1 follower. The sweep-only pass at the timeout (roadmap wording) has no finds requirement and is weaker.
 
@@ -1909,6 +1910,9 @@ Synthesized from this review's findings. Each task derives from a specific findi
 - [x] **T10 (P2, CC: ~2h)** — uav_planning, docker — the video look and the dress run (session 13): `gui:=true`, `arena_view:=true` (plain ground, arena plate, top-down view, colours, halos, no shadows), `ground_marker_node` and its bridge, and the DDS participant limit (gotcha 61)
   - Files: `launch/swarm.launch.py`, `uav_planning/ground_marker_node.py`, `test/test_arena_view.py`, `docker/docker-compose.yml`
   - Verify: done 2026-11-22: DONE headless and with the window, markers within 0.01 m of hovering drones, 225 tests
+- [ ] **T11 (P2, CC: ~2h)** — ci — GitHub Actions (session 15, D43): hosted `ci.yml`, self-hosted `smoke.yml`, `ci/` smoke scripts
+  - Files: `.github/workflows/ci.yml`, `.github/workflows/smoke.yml`, `ci/`, `src/uav_planning/test/test_arena_view.py`
+  - Verify: `ci.yml` green on GitHub 2026-11-23 (run 45134386862, 223 passed, 2 skipped); smoke steps DONE with 3 finds by hand, twice (97 s, 317 s). Open box: `smoke.yml` on a registered runner (TODOS.md, CI)
 
 - [x] **T11 (P1, CC: ~1h)** — video v1 for the Nov 30 go/no-go (done 2026-11-22, session 14: `docs/media/uav-v1.mp4`, GO): record one full mission (leader sweep, followers moving, finds, return to find, `/mission_report`) with OBS, about 90 s, sped up if RTF is low; saved outside the repo unless the user wants it committed
   - Surfaced by: the roadmap's Nov 30 row
@@ -1919,7 +1923,7 @@ Effort assumes features at about 30x and tests at about 50x human-to-CC time, ad
 
 ## Unresolved decisions
 
-None blocking (D41, the mission state machine, was decided 2026-11-20 and amended 2026-11-22; D42, concurrent timing, 2026-11-22). Open for the user, none blocking: whether precision landing is scheduled or out of scope (it is in no milestone), and the eval's optional thesis-timing arm (D42). Decided 2026-11-22: halos and ground markers both stay. D40 set D32's N to 3 (untested against a correlated detector); the D14 thresholds remain provisional values by decision, not open questions, and session 11 measures them live (session 10's probe: worst false alarm after the sweep 23 %). D24's yield cost about 13 s once in session 10, with an arrived drone giving way; that is an observation, not an open decision, unless it recurs.
+None blocking (D41, the mission state machine, was decided 2026-11-20 and amended 2026-11-22; D42, concurrent timing, 2026-11-22). Open for the user, none blocking: whether precision landing is scheduled or out of scope (it is in no milestone), the eval's optional thesis-timing arm (D42), and registering a self-hosted runner for `smoke.yml` (D43, TODOS.md). Decided 2026-11-23: the CI shape (D43). Decided 2026-11-22: halos and ground markers both stay. D40 set D32's N to 3 (untested against a correlated detector); the D14 thresholds remain provisional values by decision, not open questions, and session 11 measures them live (session 10's probe: worst false alarm after the sweep 23 %). D24's yield cost about 13 s once in session 10, with an arrived drone giving way; that is an observation, not an open decision, unless it recurs.
 
 ## Completion summary
 
