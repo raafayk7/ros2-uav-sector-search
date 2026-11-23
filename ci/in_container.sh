@@ -3,7 +3,8 @@
 # Run from the repo root inside the container (the self-hosted workflow and
 # `docker compose exec` both call it):
 #   bash -l ci/in_container.sh
-set -eu
+# No -u: ROS's setup scripts read variables they never define.
+set -e
 
 source /usr/local/bin/entrypoint.sh
 cd /workspaces/multi-agent-uavs
