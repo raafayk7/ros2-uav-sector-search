@@ -37,6 +37,7 @@ Continuing the multi-agent UAV ROS 2 rebuild: session 16, the language prior. Th
 ## Environment
 
 - Before any sim launch: `mount | grep docker-data` and `docker ps --filter name=WinBoat` (tell the user at once if it is up). This session needs no sim; the library tests need no ROS.
+- The smoke runner is stopped between sessions (Ctrl-C in its terminal). To use it: `cd ~/actions-runner && ./run.sh`, then `gh workflow run smoke.yml`; it needs the USB mounted, WinBoat stopped and no sim running. `smoke.yml` is dispatch-only, so nothing queues while it is off.
 - Run tests with `python3 -m pytest src` in the container (`source /usr/local/bin/entrypoint.sh` first in a non-interactive shell); with a sim up, ROS-based tests need `ROS_DOMAIN_ID=77`.
 - The dev container was stopped and restarted in session 15; if `up -d` is needed after a reboot, check setuptools with `/usr/bin/python3` (gotchas 57-58, 64).
 - Commit on `main` after each working sub-task. Do not push without asking.
