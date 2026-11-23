@@ -106,7 +106,7 @@ Earlier milestones, still true: one follower flies to a sector and reports `ARRI
 
 - **Perception.** YOLO26 is a stretch goal; the noisy ground-truth detector stands in.
 - **Landing.** Precision landing (colour masking + PID in the original) is not rebuilt and is in no milestone; a find ends in a hover.
-- **CI.** Two GitHub Actions workflows are written (`.github/workflows/`): unit tests on a hosted runner, and the mission as a smoke test on a self-hosted runner (the 25 GB image does not fit a hosted one). The unit job is green on GitHub. The smoke test was run by hand twice to a finished mission with all three targets found, but has not run on a runner yet.
+- **CI.** Two GitHub Actions workflows (`.github/workflows/`): unit tests on a hosted runner, and the mission as a smoke test on a self-hosted runner (the 25 GB image does not fit a hosted one). Both are green on GitHub: the unit job, and the smoke test on a self-hosted runner, which flew a full mission and found all three targets.
 - **Scale beyond four drones** and **re-enabling after a disable** have not been run. A four-drone run holds about 30 DDS participants, close to the 32 the default RMW allows (`docs/docker-notes.md`, gotcha 61).
 
 Known issues and measured quirks are logged in [`docs/docker-notes.md`](docs/docker-notes.md) and [`TODOS.md`](TODOS.md).

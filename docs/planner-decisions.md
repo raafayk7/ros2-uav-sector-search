@@ -1786,10 +1786,11 @@ Ran: the CI work (Dec 8 row), with `/verify` once mid-session. Code: `ci/smoke_t
 | 1 (no targets) | dev container | 22 | 94 | 0, vacuous |
 | 2 | dev container | 26 | 97 | 3 |
 | 3 | clean checkout, `docker run` as in `smoke.yml` | 86 | 317 | 3 |
+| 4 | `smoke.yml` on the self-hosted runner (GitHub run 45134386843) | 91 | 302 | 3 |
 
-Times are the checker's wall seconds. Run 3 is slower with the sweep starting 60 s later; cause not found (a cold container after the build is a guess). Not shown: `smoke.yml` on a runner (`ci.yml` itself went green on GitHub the same day, run 45134386862, 223 passed and 2 skipped in 80 s), a second sample of run 3, what a hosted runner's 4 vCPU would do to the sim (not needed, the mission is not hosted). Their home: `TODOS.md`, CI.
+Times are the checker's wall seconds. Runs 3 and 4 (a fresh `docker run` after a build) both start the sweep 60-65 s later than the dev container, so it repeats; cause not found (a cold container after the build is a guess). Not shown: `ci.yml` went green on GitHub (run 45134386862, 223 passed and 2 skipped in 80 s) and `smoke.yml` on the runner (run 4), but not a second sample of run 3, what a hosted runner's 4 vCPU would do to the sim (not needed, the mission is not hosted). Their home: `TODOS.md`, CI.
 
-**Not independently verified:** `smoke.yml` itself (YAML parses; steps run by hand; its push run is queued with no runner); the checker's "RETRY" path (exit 3, relaunch) never triggered in 3 runs.
+**Not independently verified:** the checker's "RETRY" path (exit 3, relaunch) never triggered in 3 runs.
 
 ## NOT in scope
 
@@ -1915,15 +1916,15 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: the roadmap's Nov 30 row
   - Files: none (a video file)
   - Verify: the file exists and shows a full mission; the go/no-go outcome is written in the roadmap
-- [ ] **T12 (P2, CC: ~2h)** — ci — GitHub Actions (session 15, D43): hosted `ci.yml`, self-hosted `smoke.yml`, `ci/` smoke scripts
+- [x] **T12 (P2, CC: ~2h)** — ci — GitHub Actions (session 15, D43): hosted `ci.yml`, self-hosted `smoke.yml`, `ci/` smoke scripts
   - Files: `.github/workflows/ci.yml`, `.github/workflows/smoke.yml`, `ci/`, `src/uav_planning/test/test_arena_view.py`
-  - Verify: `ci.yml` green on GitHub 2026-11-23 (run 45134386862, 223 passed, 2 skipped); smoke steps DONE with 3 finds by hand, twice (97 s, 317 s). Open box: `smoke.yml` on a registered runner (TODOS.md, CI)
+  - Verify: `ci.yml` green on GitHub 2026-11-23 (run 45134386862, 223 passed, 2 skipped); smoke steps DONE with 3 finds by hand, twice (97 s, 317 s). `smoke.yml` green on the self-hosted runner the same day (run 45134386843: 225 tests, DONE, 3 finds)
 
 Effort assumes features at about 30x and tests at about 50x human-to-CC time, adjusted down for ROS integration.
 
 ## Unresolved decisions
 
-None blocking (D41, the mission state machine, was decided 2026-11-20 and amended 2026-11-22; D42, concurrent timing, 2026-11-22). Open for the user, none blocking: whether precision landing is scheduled or out of scope (it is in no milestone), the eval's optional thesis-timing arm (D42), and registering a self-hosted runner for `smoke.yml` (D43, TODOS.md). Decided 2026-11-23: the CI shape (D43). Decided 2026-11-22: halos and ground markers both stay. D40 set D32's N to 3 (untested against a correlated detector); the D14 thresholds remain provisional values by decision, not open questions, and session 11 measures them live (session 10's probe: worst false alarm after the sweep 23 %). D24's yield cost about 13 s once in session 10, with an arrived drone giving way; that is an observation, not an open decision, unless it recurs.
+None blocking (D41, the mission state machine, was decided 2026-11-20 and amended 2026-11-22; D42, concurrent timing, 2026-11-22). Open for the user, none blocking: whether precision landing is scheduled or out of scope (it is in no milestone), the eval's optional thesis-timing arm (D42). Decided 2026-11-23: the CI shape (D43), and the runner is registered and green. Decided 2026-11-22: halos and ground markers both stay. D40 set D32's N to 3 (untested against a correlated detector); the D14 thresholds remain provisional values by decision, not open questions, and session 11 measures them live (session 10's probe: worst false alarm after the sweep 23 %). D24's yield cost about 13 s once in session 10, with an arrived drone giving way; that is an observation, not an open decision, unless it recurs.
 
 ## Completion summary
 

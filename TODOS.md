@@ -30,18 +30,6 @@
 
 ## CI
 
-### Register the self-hosted runner and run `smoke.yml`
-
-**What:** Register a self-hosted runner labelled `uav-smoke` and dispatch `smoke.yml` once. (`ci.yml` went green on GitHub on 2026-11-23, run 45134386862.)
-
-**Why:** Session 15 ran every step by hand (the hosted steps in a stock `ros:jazzy` container, the smoke steps through the same `docker run` line the workflow uses), and `ci.yml` has since passed on GitHub, but `smoke.yml` has not run on a runner, so its syntax on GitHub, permissions and runner setup are untested. Its push run (2026-11-23) sits queued with no runner; cancel it or register one.
-
-**Context:** `.github/workflows/ci.yml`, `smoke.yml`, `ci/`. The runner's user needs the docker group, uid 1000, the USB data partition mounted and WinBoat stopped. `smoke.yml` must never gain a `pull_request` trigger (a self-hosted runner on a public repo runs a fork's code).
-
-**Effort:** S
-**Priority:** P2
-**Depends on:** the user registering a runner on their machine
-
 ### Fix the setuptools mix in the Dockerfile
 
 **What:** Make the image end with only apt's setuptools 68.1.2 in `/usr/lib/python3/dist-packages`, with nothing in `/usr/local`.
@@ -54,6 +42,19 @@
 **Priority:** P3
 
 ## Completed
+
+### Register the self-hosted runner and run `smoke.yml` (done 2026-11-23)
+
+**What:** Register a self-hosted runner labelled `uav-smoke` and run `smoke.yml` once.
+
+**Why:** Session 15 ran every step by hand; the workflow file itself had not run on a runner.
+
+**Context:** `.github/workflows/smoke.yml`, `ci/`. `smoke.yml` must never gain a `pull_request` trigger (a self-hosted runner on a public repo runs a fork's code). The runner lives in `~/actions-runner`, outside the repo (it holds credentials).
+
+**Effort:** S
+**Priority:** P2
+
+**Done:** run 45134386843 passed on the user's runner: 225 tests, mission DONE, 3 finds. The runner only runs while the machine is on and `./run.sh` is up; pushes to main queue a smoke job otherwise.
 
 ### Repeated frames over-count evidence (done 2026-11-18, D40)
 
