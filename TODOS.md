@@ -28,20 +28,20 @@
 **Priority:** P2
 **Depends on:** 2D eval sim
 
-## CI
+## Completed
 
-### Fix the setuptools mix in the Dockerfile
+### Fix the setuptools mix in the Dockerfile (done 2026-11-23)
 
-**What:** Make the image end with only apt's setuptools 68.1.2 in `/usr/lib/python3/dist-packages`, with nothing in `/usr/local`.
+**What:** Make the image end with only apt's setuptools 68.1.2 and nothing in `/usr/local`.
 
-**Why:** A container made from the image had 78.1.0 files with an 84.2.1 record in `/usr/local`, and `colcon build --symlink-install` failed with "option --uninstall not recognized" until `pip3 uninstall setuptools` was run twice (docker-notes 58, 64). `ci/in_container.sh` carries the workaround.
+**Why:** A container from the image had setuptools 78.1.0 files with a stale 84.2.1 record, and `colcon build --symlink-install` failed with "option --uninstall not recognized" (docker-notes 58, 64).
 
-**Context:** The Dockerfile's `pip install "setuptools<80"` after the torch/ultralytics layer is not enough on its own. Needs a rebuild (about 60 min, USB data partition), so batch it with the next image change.
+**Context:** Dockerfile's last pip step. The build cache (24 layers) made the rebuild take minutes.
 
 **Effort:** S
 **Priority:** P3
 
-## Completed
+**Done:** the step uninstalls pip's copy until 68.1.2 imports and fails the build otherwise. Fresh container: setuptools 68.1.2, `colcon build`, 231 tests, `import torch, ultralytics` all fine; `ci/in_container.sh` lost its workaround. The old image is `multi-agent-uavs:jazzy-prev` (remove with `docker rmi` once the new one has proven itself). Existing containers keep the old state until recreated.
 
 ### `/verify` on the host (done 2026-11-23)
 

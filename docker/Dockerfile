@@ -445,15 +445,27 @@ RUN pip3 install --break-system-packages --no-cache-dir --ignore-installed \
         "shapely"
 
 # -------------------------------------------------------------------------
-# Pin setuptools < 80. The torch/ultralytics install above pulls in
-# setuptools >= 80, which removed the `--editable` option from the `develop`
-# command (setuptools 80.0.0 defers editable installs to pip via PEP 517).
-# colcon's `--symlink-install` calls `setup.py develop --editable ...` for
-# ament_python packages, so any setuptools >= 80 breaks the build with
-# "error: option --editable not recognized". Keep this as the LAST pip step
-# touching setuptools so it wins. Ref: colcon/colcon-core#696.
+# Leave only Ubuntu's setuptools (apt, 68.1.2). The torch/ultralytics install
+# above pulls in setuptools >= 80, which removed the `--editable` option from
+# the `develop` command (setuptools 80.0.0 defers editable installs to pip via
+# PEP 517). colcon's `--symlink-install` calls `setup.py develop --editable`
+# for ament_python packages, so any setuptools >= 80 breaks the build with
+# "error: option --editable not recognized". Ref: colcon/colcon-core#696.
+#
+# The earlier fix here, `pip install "setuptools<80"`, was not enough: it left
+# setuptools 78.1.0 files beside a stale 84.2.1 dist-info in /usr/local, and
+# colcon then failed with "option --uninstall not recognized" in every
+# container (docker-notes 58, 64). Removing pip's copy lets apt's 68.1.2 show
+# through. Stop as soon as 68.1.2 imports: one uninstall too many removes apt's
+# copy as well (seen in the first attempt). The build fails here if 68.1.2 is
+# not what ends up importable.
 # -------------------------------------------------------------------------
-RUN pip3 install --break-system-packages --no-cache-dir "setuptools<80"
+RUN for i in 1 2 3; do \
+        [ "$(/usr/bin/python3 -c 'import setuptools; print(setuptools.__version__)' 2>/dev/null)" = "68.1.2" ] && break; \
+        pip3 uninstall -y --break-system-packages setuptools; \
+    done \
+    && ! ls -d /usr/local/lib/python3.12/dist-packages/setuptools* >/dev/null 2>&1 \
+    && test "$(/usr/bin/python3 -c 'import setuptools; print(setuptools.__version__)')" = "68.1.2"
 
 # -------------------------------------------------------------------------
 # Entrypoint - sources every overlay so `docker compose exec ros2 bash` lands
