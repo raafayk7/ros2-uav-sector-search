@@ -1,0 +1,11 @@
+{
+  "$schema": "https://github.com/garrytan/gstack/docs/pregate.md#pregate-v1",
+  "runner": "docker compose -f docker/docker-compose.yml exec -T ros2 bash -lc 'source /usr/local/bin/entrypoint.sh >/dev/null 2>&1; cd /workspaces/multi-agent-uavs && source install/setup.bash && python3 -m pytest {files}'",
+  "dependencies": {
+    ".github/workflows/**": ["src/uav_planning/test/test_ci_files.py"],
+    "ci/**": ["src/uav_planning/test/test_ci_files.py"],
+    "docker/**": ["src/uav_planning/test/test_ci_files.py"],
+    "skills/**": ["src/uav_planning/test/test_ci_files.py"],
+    "src/uav_planning/launch/**": ["src/uav_planning/test/test_arena_view.py"]
+  }
+}
