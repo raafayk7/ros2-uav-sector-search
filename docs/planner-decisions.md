@@ -1786,9 +1786,9 @@ Ran: the CI work (Dec 8 row), with `/verify` once mid-session. Code: `ci/smoke_t
 | 2 | dev container | 26 | 97 | 3 |
 | 3 | clean checkout, `docker run` as in `smoke.yml` | 86 | 317 | 3 |
 
-Times are the checker's wall seconds. Run 3 is slower with the sweep starting 60 s later; cause not found (a cold container after the build is a guess). Not shown: any run on GitHub, a second sample of run 3, what a hosted runner's 4 vCPU would do to the sim (not needed, the mission is not hosted). Their home: `TODOS.md`, CI.
+Times are the checker's wall seconds. Run 3 is slower with the sweep starting 60 s later; cause not found (a cold container after the build is a guess). Not shown: `smoke.yml` on a runner (`ci.yml` itself went green on GitHub the same day, run 45134386862, 223 passed and 2 skipped in 80 s), a second sample of run 3, what a hosted runner's 4 vCPU would do to the sim (not needed, the mission is not hosted). Their home: `TODOS.md`, CI.
 
-**Not independently verified:** the two workflow files themselves (YAML parses; steps run by hand); the checker's "RETRY" path (exit 3, relaunch) never triggered in 3 runs.
+**Not independently verified:** `smoke.yml` itself (YAML parses; steps run by hand; its push run is queued with no runner); the checker's "RETRY" path (exit 3, relaunch) never triggered in 3 runs.
 
 ## NOT in scope
 

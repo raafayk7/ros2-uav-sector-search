@@ -43,11 +43,11 @@ stacks on.
   `ground_marker_node` keeps a marker on the ground under each drone.
 - **Looking at it:** `gui:=true` opens the Gazebo window; `arena_view:=true`
   draws the arena, looks straight down on it and colours the drones.
-- **CI (2026-11-23):** two workflows are written and were run by hand, not yet
-  on GitHub: unit tests on a hosted runner, and the mission as a smoke test on
-  a self-hosted runner (`ci/`; the 25 GB image does not fit a hosted one).
-- **Next:** the language prior (the roadmap's Dec 10 milestone), and a push so
-  the CI runs on GitHub. The Nov 30 go/no-go is a GO: video v1 is in
+- **CI (2026-11-23):** unit tests on a hosted runner, green on GitHub; the
+  mission as a smoke test on a self-hosted runner (`ci/`; the 25 GB image does
+  not fit a hosted one), written and run by hand, not yet on a runner.
+- **Next:** the language prior (the roadmap's Dec 10 milestone), and registering the
+  self-hosted runner. The Nov 30 go/no-go is a GO: video v1 is in
   `docs/media/`.
 - **Not built:** the language prior, YOLO (stretch) and precision landing (in
   no milestone).
