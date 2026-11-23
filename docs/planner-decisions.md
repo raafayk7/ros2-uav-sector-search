@@ -1910,14 +1910,14 @@ Synthesized from this review's findings. Each task derives from a specific findi
 - [x] **T10 (P2, CC: ~2h)** — uav_planning, docker — the video look and the dress run (session 13): `gui:=true`, `arena_view:=true` (plain ground, arena plate, top-down view, colours, halos, no shadows), `ground_marker_node` and its bridge, and the DDS participant limit (gotcha 61)
   - Files: `launch/swarm.launch.py`, `uav_planning/ground_marker_node.py`, `test/test_arena_view.py`, `docker/docker-compose.yml`
   - Verify: done 2026-11-22: DONE headless and with the window, markers within 0.01 m of hovering drones, 225 tests
-- [ ] **T11 (P2, CC: ~2h)** — ci — GitHub Actions (session 15, D43): hosted `ci.yml`, self-hosted `smoke.yml`, `ci/` smoke scripts
-  - Files: `.github/workflows/ci.yml`, `.github/workflows/smoke.yml`, `ci/`, `src/uav_planning/test/test_arena_view.py`
-  - Verify: `ci.yml` green on GitHub 2026-11-23 (run 45134386862, 223 passed, 2 skipped); smoke steps DONE with 3 finds by hand, twice (97 s, 317 s). Open box: `smoke.yml` on a registered runner (TODOS.md, CI)
 
 - [x] **T11 (P1, CC: ~1h)** — video v1 for the Nov 30 go/no-go (done 2026-11-22, session 14: `docs/media/uav-v1.mp4`, GO): record one full mission (leader sweep, followers moving, finds, return to find, `/mission_report`) with OBS, about 90 s, sped up if RTF is low; saved outside the repo unless the user wants it committed
   - Surfaced by: the roadmap's Nov 30 row
   - Files: none (a video file)
   - Verify: the file exists and shows a full mission; the go/no-go outcome is written in the roadmap
+- [ ] **T12 (P2, CC: ~2h)** — ci — GitHub Actions (session 15, D43): hosted `ci.yml`, self-hosted `smoke.yml`, `ci/` smoke scripts
+  - Files: `.github/workflows/ci.yml`, `.github/workflows/smoke.yml`, `ci/`, `src/uav_planning/test/test_arena_view.py`
+  - Verify: `ci.yml` green on GitHub 2026-11-23 (run 45134386862, 223 passed, 2 skipped); smoke steps DONE with 3 finds by hand, twice (97 s, 317 s). Open box: `smoke.yml` on a registered runner (TODOS.md, CI)
 
 Effort assumes features at about 30x and tests at about 50x human-to-CC time, adjusted down for ROS integration.
 
