@@ -67,7 +67,7 @@
 **Effort:** S
 **Priority:** P2
 
-**Done:** run 45134386843 passed on the user's runner: 225 tests, mission DONE, 3 finds. The runner only runs while the machine is on and `./run.sh` is up; pushes to main queue a smoke job otherwise.
+**Done:** run 45134386843 passed on the user's runner: 225 tests, mission DONE, 3 finds. The runner only runs while the machine is on and `./run.sh` is up; `smoke.yml` is dispatch-only (`gh workflow run smoke.yml`), so a push never queues a job nobody can take.
 
 ### Repeated frames over-count evidence (done 2026-11-18, D40)
 

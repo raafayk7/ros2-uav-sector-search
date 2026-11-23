@@ -6,21 +6,20 @@ name: smoke
 # runner has about 14 GB of free disk, and a build there needs roughly twice
 # the image. So this job runs on the maintainer's own machine, where the image
 # already exists, and is never offered to pull requests: a self-hosted runner
-# on a public repo runs whatever a fork's PR contains. Triggers are a manual
-# dispatch and pushes to main only.
+# on a public repo runs whatever a fork's PR contains. The only trigger is a
+# manual dispatch (`gh workflow run smoke.yml`): the runner is the maintainer's
+# machine and is often off, and a push trigger would queue a job per push that
+# GitHub fails after about 24 hours with no runner, leaving red marks on main.
 #
 # Runner setup (Settings > Actions > Runners > New self-hosted runner), with
 # the label `uav-smoke`; the runner's user must be in the docker group and
 # have uid 1000 (the image's `ros` user), and the USB Docker data partition
 # must be mounted (docker-notes 38). The WinBoat VM must be stopped.
 #
-# NOT TESTED on a real runner as of 2026-11-23: the steps below were run by
-# hand through ci/in_container.sh; the workflow file itself has not run.
+# Ran green on the maintainer's runner on 2026-11-23 (run 45134386843).
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
 
 permissions:
   contents: read

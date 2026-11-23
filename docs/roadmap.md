@@ -68,7 +68,7 @@ A cell's starting belief = alpha * prior_LLM + (1 - alpha) * 0.5, converted to l
 
 ## CI scope
 
-Smoke test: 1 leader + 1 follower, ground-truth detector (no camera rendering, so no GPU), `replay` prior, 10-minute timeout; pass = reaches "target localized" or completes the sweep. **As built (session 15):** the arena starts empty, so the smoke script spawns the three session-8 targets and the checker fails a DONE with no finds; the full image (25 GB) cannot be built or pulled on a hosted runner (about 14 GB free), so the smoke test is a separate self-hosted job (manual dispatch and pushes to main, never pull requests) and the hosted job runs only build + unit tests in the stock `ros:jazzy` image. Plus unit tests for fusion and rasterization and a 3-seed eval-sim regression.
+Smoke test: 1 leader + 1 follower, ground-truth detector (no camera rendering, so no GPU), `replay` prior, 10-minute timeout; pass = reaches "target localized" or completes the sweep. **As built (session 15):** the arena starts empty, so the smoke script spawns the three session-8 targets and the checker fails a DONE with no finds; the full image (25 GB) cannot be built or pulled on a hosted runner (about 14 GB free), so the smoke test is a separate self-hosted job (manual dispatch only, never pull requests) and the hosted job runs only build + unit tests in the stock `ros:jazzy` image. Plus unit tests for fusion and rasterization and a 3-seed eval-sim regression.
 
 ## Milestones
 
