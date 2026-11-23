@@ -43,6 +43,19 @@
 
 ## Completed
 
+### `/verify` on the host (done 2026-11-23)
+
+**What:** Make `gstack-checks` green: a pregate policy and a runner that goes through the container.
+
+**Why:** The container check passed but the pregate per-file stage reported ENV (no `pytest` on the host) and `status` stayed NOT_READY.
+
+**Context:** `.gstack/pregate.json` (runner = `docker compose exec` pytest on `{files}`; lanes for `.github`, `ci`, `docker`, `skills` and the swarm launch file) and `src/uav_planning/test/test_ci_files.py` (6 tests). Package config files (`gimbal_nadir.parm`, `package.xml`, ...) are not mapped, so touching one gives `PREGATE_NO_LANE`: map it then. The policy is read from `origin/main`, so a change to it only counts after it lands. `gstack-checks trust` was run once for the two container commands.
+
+**Effort:** S
+**Priority:** P3
+
+**Done:** after the push, `gstack-checks run`: verify PASS, tests PASS; `status` READY_FOR_SHIP, not_covered none. The tests check took 0.1 s because the diff against `origin/main` held only docs; a mapped change runs the lane (6 tests, 2.8 s as a head policy).
+
 ### Register the self-hosted runner and run `smoke.yml` (done 2026-11-23)
 
 **What:** Register a self-hosted runner labelled `uav-smoke` and run `smoke.yml` once.
@@ -105,15 +118,3 @@
 
 **Effort:** S
 **Priority:** P3
-
-### `/verify` on the host
-
-**What:** Make `gstack-checks` green: a `.gstack/pregate.json` that maps the 8 touched files to tests and a runner that goes through the container, or declare the files uncoverable.
-
-**Why:** The declared container check passes (225 tests), but the pregate's per-file stage reports ENV (no `pytest` on the host) and `status` stays NOT_READY.
-
-**Context:** `CLAUDE.md` has the `gstack:verify:` line; planner-decisions, session 14 notes.
-
-**Effort:** S
-**Priority:** P3
-

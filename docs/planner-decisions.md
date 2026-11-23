@@ -1769,7 +1769,7 @@ At hover with OBS open (preview on) and not recording, RTF read 0.341, 0.351, 0.
 |---|---|---|
 | RTF with recording at 30 fps / 720p, and the encoder OBS used | no (the video was cut from the 60 fps recording) | before a re-record; docker-notes 63 |
 | A re-record without the grid patch, with the stats overlay | no | optional; only if the video is redone (TODOS.md, video view) |
-| `/verify`'s pregate stage (host runner, test lanes for 8 files) | no | TODOS.md |
+| `/verify`'s pregate stage (host runner, test lanes for 8 files) | done 2026-11-23, session 15 (`.gstack/pregate.json`, container runner) | TODOS.md, Completed |
 
 **Plan-level versus code.** Plan-level, by the user: GO, halos and markers both, the planner line, the README video. Code: only the `CLAUDE.md` `gstack:verify:` line. Documentation: this section, the README, the roadmap, the stack overview, docker-notes 63, TODOS, the next-session prompt.
 
@@ -1789,6 +1789,8 @@ Ran: the CI work (Dec 8 row), with `/verify` once mid-session. Code: `ci/smoke_t
 | 4 | `smoke.yml` on the self-hosted runner (GitHub run 45134386843) | 91 | 302 | 3 |
 
 Times are the checker's wall seconds. Runs 3 and 4 (a fresh `docker run` after a build) both start the sweep 60-65 s later than the dev container, so it repeats; cause not found (a cold container after the build is a guess). Not shown: `ci.yml` went green on GitHub (run 45134386862, 223 passed and 2 skipped in 80 s) and `smoke.yml` on the runner (run 4), but not a second sample of run 3, what a hosted runner's 4 vCPU would do to the sim (not needed, the mission is not hosted). Their home: `TODOS.md`, CI.
+
+**`/verify` made honest (2026-11-23).** `.gstack/pregate.json` routes the per-file stage through the container, with lanes for `.github`, `ci`, `docker`, `skills` and the swarm launch file, and `test_ci_files.py` (6 tests) guards what had no test: `smoke.yml` never runs for pull requests, `ci.yml` pins the Dockerfile's ArduPilot SHA, `smoke.yml` and compose share the DDS limit, `ci/` scripts are valid, and the `.skill` bundle matches `SKILL.md` (checked to fail when `SKILL.md` changes). The policy counts only from `origin/main`, so it took effect after the push; then `gstack-checks status` read READY_FOR_SHIP with not_covered none (the tests check ran in 0.1 s because only docs differed from main). Package config files are unmapped on purpose: touching one gives PREGATE_NO_LANE.
 
 **Not independently verified:** the checker's "RETRY" path (exit 3, relaunch) never triggered in 3 runs.
 

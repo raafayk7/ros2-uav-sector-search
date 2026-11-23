@@ -94,6 +94,8 @@ Run in the container (`source /usr/local/bin/entrypoint.sh` first in a non-inter
 <!-- gstack:verify: docker compose -f docker/docker-compose.yml exec -T ros2 bash -lc 'source /usr/local/bin/entrypoint.sh >/dev/null 2>&1; cd /workspaces/multi-agent-uavs && source install/setup.bash && python3 -m pytest src -q' -->
 The line above is what `/verify` runs: the project's tests inside the ros2 container, which must be up (the host has neither rclpy nor pytest).
 
+`/verify`'s per-file stage runs through the container too: `.gstack/pregate.json` (lanes for `.github`, `ci`, `docker`, `skills`, the swarm launch file; touching an unmapped file such as a `.parm` or `package.xml` gives PREGATE_NO_LANE, so map it) and `src/uav_planning/test/test_ci_files.py`.
+
 Skill source-of-truth is `skills/multi-agent-uavs/SKILL.md`. `.claude/skills/multi-agent-uavs` is a symlink to that directory so Claude Code picks it up automatically when run in this project. `skills/multi-agent-uavs.skill` is the packaged ZIP bundle for installing the same skill into Cowork — **after editing `SKILL.md`, run `skills/pack.sh` before committing** so the bundle stays in sync with the source (Claude Code reads the source directly, but anyone installing the skill from this repo's `.skill` file gets whatever the bundle contains, so a stale bundle silently ships an old skill). To make local Cowork sessions pick up edits to `SKILL.md` without re-installing on every change, replace the Cowork-installed skill directory with a symlink to this repo's `skills/multi-agent-uavs/` (one-time setup — see `docs/docker-notes.md` adjacent or the project README).
 
 ## How to work with Claude on this project
