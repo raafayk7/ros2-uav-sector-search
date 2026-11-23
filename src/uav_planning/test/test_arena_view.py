@@ -14,6 +14,21 @@ from uav_planning.ground_marker_node import moved_enough
 LAUNCH = Path(__file__).resolve().parents[1] / 'launch' / 'swarm.launch.py'
 
 
+def _has_gz_overlay():
+    try:
+        from ament_index_python.packages import get_package_share_directory
+        get_package_share_directory('ardupilot_gz_gazebo')
+        return True
+    except Exception:
+        return False
+
+
+# The runway world ships with upstream's ardupilot_gz overlay, which only the
+# full image has (CI's stock ROS image does not).
+needs_gz_overlay = pytest.mark.skipif(
+    not _has_gz_overlay(), reason='needs the ardupilot_gz overlay (full image)')
+
+
 @pytest.fixture(scope='module')
 def swarm():
     spec = importlib.util.spec_from_file_location('swarm_launch', LAUNCH)
@@ -42,6 +57,7 @@ def test_marker_model_is_static_and_visual_only(swarm):
     assert '<collision' not in sdf and '<inertial' not in sdf
 
 
+@needs_gz_overlay
 def test_world_with_arena_view_has_one_marker_per_drone(swarm):
     markers = [(f'ground_marker_iris_{i}', '1 0.8 0', i * 5, 0)
                for i in range(1, 5)]
@@ -51,6 +67,7 @@ def test_world_with_arena_view_has_one_marker_per_drone(swarm):
     assert text.count('<model name="arena_view">') == 1
 
 
+@needs_gz_overlay
 def test_world_without_arena_view_has_no_markers(swarm):
     markers = [('ground_marker_iris_1', '1 0.8 0', 0, 0)]
     text = swarm._world('0.002', False, markers).read_text()

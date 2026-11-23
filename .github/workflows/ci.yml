@@ -1,0 +1,72 @@
+name: ci
+
+# Tier 1: runs on every push and pull request on a GitHub-hosted runner.
+#
+# Why the stock ros:jazzy image and not docker/Dockerfile: that image is about
+# 25 GB (a SITL build, a Gazebo stack, torch) and a hosted runner has about
+# 14 GB of free disk, so it cannot be built or pulled there. What this job
+# checks is the ROS-free library plus the ROS-light tests, which need ROS 2
+# Jazzy and a few message packages. It never starts Gazebo or SITL, so a green
+# run says the code builds and the tests pass, not that anything flew.
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # Keep equal to ARG ARDUPILOT_REF in docker/Dockerfile. ardupilot_msgs lives
+  # in the ArduPilot repo and is not an apt package; it is message definitions
+  # only, so a sparse checkout of one directory builds in seconds.
+  ARDUPILOT_REF: ddba3b490eaec04dafa3a12b45b7527aef0d0341
+
+jobs:
+  unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container:
+      image: ros:jazzy
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build and test tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git \
+            python3-colcon-common-extensions \
+            python3-pytest \
+            python3-numpy \
+            ros-jazzy-vision-msgs \
+            ros-jazzy-geographic-msgs \
+            ros-jazzy-ros-gz-interfaces
+
+      - name: Build ardupilot_msgs at the pinned commit
+        shell: bash
+        run: |
+          mkdir -p /opt/ap_msgs_ws/src && cd /opt/ap_msgs_ws/src
+          git init -q ardupilot && cd ardupilot
+          git remote add origin https://github.com/ArduPilot/ardupilot.git
+          git sparse-checkout set Tools/ros2/ardupilot_msgs
+          git fetch -q --depth 1 --filter=blob:none origin "$ARDUPILOT_REF"
+          git checkout -q FETCH_HEAD
+          cd /opt/ap_msgs_ws
+          source /opt/ros/jazzy/setup.bash
+          colcon build --packages-select ardupilot_msgs
+
+      - name: Build workspace
+        shell: bash
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          source /opt/ap_msgs_ws/install/setup.bash
+          colcon build --symlink-install
+
+      - name: Unit tests
+        shell: bash
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          source /opt/ap_msgs_ws/install/setup.bash
+          source install/setup.bash
+          python3 -m pytest src -q -rsf
