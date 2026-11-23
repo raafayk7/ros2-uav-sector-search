@@ -28,6 +28,30 @@
 **Priority:** P2
 **Depends on:** 2D eval sim
 
+## CI and image
+
+### Look at the Gazebo window on the rebuilt image
+
+**What:** Run `swarm.launch.py gui:=true arena_view:=true` once on `multi-agent-uavs:jazzy` (after a dev-container recreate) and check the window opens and renders.
+
+**Why:** The 2026-11-23 rebuild only changed setuptools and was tested headless (colcon, 231 tests, the full smoke mission), so nothing GUI-side was exercised.
+
+**Context:** Do it at the start of the next video or showcase session; the user watches the window, so ask before restarting a sim. The old image is `multi-agent-uavs:jazzy-prev` if it ever fails.
+
+**Effort:** S
+**Priority:** P3
+
+### Exercise the smoke retry path and explain the slow cold start
+
+**What:** (a) Force `ci/smoke_check.py` exit 3 (for example `STALL=1 ci/smoke_test.sh`) to watch the relaunch run end to end. (b) Find why the sweep starts about 65 s later after a fresh `docker run` than in the dev container (91 s against 26 s, 3 of 3 fresh runs).
+
+**Why:** The relaunch for the silent `/clock` start (docker-notes 33) has never fired in 5 smoke runs, so it is untested shell; the late start is inside the 600 s limit but unexplained.
+
+**Context:** `ci/smoke_test.sh`, docker-notes 66, planner-decisions session 15 notes. Do (a) the first time a smoke run needs a retry or fails on the flake; (b) only if it starts to matter (a timeout, or a Gazebo showcase run that is slow from a fresh container).
+
+**Effort:** S
+**Priority:** P3
+
 ## Completed
 
 ### Fix the setuptools mix in the Dockerfile (done 2026-11-23)
