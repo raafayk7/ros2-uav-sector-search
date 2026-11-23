@@ -28,6 +28,31 @@
 **Priority:** P2
 **Depends on:** 2D eval sim
 
+## CI
+
+### Run both workflows on GitHub once
+
+**What:** Push, watch `ci.yml` (hosted) go green, then register a self-hosted runner labelled `uav-smoke` and dispatch `smoke.yml` once.
+
+**Why:** Session 15 ran every step by hand (the hosted steps in a stock `ros:jazzy` container, the smoke steps through the same `docker run` line the workflow uses), but neither workflow file has run on GitHub, so syntax, permissions and runner setup are untested.
+
+**Context:** `.github/workflows/ci.yml`, `smoke.yml`, `ci/`. The runner's user needs the docker group, uid 1000, the USB data partition mounted and WinBoat stopped. `smoke.yml` must never gain a `pull_request` trigger (a self-hosted runner on a public repo runs a fork's code).
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** the user's yes to push
+
+### Fix the setuptools mix in the Dockerfile
+
+**What:** Make the image end with only apt's setuptools 68.1.2 in `/usr/lib/python3/dist-packages`, with nothing in `/usr/local`.
+
+**Why:** A container made from the image had 78.1.0 files with an 84.2.1 record in `/usr/local`, and `colcon build --symlink-install` failed with "option --uninstall not recognized" until `pip3 uninstall setuptools` was run twice (docker-notes 58, 64). `ci/in_container.sh` carries the workaround.
+
+**Context:** The Dockerfile's `pip install "setuptools<80"` after the torch/ultralytics layer is not enough on its own. Needs a rebuild (about 60 min, USB data partition), so batch it with the next image change.
+
+**Effort:** S
+**Priority:** P3
+
 ## Completed
 
 ### Repeated frames over-count evidence (done 2026-11-18, D40)

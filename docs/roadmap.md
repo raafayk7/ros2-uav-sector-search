@@ -33,7 +33,7 @@ Closest prior pattern to cite, not hide: "Bootstrapped LLM Semantics for Context
 | Mission | state machine (D41): `mission_node` in `uav_planning`. WAITING -> SEARCHING -> DONE or TIMED_OUT; planners launch disabled and the mission enables them; ends when the sweep is complete and every unconfirmed sector is below 0.5 for 30 s (D14), or after 600 sim-s, then disables the planners (D29 hold) and publishes a latched `/mission_report` (finds with drone and time from `belief_map_node`'s `/confirmed_finds`) | built and flown 2026-11-20 (session 11): one cold mission from one command (`swarm.launch.py leader:=true num_followers:=3`) ended DONE 31.3 s after the sweep with all 3 finds reported by the right drones; a second DONE run at another seed, and one TIMED_OUT run (`mission_timeout:=60`). Sim time from the followers' pose stamps: the report's `sim_s` matched Gazebo's clock to 0.08 s. **Return to find** (D41 amended, built and flown 2026-11-22, session 13): after DONE each finder flies to hover over its find, all three within 0.1 m 19 s later; latched `/mission_return`. **Follower timing** (D42): followers start with the sweep, as in this row's "planners enabled in SEARCHING" |
 | Language prior | `mission_prior_node` (contract below) | todo, after go/no-go |
 | Eval | 2D kinematic sim runner reusing the planner and fusion library | todo |
-| CI | GitHub Actions smoke test | todo |
+| CI | GitHub Actions: `ci.yml` (hosted, build + unit tests) and `smoke.yml` (self-hosted, the mission) | built and run by hand 2026-11-23 (session 15); neither workflow has run on GitHub yet |
 
 **Code structure rule:** the sector planner, its DGA and BLL baselines, fusion and region rasterization are a **pure Python library with no ROS dependency**, unit-tested at the library level. ROS nodes are thin wrappers. This is what lets the 2D eval sim reuse the code unchanged.
 
@@ -68,7 +68,7 @@ A cell's starting belief = alpha * prior_LLM + (1 - alpha) * 0.5, converted to l
 
 ## CI scope
 
-Smoke test: 1 leader + 1 follower, ground-truth detector (no camera rendering, so no GPU), `replay` prior, 10-minute timeout; pass = reaches "target localized" or completes the sweep. Plus unit tests for fusion and rasterization and a 3-seed eval-sim regression.
+Smoke test: 1 leader + 1 follower, ground-truth detector (no camera rendering, so no GPU), `replay` prior, 10-minute timeout; pass = reaches "target localized" or completes the sweep. **As built (session 15):** the arena starts empty, so the smoke script spawns the three session-8 targets and the checker fails a DONE with no finds; the full image (25 GB) cannot be built or pulled on a hosted runner (about 14 GB free), so the smoke test is a separate self-hosted job (manual dispatch and pushes to main, never pull requests) and the hosted job runs only build + unit tests in the stock `ros:jazzy` image. Plus unit tests for fusion and rasterization and a 3-seed eval-sim regression.
 
 ## Milestones
 
@@ -80,7 +80,7 @@ Smoke test: 1 leader + 1 follower, ground-truth detector (no camera rendering, s
 | Nov 24 | Mission state machine end to end. Build order from Nov 16: camera to nadir (2 h timebox, done Nov 16) and sim speed (2 h timebox, done Nov 16: a 2 ms physics step doubles RTF, now the swarm default, D37); ground-truth detector (done Nov 17); sweep controller (done Nov 17, D39); `belief_map_node` + footprints (done Nov 18, D40); Nov 20 checkpoint (met Nov 18); state machine (designed Nov 20, D41; `mission_node` built and flown end to end on Nov 20, session 11: **met**, DONE from one command with a correct report) |
 | Nov 25-29 | Literature check on the narrowed contribution claim (scheduled 2026-11-18): closest prior work, whether the claim holds, rewording if needed, in `docs/literature-check.md`. Before the LLM layer and any README claim. **Done 2026-11-22** (session 12): novel only in the eval; the user accepted the rewording and the fourth eval arm the same day |
 | **Nov 30** | **Go/no-go:** leader + 3 followers complete a mission in Gazebo (ground-truth detector) from one command; video v1. **GO, 2026-11-22** (sessions 13-14): the mission part was met cold from one command, headless and with the Gazebo window, and video v1 exists (`docs/media/uav-v1.mp4`, 72 s, recorded with OBS from a run to DONE and AT_FINDS). Recording with OBS roughly halved the sim's speed (`docs/planner-decisions.md`, session 14 notes) |
-| Dec 8 | CI green |
+| Dec 8 | CI green. **Built 2026-11-23 (session 15), not yet green on GitHub:** `ci.yml` steps pass in a stock `ros:jazzy` container (223 passed, 2 skipped); the smoke steps passed twice by hand (dev container, and a clean checkout through the `docker run` line `smoke.yml` uses): mission DONE, 3 finds, 97 s and 317 s wall. Needs a push and a registered self-hosted runner (TODOS.md, CI) |
 | Dec 10 | Language prior drives a mission end to end |
 | Dec 20 | Results table over 20 scenarios x 4 conditions, 3 Gazebo showcase runs, video v2 |
 

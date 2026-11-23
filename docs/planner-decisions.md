@@ -1772,6 +1772,24 @@ At hover with OBS open (preview on) and not recording, RTF read 0.341, 0.351, 0.
 
 **Plan-level versus code.** Plan-level, by the user: GO, halos and markers both, the planner line, the README video. Code: only the `CLAUDE.md` `gstack:verify:` line. Documentation: this section, the README, the roadmap, the stack overview, docker-notes 63, TODOS, the next-session prompt.
 
+## Implementation notes (session 15, 2026-11-23)
+
+Ran: the CI work (Dec 8 row), with `/verify` once mid-session. Code: `ci/smoke_test.sh`, `ci/smoke_check.py`, `ci/spawn_targets.sh`, `ci/in_container.sh`, a test-skip marker in `test_arena_view.py`. CI configuration: `.github/workflows/ci.yml`, `smoke.yml`. Plan-level: none (D37-D42 and the stack are untouched). Docs: roadmap, CLAUDE.md, docker-notes 64-66, TODOS.md.
+
+**Decision with the user: two tiers.** The image is 25 GB and a hosted runner has about 14 GB free, so the mission test cannot run there. The user chose a self-hosted job (manual and on pushes to main, never pull requests) over a slim image or unit-tests-only. The hosted job runs build + unit tests in stock `ros:jazzy`.
+
+**A vacuous pass, caught.** The first smoke run ended `PASS: mission DONE, 0 find(s)`: the launch spawns no targets, the sweep emptied the map and the end rule closed the mission. The checker now needs at least one find and the script spawns the three session-8 targets. Result: DONE with 3 finds, one per target cell, with 1 follower. The sweep-only pass at the timeout (roadmap wording) has no finds requirement and is weaker.
+
+| Run | Where | Sweep started (s) | DONE (s) | Finds |
+|---|---|---|---|---|
+| 1 (no targets) | dev container | 22 | 94 | 0, vacuous |
+| 2 | dev container | 26 | 97 | 3 |
+| 3 | clean checkout, `docker run` as in `smoke.yml` | 86 | 317 | 3 |
+
+Times are the checker's wall seconds. Run 3 is slower with the sweep starting 60 s later; cause not found (a cold container after the build is a guess). Not shown: any run on GitHub, a second sample of run 3, what a hosted runner's 4 vCPU would do to the sim (not needed, the mission is not hosted). Their home: `TODOS.md`, CI.
+
+**Not independently verified:** the two workflow files themselves (YAML parses; steps run by hand); the checker's "RETRY" path (exit 3, relaunch) never triggered in 3 runs.
+
 ## NOT in scope
 
 - Potential-field layer: altitude layers cover the sim (D5); revisit if a same-altitude flight is ever needed.
