@@ -167,11 +167,11 @@
 **Priority:** P2
 **Depends on:** 2D eval sim, arena size
 
-### `anthropic` is not in the container image
+### The live provider is Claude-only and its package is not in the image
 
-**What:** Add `anthropic` to the Dockerfile's pip step at the next rebuild, or accept `pip install anthropic` in the container each time.
+**What:** The user will use Gemini (decided 2026-11-24). Session 18 writes a Gemini provider on Google's `google-genai` package behind the same `provider(clue, world)` interface in `core/live.py` (not LiteLLM: its PyPI package was compromised twice in 2026, and the key is what that malware took), then adds the package to the Dockerfile's pip step at the next rebuild or installs it in the container (pinned).
 
-**Why:** `LiveProvider` needs it; without it a live prior is a warning and a uniform map (docker-notes 67). Never used: no live call has been made.
+**Why:** `LiveProvider` calls the Anthropic SDK, which is not installed either; without a client a live prior is a warning and a uniform map (docker-notes 67). No live call has been made. Gemini 3.x ignores or discourages `temperature`, so none is sent there either.
 
 **Context:** `docker/Dockerfile` (pip block near line 362), `uav_mapping/core/live.py`. A rebuild is about 60 minutes; do not rebuild for this alone.
 

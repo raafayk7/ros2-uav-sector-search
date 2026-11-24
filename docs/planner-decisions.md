@@ -1884,7 +1884,7 @@ What this shows: the clue changed where a follower went first (iris_2 flew to th
 | Gap | In scope here? | Home |
 |---|---|---|
 | A real language model's output; the prompt's quality; the model's answer to the hut and mast clues | No (needs the user's `LLM_API_KEY`) | Session 18 |
-| `anthropic` is not installed in the container, so `LiveProvider` cannot create a client there | Yes, found, not fixed (a package in a 25 GB image) | `pip install anthropic` in the container in session 18, or an image rebuild; TODOS |
+| `LiveProvider` calls the Claude API and `anthropic` is not installed; the user will use Gemini (told 2026-11-24, after the work) | Found, not fixed (a package in a 25 GB image; a Gemini provider is a session 18 job) | Session 18: a `google-genai` provider, pinned, not LiteLLM (compromised twice in 2026); TODOS |
 | Frames dropped while waiting for the prior | Partly: unit-tested (in-process node), 0 dropped in all flights because replay is instant | A slow live call in session 18 |
 | The prior node dying, in a flight | Unit-tested as the timeout path, not flown | Session 18 |
 | Leader lane order | No (D50) | Eval sim, TODOS |
