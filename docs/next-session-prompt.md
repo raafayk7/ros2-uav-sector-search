@@ -1,63 +1,61 @@
-# Next-session prompt: wire the language prior and fly a clue (session 17)
+# Next-session prompt: the 2D eval sim and a real language model (session 18)
 
 Paste the block below to open the next session. Replace this file after each session.
 
 ## Where the plan stands
 
-**Session 16 (2026-11-24) settled the five open prior questions (D44-D48) and built the ROS-free library:** `uav_mapping/core/prior.py`, `core/landmarks.py`, `BeliefMap(start=...)`, `worlds/runway/` (8 invented landmarks, 5 hand-written recordings), 127 tests, 358 in total. Scope fully met. No sim ran, no language model was called, nothing uses the library yet. Nothing has been pushed since `origin/main` unless the user did it.
+**Session 17 (2026-11-24) met the Dec 10 row.** `swarm.launch.py leader:=true num_followers:=3 clue:="..."` starts `mission_prior_node`; `belief_map_node` waits for its latched `/mission_prior` (D49), then builds its map from it. One cold headless run each of no clue, the hut clue and the radio mast clue (misleading) ended DONE with all 3 finds (74.7, 74.0 and 72.8 sim-s), and the clue changed the first goal sectors. 382 tests. Not shown: a real language model's output (the `live` provider was unit-tested with a fake client and never called), any time effect (one run each, 40 m arena), leader lane order (moved here, D50). Nothing has been pushed since `origin/main` unless the user did it.
 
-**Sessions left to Dec 10: one (session 17).** At the current pace it lands before the end of November, so Dec 10 is on track with time to spare, and Dec 20 needs sessions 18-19.
+**Sessions left to Dec 20: two (18 and 19).**
 
-Open for the user, none blocking session 17:
+Open for the user, in the order session 18 needs them:
 
-- **The eval's recordings need a real language model.** Session 16's are hand-written and the eval refuses them (D48). Session 18 needs `LLM_API_KEY` set by the user, in their shell only, never committed. Choose the one `live` model then.
-- **Eval arena size** (session 18): the session 16 probe says a clue barely matters at 40 m, and that 80-160 m shows it.
+- **`LLM_API_KEY`**, set in the user's shell only, never committed, and the one `live` model to use (the roadmap allows one). The container also needs `pip install anthropic` (TODOS, docker-notes 67).
+- **Confirm the temperature correction.** The roadmap said temperature 0; current Claude models reject any `temperature`, so none is sent and repeatability comes from frozen recordings. If the user wants a provider that takes a temperature, say so before the key is used.
+- **Eval arena size.** Session 16's probe says a clue barely matters at 40 m and shows at 80-160 m.
 - Whether precision landing is scheduled or out of scope; the eval's optional thesis-timing arm (D42).
 
 | Session | Work | Milestone | Model | Why that model | Time |
 |---|---|---|---|---|---|
-| 1-16 (done 2026-11-07 to 11-24) | Datum through the go/no-go, video v1, CI green, prior library | Nov 10, 15, 20, 24, 30; Dec 8 | mixed | see git history | ~37 h |
-| **17 (this prompt)** | `mission_prior_node`, wire the prior into `belief_map_node` and `swarm.launch.py`, the `live` provider, first mission driven by a clue; explainer v2 if time allows | **Dec 10** | Sonnet | Wiring against a settled design; one small design choice, below | ~2-3 h |
-| 18 | 2D eval sim, arena size, run matrix, frozen live recordings | Dec 20 | Opus | Eval design and honest reporting | ~3 h |
+| 1-17 (done 2026-11-07 to 11-24) | Datum through the go/no-go, video v1, CI green, prior library, clue-driven mission | Nov 10, 15, 20, 24, 30; Dec 8, 10 | mixed | see git history | ~40 h |
+| **18 (this prompt)** | 2D eval sim, arena size, the first live call and frozen recordings, leader lane order (D50), run matrix | Dec 20 | Opus | Eval design and honest reporting | ~3 h |
 | 19 | 20 seeds x 4 conditions, results table, video v2, re-run the literature search | Dec 20 | Opus | Writing what the numbers do and do not show | ~2-3 h |
 
 ---
 
-Continuing the multi-agent UAV ROS 2 rebuild: session 17. The prior library is built and tested. This session makes a typed clue change where the drones go, in Gazebo, from one command.
+Continuing the multi-agent UAV ROS 2 rebuild: session 18. A clue now drives a Gazebo mission with replay. This session builds the eval that measures what a wrong clue costs, and makes the first real language-model call.
 
 ## Read first
 
-- `docs/planner-decisions.md`: the session 16 notes (D44-D48, probe limits, what is not shown), D41 and D42.
-- `uav_mapping/core/prior.py` (`make_prior`, `load_replay`), `core/landmarks.py` (`load_world`), `BeliefMap(start=...)` in `core/belief.py`.
-- `uav_mapping/belief_map_node.py`, `uav_planning/launch/swarm.launch.py`, `ci/smoke_test.sh`.
-- `docs/roadmap.md`: LLM contract, Mission timing.
+- `docs/planner-decisions.md`: the session 16 and 17 notes (D44-D50, the probe's limits, the three flown runs and what they do not show), D41, D42.
+- `docs/roadmap.md`: Eval design, LLM contract, Mission timing. `docs/literature-check.md` for the reworded claim ("What a wrong language-derived search prior costs, measured").
+- `docs/probes/prior_probe.py`: the 2D point-mass sim the eval grows from. `uav_mapping/core/prior.py`, `core/live.py`, `core/landmarks.py` (`wrong_landmarks`, `misleading_swap`).
+- `uav_mapping/mission_prior_node.py` (`record_to`), `docs/probes/prior_live_check.py`.
 
 ## Task
 
-1. **The wiring choice, with the user.** `BeliefMap` takes its start only when constructed, so the map must not fuse or publish before the prior is in. Recommendation to put to the user: `mission_prior_node` publishes one latched message; with a clue set, `belief_map_node` drops frames and stays silent until it arrives, then builds its map. `mission_node`'s WAITING already waits for `/heatmap` (D41), so the mission cannot start on a half-built map. An empty clue skips all of it and must be exactly today's behaviour. Decide what happens if the prior node dies (a timeout to uniform with a warning keeps "nothing here can stop a flight").
-2. **`mission_prior_node`** (in `uav_mapping`): parameters clue, world directory, provider (`replay` default), alpha; calls `make_prior`, logs every warning, publishes. It publishes the prior and nothing else (hard rule; extend `test_the_prior_code_cannot_reach_a_drone`).
-3. **`live` provider**: key only from `LLM_API_KEY`, temperature 0, the prompt built from the landmark file and bounds. Testable without a key; do not call it unless the user sets one. It also needs a way to save its output as a recording. Check that the chosen model still accepts a temperature setting.
-4. **Launch.** `swarm.launch.py clue:="One hiker, last seen near the hut."`, replay by default so no key is needed.
-5. **Fly it.** One cold run with the hut clue and one with the radio mast clue (the misleading twin), targets from `ci/spawn_targets.sh`. Show that the first goal sectors differ from a run without a clue, and that all runs end DONE with the finds. Expect little time difference at 40 m: session 16 says so, and one run each is not a measurement.
-6. **Leader lane order** (roadmap: high-prior lanes first) is not built. On 40 m it cannot pay off. Ask whether it stays in scope for Dec 10 or moves to the eval sim.
-7. Docs: roadmap Dec 10 row, decisions, session 17 notes, this file for session 18. Explainer v2 (`docs/explainer/pieces/drone-search-v1`, steps 10-13 become real) only if time allows.
+1. **The first live call, with the user.** Ask the user to set `LLM_API_KEY` in the shell that launches the container command and to name the model. Run `pip install anthropic` in the container. Check the model takes the request as built (no temperature; the provider asks with default sampling). Then run `mission_prior_node` alone (no sim) with `provider:=live llm_model:=... record_to=worlds/runway/recordings.json` for the hut and mast clues and read what the model returned before trusting it: regions on the right places, sensible radius, weight and confidence. One call each, show the cost. Never write the key to a file or a log.
+2. **Arena size**, with the user: 40 m shows little (session 16), 80-160 m shows it. The eval sim and the landmark file must match the grid (`World.check_grid`); an 80 m world means a new `worlds/<name>/` with its own landmarks and recordings.
+3. **The 2D eval sim**: point-mass drones, the camera footprint model, the same planner and belief code, faster than real time (grow `prior_probe.py`). Conditions: uniform, accurate clue, misleading (D47), misleading with negative evidence off (`BeliefParams.p_miss = 0.5`). Strict mode (`make_prior(strict=True)`, `load_replay(require_live=True)`): no hand-written recording may reach a result. Report time to first find, time to all found with the censor count, coverage at timeout, and how often the regions covered each target; not time to DONE.
+4. **Leader lane order** (D50): high-prior lanes first in `core/sweep.py`, with the coverage guarantee kept (every lane flown whatever the prior). Build it in the eval sim first; Gazebo only if time allows.
+5. **Run matrix**: pilot a few seeds per condition to check the harness and the cost before the full 20 x 4 (session 19).
+6. Docs: roadmap, decisions (session 18 notes), this file for session 19.
 
 ## Environment
 
-- Before any sim launch: `mount | grep docker-data` and `docker ps --filter name=WinBoat` (tell the user at once if it is up).
-- Session 16 recreated the dev container from the rebuilt image (setuptools 68.1.2 checked). Run `colcon build --symlink-install` after every Python edit (gotcha 32). Not checked since the rebuild: the Gazebo window (TODOS); ask before any GUI run.
+- Before any sim launch: `mount | grep docker-data` and `docker ps --filter name=WinBoat` (tell the user at once if it is up). The 2D eval needs no sim.
+- Run `colcon build --symlink-install` after every Python edit (gotcha 32). A cold start with no ROS `/clock` happens (docker-notes 33, 68): `docker compose restart ros2` and launch again.
 - Tests: `python3 -m pytest src` in the container (`source /usr/local/bin/entrypoint.sh` first); with a sim up, `ROS_DOMAIN_ID=77`.
-- `.gstack/pregate.json` gained `worlds/**` and `uav_mapping/package.xml` lanes; they count only once on `origin/main`, so until a push `/verify` says "tests UNMAPPED" for them.
-- One four-drone run holds about 30 DDS participants (gotcha 61); one more node is one more.
+- `.gstack/pregate.json` has `worlds/**` and `uav_mapping/package.xml` lanes; they count only once on `origin/main`, so until a push `/verify` says "tests UNMAPPED" for them.
 - The smoke runner is off between sessions (`cd ~/actions-runner && ./run.sh`, then `gh workflow run smoke.yml`).
 - Commit on `main` after each working sub-task. Do not push without asking.
 
 ## Done means
 
-A mission launched with a clue flies to the clue's sectors first and ends DONE from one command, with replay and no key; without a clue it behaves as today. The Dec 10 row is updated. Say plainly which changes are code, which are plan-level decisions and which are documentation. For each "not shown" gap, say whether it was in scope and where it now lives.
+A pilot of the eval runs end to end on frozen live recordings with no hand-written one anywhere in a result, the arena size is decided and recorded, and the harness cost is known. Say plainly which changes are code, which are plan-level decisions and which are documentation. For each "not shown" gap, say whether it was in scope and where it now lives.
 
 ## Working agreements
 
 - The user has high-level ROS understanding, not deep. Explain new terms in one paragraph the first time.
-- Settled decisions stay settled (stack, D37-D48). The contribution claim changes only with the user's yes.
+- Settled decisions stay settled (stack, D37-D50). The contribution claim changes only with the user's yes.
 - Do not push without asking.

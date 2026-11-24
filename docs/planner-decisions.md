@@ -4,7 +4,7 @@ Review target (fixed): the follower planner section of `docs/roadmap.md`, scoped
 
 ## Decisions at a glance
 
-Status: decided. The language prior's questions are settled and its ROS-free library built and tested as of 2026-11-24 (session 16, D44-D48; not wired or flown). `mission_node` is built and flew two whole missions to DONE from one command on 2026-11-20 (session 11, two detector seeds), plus one TIMED_OUT run. The mission state machine was designed (D41) and its ROS-free core built and tested the same day (session 10); a leader and 3 followers found all 3 targets in two cold runs. `belief_map_node` and a leader role in the swarm launch are built as of 2026-11-18 (session 9, D40), and one follower completed the Nov 20 search loop in two cold runs. The leader's sweep controller is built and flown as of 2026-11-17 (session 8, D39). T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07. T3 (node) and T4 (arm helper, stub map) are built and flown as of 2026-11-08: one follower in headless SITL reaches the best stub sector and reports ARRIVED, and disabling holds it. T5 (swarm launch) is built and flown as of 2026-11-12: three followers each hold a different stub peak. Full reasoning is in the ledger below.
+Status: decided. The language prior's questions are settled, its ROS-free library built, and a clue drives a mission as of 2026-11-24 (sessions 16-17, D44-D50; replay flown with a clue, the `live` provider never called). `mission_node` is built and flew two whole missions to DONE from one command on 2026-11-20 (session 11, two detector seeds), plus one TIMED_OUT run. The mission state machine was designed (D41) and its ROS-free core built and tested the same day (session 10); a leader and 3 followers found all 3 targets in two cold runs. `belief_map_node` and a leader role in the swarm launch are built as of 2026-11-18 (session 9, D40), and one follower completed the Nov 20 search loop in two cold runs. The leader's sweep controller is built and flown as of 2026-11-17 (session 8, D39). T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07. T3 (node) and T4 (arm helper, stub map) are built and flown as of 2026-11-08: one follower in headless SITL reaches the best stub sector and reports ARRIVED, and disabling holds it. T5 (swarm launch) is built and flown as of 2026-11-12: three followers each hold a different stub peak. Full reasoning is in the ledger below.
 
 | Topic | Decision | Ref |
 |---|---|---|
@@ -35,6 +35,8 @@ Status: decided. The language prior's questions are settled and its ROS-free lib
 | Clue: starting belief | Raise only: `0.5 + 0.5 x alpha x u`, alpha 0.5 (cap 0.7), u = weight x confidence x overlap; cells in no region stay unknown (0.5), so a uniform prior is exactly the map without one | D45 |
 | Clue: several targets | Flat list, one region per place; overlaps take the maximum; nothing normalized; head counts ignored | D46 |
 | Clue: misleading | The accurate clue with every target's landmark swapped, at random by seed, for one whose surroundings leave every target's cell and its 8 neighbours unraised; judged on landmark geometry before any LLM call; no valid swap = redraw the targets for all arms | D47 |
+| Clue: wiring | `mission_prior_node` publishes one latched `/mission_prior` JSON; with a clue `belief_map_node` drops frames and publishes no `/heatmap` until it arrives, then builds its map from it; after `prior_timeout` (60 wall-s) it builds uniform with a warning; a prior that fails still publishes (uniform, `failed`); no clue = today's map built at once | D49 |
+| Clue: leader lane order | Not built for Dec 10; moves to the eval sim, where an arena large enough to show an effect exists | D50 |
 | Clue: replay | Exact match on world, clue text (case and spacing aside) and landmark fingerprint; otherwise uniform with a warning in a mission, an error in the eval; recordings say `live` or `hand-written` and the eval refuses the latter | D48 |
 | Milestone map | New stub publisher, 8x8 at 5 m, multiple peaks | D19 |
 | Camera | Required before footprints: gimbal to nadir, proven with the marker test, 2 h timebox | D30 |
@@ -1851,6 +1853,47 @@ The outside level was not on the open list. The roadmap fixed alpha without sayi
 | Arena size for the eval | No, evidence only | Session 18 |
 
 **Plan-level versus code.** Plan-level, by the user: D44-D48. Code: everything under "What was built", plus `python3-yaml` in `package.xml` and `ci.yml`, and `worlds/**` in `.gstack/pregate.json` (counts only once pushed). Documentation: this section, the decisions table, History lines on D18 and D31, the roadmap, README, stack overview, CLAUDE.md, the skill, TODOS, the probes README and the session 17 prompt.
+
+## Implementation notes (session 17, 2026-11-24)
+
+Ran: the wiring choice put to the user (D49, D50), then `mission_prior_node`, the `live` provider, the launch arguments, 24 new tests (382 in all), and three cold headless runs of `swarm.launch.py leader:=true num_followers:=3 detector_seed:=7` with the three targets from `ci/spawn_targets.sh`.
+
+**D49 and D50 (decided 2026-11-24 by the user, on my recommendation).**
+
+| | Question | Decision | Rejected |
+|---|---|---|---|
+| D49 | How the starting belief reaches the map, and a dead prior node | One latched message; the map is silent until it arrives; uniform with a warning after 60 wall-s | Fail hard on timeout (no silent uniform, but a dead node would stop a flight); compute inside `belief_map_node` (no node, but the prior code moves into the map's owner and the hard-rule test loses its boundary) |
+| D50 | Leader lane order (high-prior lanes first) | Out of Dec 10; built in the eval sim (session 18) | Keep in session 17 (an hour, and a 40 m Gazebo run cannot show it working) |
+
+Details decided while writing, not asked: the message is JSON (`start` as 8x8 floats, `failed`, `warnings`, `regions`, `clue`, `provider`) like `/confirmed_finds`, not an `OccupancyGrid`, whose int8 values would round the start; a prior that cannot be built (no recording, no key, invalid twice, world file does not match the grid, unknown provider) is published as a uniform prior marked `failed`, so the map starts at once instead of waiting out the timeout; a missing key or missing client library is one attempt, not a retry (`ProviderUnavailable`); an unreadable message or one arriving after the map was built is warned about and ignored or flown uniform.
+
+**The roadmap said temperature 0. Current Claude models do not accept it** (they take only their default sampling and answer a request that sets `temperature` with a 400; the API docs say every model from 2026-10-21). The `live` provider sends none. Repeatability comes from replay: a live answer is frozen with `record_to` / `save_recording` as a `live` recording, and the eval reads only those. The roadmap's line was changed to say so. A plan-level correction, not a decision; say so if you want something else (for example another provider that does take a temperature).
+
+**Flown (replay, headless, detector seed 7, one cold run each):**
+
+| Run | First goals once SEARCHING | Raised cells | Finds, sim-s | DONE, sim-s |
+|---|---|---|---|---|
+| no clue | (0,2) (2,2) (6,1), none raised | none | (6,1) 27.9, (1,2) 30.6, (4,5) 30.6 | 74.7 |
+| hut | (6,1) (0,2) (3,3); iris_2's is raised | 9 around the hut | (6,1) 25.8, (1,2) 28.2, (4,5) 33.2 | 74.0 |
+| radio mast | (7,7) (1,2) (6,1); iris_2's is raised | 4 at the NE corner | (1,2) 25.2, (4,5) 33.9, (6,1) 42.0 | 72.8 |
+
+What this shows: the clue changed where a follower went first (iris_2 flew to the hut sector in one run and to the mast corner, which holds no target, in the other), all three missions ended DONE with the 3 finds, and with a clue the map was built from the prior before any frame arrived (0 frames dropped). What it does not show: a time effect. Last find 30.6 / 33.2 / 42.0 sim-s fits "a wrong clue costs time", but it is one run each, followers start with the sweep so the leader's map already steers two of the three first goals, and the 40 m arena is the one session 16 says shows little. The hut run's iris_2 goal was also the cell the blue target sits in, so a clue near a target and a baseline that finds it anyway look alike on this arena.
+
+**Not shown, and where each lives.**
+
+| Gap | In scope here? | Home |
+|---|---|---|
+| A real language model's output; the prompt's quality; the model's answer to the hut and mast clues | No (needs the user's `LLM_API_KEY`) | Session 18 |
+| `anthropic` is not installed in the container, so `LiveProvider` cannot create a client there | Yes, found, not fixed (a package in a 25 GB image) | `pip install anthropic` in the container in session 18, or an image rebuild; TODOS |
+| Frames dropped while waiting for the prior | Partly: unit-tested (in-process node), 0 dropped in all flights because replay is instant | A slow live call in session 18 |
+| The prior node dying, in a flight | Unit-tested as the timeout path, not flown | Session 18 |
+| Leader lane order | No (D50) | Eval sim, TODOS |
+| A time effect of a clue, accurate or misleading | No | Session 18 eval |
+| D46 and D47 in a mission | No | Session 18 eval |
+
+One of four cold starts this session had no ROS `/clock` (gotcha 33): `wait_for_clock` timed out at 180 s and the launch shut down before any project node started. Restart and relaunch, as documented; it was not the new code (the prior and map nodes start after that gate).
+
+**Plan-level versus code.** Plan-level, by the user: D49, D50. Plan-level correction, not yet confirmed: no temperature (above). Code: `core/live.py`, `core/prior.py` additions (`prior_message`, `read_prior_message`, `uniform_prior`, `save_recording`, `ProviderUnavailable`), `mission_prior_node.py`, the `belief_map_node` wait, `swarm.launch.py` arguments, `test_prior_wiring.py`, `docs/probes/prior_live_check.py`. Documentation: this section, the table rows, the roadmap, README, stack overview, CLAUDE.md, the skill, TODOS, docker-notes 67-68 and the session 18 prompt.
 
 ## NOT in scope
 

@@ -104,7 +104,7 @@ Earlier milestones, still true: one follower flies to a sector and reports `ARRI
 
 **Not done yet:**
 
-- **Language clue.** The library that turns a recorded clue into a starting map is built and tested (`uav_mapping/core/prior.py`, `worlds/`), but no node uses it, no language model has been called (the recordings are hand-written) and no mission has flown on a clue.
+- **Language clue.** `swarm.launch.py leader:=true clue:="..."` turns a recorded clue into a starting map (`uav_mapping/core/prior.py`, `worlds/`) through `mission_prior_node`, and three headless missions (no clue, a clue at the hut, a misleading clue at the radio mast) ended DONE with all 3 finds, the clue changing where the first follower went. No language model has been called yet (the recordings are hand-written and the `live` provider is untested against a real model), and one run each measures nothing about time.
 - **Perception.** YOLO26 is a stretch goal; the noisy ground-truth detector stands in.
 - **Landing.** Precision landing (colour masking + PID in the original) is not rebuilt and is in no milestone; a find ends in a hover.
 - **CI.** Two GitHub Actions workflows (`.github/workflows/`): unit tests on a hosted runner, and the mission as a smoke test on a self-hosted runner (the 25 GB image does not fit a hosted one). Both are green on GitHub: the unit job, and the smoke test on a self-hosted runner, which flew a full mission and found all three targets.

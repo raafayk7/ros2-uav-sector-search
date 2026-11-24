@@ -46,14 +46,17 @@ stacks on.
 - **CI (2026-11-23), green:** unit tests on a hosted runner, and the mission
   as a smoke test on a self-hosted runner on the user's machine (`ci/`; the
   25 GB image does not fit a hosted one): a finished mission with 3 finds.
-- **Built, not yet used (2026-11-24):** the library behind the language prior
-  (`uav_mapping/core/prior.py`, `landmarks.py`, `worlds/runway/`): a recorded
-  clue becomes regions, then a starting belief for the map. No node, no
-  language model call and no flight yet.
-- **Next:** wiring the language prior (the roadmap's Dec 10 milestone). The Nov 30 go/no-go is a GO: video v1 is in
+- **Built and flown with replay (2026-11-24):** the language prior
+  (`uav_mapping/core/prior.py`, `landmarks.py`, `worlds/runway/`, and
+  `mission_prior_node`): a recorded clue becomes regions, then a starting
+  belief that `belief_map_node` waits for before it publishes a map. Three
+  headless missions ended DONE (no clue, accurate, misleading). A `live`
+  provider exists but has never called a model.
+- **Next:** the 2D eval sim, a real language model's recordings and the
+  results (sessions 18-19, Dec 20). The Nov 30 go/no-go is a GO: video v1 is in
   `docs/media/`.
-- **Not built:** the language prior's node, YOLO (stretch) and precision landing (in
-  no milestone).
+- **Not built:** leader lane order (eval sim), YOLO (stretch) and precision
+  landing (in no milestone).
 
 ---
 

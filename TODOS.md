@@ -154,3 +154,26 @@
 
 **Effort:** S
 **Priority:** P3
+
+### Leader lane order: high-prior lanes first
+
+**What:** Order the leader's sweep lanes so those through high-prior cells are flown first (roadmap, Mission timing). Not built; D50 moved it out of Dec 10.
+
+**Why:** It is the only part of the clue that helps the leader. On the 40 m Gazebo arena it cannot pay off (a sweep is about 60 s and the clue barely matters, session 16 probe); the eval sim's larger arena can show it.
+
+**Context:** `uav_planning/core/sweep.py` plans lanes from `camera_info`; the coverage guarantee (every lane flown whatever the prior says) must stay. The prior arrives on `/mission_prior` (D49).
+
+**Effort:** M
+**Priority:** P2
+**Depends on:** 2D eval sim, arena size
+
+### `anthropic` is not in the container image
+
+**What:** Add `anthropic` to the Dockerfile's pip step at the next rebuild, or accept `pip install anthropic` in the container each time.
+
+**Why:** `LiveProvider` needs it; without it a live prior is a warning and a uniform map (docker-notes 67). Never used: no live call has been made.
+
+**Context:** `docker/Dockerfile` (pip block near line 362), `uav_mapping/core/live.py`. A rebuild is about 60 minutes; do not rebuild for this alone.
+
+**Effort:** S
+**Priority:** P3
