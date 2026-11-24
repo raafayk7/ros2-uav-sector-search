@@ -23,7 +23,7 @@ Session 12, 2026-11-22. No sim. This checks the roadmap's "Contribution claim" a
 
 Built and flown (D39-D41): a leader flies a full lawnmower sweep. One `belief_map_node` fuses every drone's detections and empty views into a log-odds grid with a per-look cap. Each follower runs the same rule on its own: fly to the highest-value open sector on that map, where sectors peers already hold are blocked, with a stay margin (`core/planner.py`, `choose_goal`). A target is confirmed after 3 consecutive frames by a follower over its sector. A mission node starts and ends the search.
 
-Not built: the LLM prior (`mission_prior_node`), the landmark file, the 2D eval sim, and every measurement in the eval.
+Not built when this was written (since 2026-11-24 the landmark file and a ROS-free prior library exist, not wired or flown, D44-D48): the LLM prior (`mission_prior_node`), the landmark file, the 2D eval sim, and every measurement in the eval.
 
 ## Link 1: natural-language incident report -> spatial prior
 

@@ -22,7 +22,7 @@
 
 **Why:** It was validated only on equal peaks, spiky or Gaussian. It will cross the arena for a 97% sector while ignoring a 90% sector next door, and language priors produce broad circles and capsules, where every cell in a region can tie.
 
-**Context:** Probes are described in `docs/planner-decisions.md` (R12). Do this before reporting any eval result. Start from the rule in `uav_planning/core/planner.py`.
+**Context:** Probes are described in `docs/planner-decisions.md` (R12). Do this before reporting any eval result. Start from the rule in `uav_planning/core/planner.py`. Session 16 (2026-11-24): `prior_probe.py` flew the rule on broad 8 m circles and it found the targets (0-1 of 41 missed per arm with negative evidence on), and area overlap (D44) makes edge cells rank below interior ones, so ties are fewer. No alternative rule was compared, so this stays open.
 
 **Effort:** S
 **Priority:** P2
@@ -77,7 +77,7 @@
 **Effort:** S
 **Priority:** P3
 
-**Done:** the step uninstalls pip's copy until 68.1.2 imports and fails the build otherwise. Fresh container: setuptools 68.1.2, `colcon build`, 231 tests, `import torch, ultralytics` all fine; `ci/in_container.sh` lost its workaround. The old image is `multi-agent-uavs:jazzy-prev` (remove with `docker rmi` once the new one has proven itself). Existing containers keep the old state until recreated.
+**Done:** the step uninstalls pip's copy until 68.1.2 imports and fails the build otherwise. Fresh container: setuptools 68.1.2, `colcon build`, 231 tests, `import torch, ultralytics` all fine; `ci/in_container.sh` lost its workaround. The old image is `multi-agent-uavs:jazzy-prev` (remove with `docker rmi` once the new one has proven itself). Existing containers keep the old state until recreated (the dev container was, on 2026-11-24: setuptools 68.1.2, `colcon build --symlink-install` fine).
 
 ### `/verify` on the host (done 2026-11-23)
 

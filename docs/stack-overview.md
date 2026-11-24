@@ -330,6 +330,21 @@ move it by at most a fixed amount (±0.85 log-odds, about 50 % to 70 %) per
 look, however many frames the camera takes. It stops a hovering drone, or one
 stuck false detection, from counting as dozens of independent sightings.
 
+**Prior / starting belief** — what the map says about a sector before any
+camera has looked. Without a clue that is "unknown" (counted as 50 %); a clue
+can raise some sectors to at most 75 %. Camera evidence then moves it as usual.
+
+**Rasterize** — turning a drawn shape into numbers on the grid. Here a circle
+or a capsule (a thick line with round ends) gives each sector the fraction of
+its area that the shape covers.
+
+**Replay provider** — answers a clue from outputs recorded earlier and
+committed to the repo, so no key or network is needed. The `live` provider
+(not built) asks a language model.
+
+**Negative evidence** — a camera view with no target still says something:
+the sectors it covered become less likely. This is what lets a wrong clue fade.
+
 **Confirmation** — the belief map's decision that a target is real: a
 follower within 2 m of a sector's centre sees it on 3 consecutive frames. The
 sector then publishes as 0 and is listed on `/confirmed_sectors` and

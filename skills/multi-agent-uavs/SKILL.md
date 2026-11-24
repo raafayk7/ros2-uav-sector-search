@@ -57,6 +57,7 @@ If the user asks about something on the "do not use" list, gently flag that the 
 │   ├── legacy-implementation-guide.docx
 │   └── assessment-ros2-migration.md
 ├── src/                                    # colcon workspace src/ — ROS 2 packages
+├── worlds/                                 # landmarks.yaml + recorded clue outputs per world
 ├── docker/                                 # Dockerfile + compose
 ├── .gitignore                              # excludes build/install/log/
 └── README.md
@@ -117,6 +118,7 @@ Decompose the system into the following nodes. Each runs as a separate ROS 2 pro
 | `perception_node` | one per drone | `/<robot>/camera/image_raw` | `/<robot>/detections` (`vision_msgs/Detection2DArray`) |
 | `localization_node` | one per drone | `/<robot>/navsat`, `/<robot>/odometry` | `/<robot>/pose` (`geometry_msgs/PoseStamped` in arena frame) |
 | `belief_map_node` | one, shared | every `/<robot>/detections` and `/<robot>/pose` (computes footprints itself) | `/heatmap` (`nav_msgs/OccupancyGrid`), `/confirmed_sectors` (`PoseArray`, latched), `/confirmed_finds` (String JSON: cell, drone, time; latched) |
+| `mission_prior_node` | one, **planned (session 17)** | the clue and `worlds/<name>/` (parameters) | the starting belief for `belief_map_node`, and nothing else (hard rule). Its ROS-free library exists: `core/prior.py` (D44-D48) |
 | `mission_node` | one (D41; built, flown to DONE 2026-11-20) | `/iris_1/sweep_status`, `/heatmap`, `/confirmed_finds`, each follower's `planner_status` and `pose` (sim stamps) | `/<robot>/planner_enable` per follower, `/mission_state` and `/mission_report` (latched) |
 | `leader_node` | legacy, one drone | own `/<robot>/detections`, own `/<robot>/pose` | `/heatmap`; replaced by `belief_map_node` in launches (D40), kept as the verified reference |
 | `follower_planner_node` | one per follower | `/heatmap`, peers' `/<robot>/pose` and `/<robot>/goal_sector` | `/ap/vN/cmd_gps_pose`, `/<robot>/goal_sector`, `/<robot>/planner_status`; obeys `/<robot>/planner_enable` |
