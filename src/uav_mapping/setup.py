@@ -35,6 +35,7 @@ setup(
         'console_scripts': [
             'leader_node = uav_mapping.leader_node:main',
             'belief_map_node = uav_mapping.belief_map_node:main',
+            'mission_prior_node = uav_mapping.mission_prior_node:main',
             'fake_detection_publisher = '
             'uav_mapping.fake_detection_publisher:main',
         ],

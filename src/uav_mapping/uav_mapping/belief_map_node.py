@@ -9,6 +9,8 @@ which stays as the verified single-drone reference.
 
   in   /<robot>/detections          Detection2DArray, one per drone in `robots`
   in   /<robot>/pose                PoseStamped, arena ENU (localization_node)
+  in   /mission_prior               String, JSON, latched (wait_for_prior only):
+                                    the language prior's starting belief
   in   /<robot>/camera/camera_info  optional: the sim-camera defaults are used
                                     until one arrives, so a follower without a
                                     bridged camera still has a footprint
@@ -20,6 +22,13 @@ which stays as the verified single-drone reference.
                                     order of finding (t in wall seconds),
                                     latched, sent with /confirmed_sectors;
                                     mission_node's report reads it (D41)
+
+With wait_for_prior (a clue was given) the map does not exist until the prior
+arrives: frames are dropped and nothing is published on /heatmap, so no mission
+can start on a half-built map (mission_node waits for /heatmap). If nothing
+arrives within prior_timeout wall-seconds the map is built uniform with a
+warning, so a dead prior node cannot stop a flight. Without a clue the map is
+built at once, exactly as before.
 
 Time: wall clock (use_sim_time false), like the detectors that drive it, so
 a look (D40) spans the same number of detector frames at any RTF, and the
@@ -45,6 +54,7 @@ from vision_msgs.msg import Detection2DArray
 
 from uav_mapping.core.belief import BeliefMap, BeliefParams, project_frame
 from uav_mapping.core.geometry import NADIR_QUAT, Camera, Grid
+from uav_mapping.core.prior import read_prior_message
 
 
 def _names(text: str):
@@ -69,6 +79,9 @@ class BeliefMapNode(Node):
         d('confirmed_topic', '/confirmed_sectors')
         d('finds_topic', '/confirmed_finds')
         d('arena_frame', 'arena')
+        d('wait_for_prior', False)            # True when a clue was given
+        d('prior_topic', '/mission_prior')
+        d('prior_timeout', 60.0)              # wall s, then fly uniform
         d('publish_period', 1.0)
         # Grid: must match the planners' and the sweep's (D39 defaults).
         d('resolution', 5.0)
@@ -118,7 +131,9 @@ class BeliefMapNode(Node):
             confirm_frames=int(g('confirm_frames')),
             arrival_radius=float(g('arrival_radius')),
             confirm_min_alt=float(g('confirm_min_alt')))
-        self.map = BeliefMap(self.grid, self.params)
+        self.map = None if g('wait_for_prior') else BeliefMap(self.grid,
+                                                              self.params)
+        self.dropped = 0
 
         self.pose = {r: None for r in self.robots}
         self.camera = {r: default_cam for r in self.robots}
@@ -141,18 +156,25 @@ class BeliefMapNode(Node):
                 CameraInfo, topic('camera_info_topic'),
                 lambda m, r=r: self._on_camera_info(r, m),
                 qos_profile_sensor_data)
+        if g('wait_for_prior'):
+            self.create_subscription(String, g('prior_topic'), self._on_prior,
+                                     latched)
+            self._prior_timer = self.create_timer(float(g('prior_timeout')),
+                                                  self._prior_timeout)
         self.heatmap_pub = self.create_publisher(
             OccupancyGrid, g('heatmap_topic'), latched)
         self.confirmed_pub = self.create_publisher(
             PoseArray, g('confirmed_topic'), latched)
         self.finds_pub = self.create_publisher(
             String, g('finds_topic'), latched)
-        self._publish_confirmed()
+        if self.map is not None:
+            self._publish_confirmed()
 
         self.create_timer(float(g('publish_period')), self._publish_heatmap)
         self.create_timer(30.0, self._report)
         self.get_logger().info(
-            f"belief_map_node up | robots={self.robots} "
+            f"belief_map_node up | {'waiting for the prior' if self.map is None else 'map built'} | "
+            f"robots={self.robots} "
             f"confirmers={sorted(self.confirmers)} | grid {self.grid.width}x"
             f"{self.grid.height} @ {self.grid.resolution} m | look cap "
             f"{self.params.look_cap:.2f} per {self.params.look_max:g} s, "
@@ -164,7 +186,38 @@ class BeliefMapNode(Node):
         self.camera[robot] = Camera(k[0], k[4], k[2], k[5],
                                     int(msg.width), int(msg.height))
 
+    def _build_map(self, start, why):
+        self.map = BeliefMap(self.grid, self.params, start=start)
+        self._prior_timer.cancel()
+        self.get_logger().info(f"map built ({why}); {self.dropped} frames "
+                               "dropped while waiting")
+        self._publish_confirmed()
+
+    def _on_prior(self, msg: String):
+        if self.map is not None:
+            self.get_logger().warn("a prior arrived after the map was built; "
+                                   "ignored")
+            return
+        try:
+            start, failed = read_prior_message(msg.data, self.grid)
+            self._build_map(start, 'uniform: the prior failed' if failed
+                            else 'from the prior')
+        except ValueError as e:
+            self.get_logger().warn(f"{e}; flying with a uniform prior")
+            self._build_map(None, 'uniform: unreadable prior')
+
+    def _prior_timeout(self):
+        if self.map is None:
+            self.get_logger().warn("no prior within the timeout; flying with "
+                                   "a uniform prior")
+            self._build_map(None, 'uniform: prior timed out')
+        else:
+            self._prior_timer.cancel()
+
     def _on_frame(self, robot, msg: Detection2DArray):
+        if self.map is None:
+            self.dropped += 1
+            return
         pose = self.pose[robot]
         if pose is None:
             self.get_logger().warn(f"{robot}: frame before pose; skipped",
@@ -192,6 +245,8 @@ class BeliefMapNode(Node):
 
     # ------------------------------------------------------------------
     def _publish_heatmap(self):
+        if self.map is None:
+            return      # waiting for the prior
         if all(p is None for p in self.pose.values()):
             return      # nothing observed yet: no all-unknown spam map
         grid = OccupancyGrid()
@@ -219,6 +274,8 @@ class BeliefMapNode(Node):
         self.finds_pub.publish(String(data=json.dumps(self.map.finds())))
 
     def _report(self):
+        if self.map is None:
+            return
         known = sum(v >= 0 for v in self.map.occupancy_data())
         self.get_logger().info(
             f"frames {self.frames} | known cells {known}/"

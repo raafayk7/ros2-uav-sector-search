@@ -56,6 +56,11 @@ class NoRecording(LookupError):
     """Replay has nothing recorded for this clue."""
 
 
+class ProviderUnavailable(RuntimeError):
+    """The provider cannot be asked at all (no key, no client library):
+    asking again cannot help, so make_prior does not retry."""
+
+
 # ---- Regions ----------------------------------------------------------------
 
 @dataclass(frozen=True)
@@ -284,7 +289,7 @@ def make_prior(clue: str, world: World, grid: Grid,
             regions, notes = _on_map(grid, parse_regions(provider(clue, world)))
             return Prior(starting_belief(rasterize(grid, regions), alpha),
                          tuple(regions), False, tuple(warnings + notes))
-        except NoRecording as e:              # asking again cannot help
+        except (NoRecording, ProviderUnavailable) as e:   # asking again cannot help
             error: Optional[Exception] = e
             warnings.append(str(e))
             break
@@ -293,9 +298,14 @@ def make_prior(clue: str, world: World, grid: Grid,
             warnings.append(f"attempt {attempt}: {type(e).__name__}: {e}")
     if strict:
         raise error
-    warnings.append('flying with a uniform prior')
+    return uniform_prior(grid, warnings)
+
+
+def uniform_prior(grid: Grid, warnings: Sequence[str] = ()) -> Prior:
+    """No information, with the reason: what a mission flies when the clue
+    cannot be turned into a prior."""
     return Prior(np.full((grid.height, grid.width), 0.5), (), True,
-                 tuple(warnings))
+                 (*warnings, 'flying with a uniform prior'))
 
 
 def _on_map(grid: Grid, regions: Sequence[Region]):
@@ -312,3 +322,66 @@ def _on_map(grid: Grid, regions: Sequence[Region]):
     if regions and not kept:
         raise PriorError("every region lies off the map")
     return kept, notes
+
+
+# ---- Prior -> belief map ----------------------------------------------------
+
+def _region_dict(r: Region) -> dict:
+    if isinstance(r, Circle):
+        return {'shape': 'circle', 'center': list(r.center), 'radius': r.radius,
+                'weight': r.weight, 'confidence': r.confidence}
+    return {'shape': 'capsule', 'start': list(r.start), 'end': list(r.end),
+            'radius': r.radius, 'weight': r.weight, 'confidence': r.confidence}
+
+
+def prior_message(prior: Prior, clue: str, provider: str) -> str:
+    """What mission_prior_node publishes: the starting belief and where it
+    came from, one JSON object. The map reads only ``start`` and ``failed``."""
+    return json.dumps({
+        'clue': clue, 'provider': provider, 'failed': prior.failed,
+        'warnings': list(prior.warnings),
+        'regions': [_region_dict(r) for r in prior.regions],
+        'start': prior.start.tolist()})
+
+
+def read_prior_message(text: str, grid: Grid) -> Tuple[np.ndarray, bool]:
+    """The starting belief and whether it is a failed (uniform) one, strictly.
+    Raises ValueError on anything else: the map then flies uniform, with a
+    warning, rather than trust a message it cannot read."""
+    try:
+        data = json.loads(text)
+        start = np.asarray(data['start'], dtype=float)
+        failed = bool(data['failed'])
+    except (TypeError, ValueError, KeyError) as e:
+        raise ValueError(f"unreadable prior message: {e!r}") from None
+    if start.shape != (grid.height, grid.width):
+        raise ValueError(f"prior is {start.shape}, grid is "
+                         f"{(grid.height, grid.width)}")
+    return start, failed
+
+
+# ---- Recordings from a live provider ----------------------------------------
+
+def live_recording(world: World, clue: str, model: str, output: str,
+                   date: str) -> Recording:
+    """A language model's output as a committed recording (D48)."""
+    return Recording(world.name, clue, world.fingerprint, 'live', model, date,
+                     output)
+
+
+def save_recording(path, rec: Recording) -> bool:
+    """Add ``rec`` to the recordings file, replacing one for the same world,
+    landmarks and clue. Returns True if it replaced one. The file is created
+    if missing and is read strictly first: a broken file is not overwritten."""
+    try:
+        with open(path, encoding='utf-8') as f:
+            have = parse_recordings(f.read())
+    except FileNotFoundError:
+        have = []
+    key = (rec.world, rec.landmarks, clue_key(rec.clue))
+    kept = [r for r in have if (r.world, r.landmarks, clue_key(r.clue)) != key]
+    out = {'recordings': [r._asdict() for r in kept + [rec]]}
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(out, f, indent=2, ensure_ascii=False)
+        f.write('\n')
+    return len(kept) != len(have)

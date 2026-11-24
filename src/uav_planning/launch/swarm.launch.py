@@ -62,6 +62,16 @@ Launch args:
   follower_y      followers' spawn y with a leader, m (default -5.0)
   detector_seed   ground-truth detector seed, drone i gets seed + i
                   (default -1: random)
+  clue            with a leader, the operator's clue (default empty = none):
+                  mission_prior_node turns it into a starting belief and
+                  belief_map_node waits for it (D44-D48, session 17)
+  prior_provider  replay (default, no key; committed recordings in worlds/) or
+                  live (the Claude API; key only from LLM_API_KEY)
+  prior_alpha     0.5 (cap 0.7)
+  prior_timeout   wall s the map waits for the prior before flying uniform
+  worlds_dir      where worlds/runway/ lives (container path by default)
+  llm_model       model name for prior_provider:=live
+  record_prior    live only: save the answer as a recording in this file
   mission         with a leader, run mission_node and start the planners
                   disabled (default true; ignored without a leader)
   mission_threshold, mission_hold   D14 end rule: every unconfirmed cell
@@ -112,6 +122,7 @@ from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 WORLD = 'runway'
 # physics step (s) -> extra SITL defaults file. Only these two are flown.
@@ -518,14 +529,36 @@ def _leader_actions(context, drones):
                 'seed': seed + i if seed >= 0 else -1,
                 'use_sim_time': False,
             }]))
+    clue = _arg(context, 'clue').strip()
     actions.append(Node(
         package='uav_mapping', executable='belief_map_node',
         name='belief_map_node', output='screen',
         parameters=[{
             'robots': ','.join(d.name for d in drones),
             'confirmers': ','.join(d.name for d in drones if d.role == 'follower'),
+            # With a clue the map waits for the prior; without one it is built
+            # at once, exactly as before.
+            'wait_for_prior': bool(clue),
+            'prior_timeout': float(_arg(context, 'prior_timeout')),
             'use_sim_time': False,
         }]))
+    if clue:
+        # ParameterValue(str): a bare launch value is read as YAML otherwise
+        # (docker-notes 51), and a clue is free text.
+        text = lambda name: ParameterValue(_arg(context, name), value_type=str)  # noqa: E731
+        actions.append(Node(
+            package='uav_mapping', executable='mission_prior_node',
+            name='mission_prior_node', output='screen',
+            parameters=[{
+                'clue': ParameterValue(clue, value_type=str),
+                'world': WORLD,
+                'worlds_dir': text('worlds_dir'),
+                'provider': text('prior_provider'),
+                'alpha': float(_arg(context, 'prior_alpha')),
+                'llm_model': text('llm_model'),
+                'record_to': text('record_prior'),
+                'use_sim_time': False,
+            }]))
     if _mission(context, drones):
         actions.append(Node(
             package='uav_planning', executable='mission_node',
@@ -583,6 +616,14 @@ def generate_launch_description():
         DeclareLaunchArgument('follower_y', default_value='-5.0'),
         DeclareLaunchArgument('detector_seed', default_value='-1'),
         DeclareLaunchArgument('mission', default_value='true'),
+        DeclareLaunchArgument('clue', default_value=''),
+        DeclareLaunchArgument('prior_provider', default_value='replay'),
+        DeclareLaunchArgument('prior_alpha', default_value='0.5'),
+        DeclareLaunchArgument('prior_timeout', default_value='60.0'),
+        DeclareLaunchArgument('worlds_dir',
+                              default_value='/workspaces/multi-agent-uavs/worlds'),
+        DeclareLaunchArgument('llm_model', default_value=''),
+        DeclareLaunchArgument('record_prior', default_value=''),
         DeclareLaunchArgument('mission_threshold', default_value='0.5'),
         DeclareLaunchArgument('mission_hold', default_value='30.0'),
         DeclareLaunchArgument('mission_timeout', default_value='600.0'),
