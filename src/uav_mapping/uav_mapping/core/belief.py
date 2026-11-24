@@ -1,11 +1,17 @@
 """The belief map: one posterior fused from every drone's camera (no ROS).
 
 Rules, all decided with the user (docs/planner-decisions.md, D31, D32, D13,
-D40):
+D40, D45):
 
 * Each cell holds the log-odds that it contains at least one target (D31).
   Cells are independent; values need not sum to 1. NaN = never observed,
   published as -1 (unknown), which the planner counts as 0.5 (D18).
+
+* Starting belief (D45). An optional grid of probabilities (core/prior.py)
+  that a cell's first evidence starts from, and that it publishes until then.
+  0.5 means no information: such a cell stays unknown, so a uniform start is
+  exactly the map without one. `logodds` stays NaN until a camera sees the
+  cell, so coverage never counts the prior as a look.
 
 * Per frame, as leader_node: a cell with a detection gets +score x l_occ, a
   cell in the footprint with none gets l_free, clamped to +-l_max.
@@ -111,13 +117,28 @@ class _Look:
 class BeliefMap:
     """The posterior, the looks that feed it, and confirmed sectors."""
 
-    def __init__(self, grid: Grid, params: BeliefParams = BeliefParams()):
+    def __init__(self, grid: Grid, params: BeliefParams = BeliefParams(),
+                 start: Optional[np.ndarray] = None):
+        """start: starting probabilities, [row, col]; None = no information."""
         self.grid = grid
         self.params = params
+        self.start_logodds = self._start_logodds(start)
         self.logodds = np.full((grid.height, grid.width), np.nan)
         self.confirmed: Dict[Cell, Tuple[str, float]] = {}   # cell -> (drone, t)
         self._looks: Dict[Tuple[str, Cell], _Look] = {}
         self._streak: Dict[str, Tuple[Cell, int]] = {}
+
+    def _start_logodds(self, start) -> np.ndarray:
+        shape = (self.grid.height, self.grid.width)
+        if start is None:
+            return np.zeros(shape)
+        start = np.asarray(start, dtype=float)
+        lo, hi = 1.0 - self.params.p_clamp, self.params.p_clamp
+        if start.shape != shape:
+            raise ValueError(f"start is {start.shape}, grid is {shape}")
+        if not np.all((start >= lo) & (start <= hi)):    # NaN fails too
+            raise ValueError(f"start must lie in [{lo:.2f}, {hi:.2f}]")
+        return np.log(start / (1.0 - start))
 
     # ------------------------------------------------------------------
     def update(self, drone: str, t: float, body_pos, frame: Frame,
@@ -150,7 +171,8 @@ class BeliefMap:
             delta, look.acc = acc - look.acc, acc
         col, row = cell
         cur = self.logodds[row, col]
-        cur = 0.0 if math.isnan(cur) else cur   # first observation: p = 0.5
+        if math.isnan(cur):     # first observation: from the start, 0.5 if none
+            cur = self.start_logodds[row, col]
         self.logodds[row, col] = min(max(cur + delta, -p.l_max), p.l_max)
 
     def _confirm_step(self, drone: str, t: float, body_pos,
@@ -183,10 +205,15 @@ class BeliefMap:
 
     # ------------------------------------------------------------------
     def probability(self, cell: Cell) -> Optional[float]:
-        """Posterior of one cell (None if never observed), suppression aside."""
+        """Belief in one cell, suppression aside. None if unknown: never
+        observed and no prior about it."""
         col, row = cell
         lo = self.logodds[row, col]
-        return None if math.isnan(lo) else 1.0 / (1.0 + math.exp(-lo))
+        if math.isnan(lo):
+            lo = self.start_logodds[row, col]
+            if lo == 0.0:
+                return None
+        return 1.0 / (1.0 + math.exp(-lo))
 
     def occupancy_data(self) -> List[int]:
         """Row-major OccupancyGrid data: 0-100, -1 unknown, 0 if confirmed."""

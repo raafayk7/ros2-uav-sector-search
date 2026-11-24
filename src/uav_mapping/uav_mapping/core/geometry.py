@@ -143,3 +143,30 @@ def cells_in_quad(grid: Grid, quad: Sequence[Point]) -> Set[Cell]:
             if point_in_quad(*grid.centre((col, row)), quad):
                 out.add((col, row))
     return out
+
+
+# ---- Areas on the grid (language prior, D44) -------------------------------
+
+def segment_distance(px, py, a: Point, b: Point):
+    """Distance from points (px, py) to the segment a-b. Arrays welcome; a
+    zero-length segment is the point a."""
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    length2 = dx * dx + dy * dy
+    if length2 == 0.0:
+        return np.hypot(px - a[0], py - a[1])
+    t = np.clip(((px - a[0]) * dx + (py - a[1]) * dy) / length2, 0.0, 1.0)
+    return np.hypot(px - (a[0] + t * dx), py - (a[1] + t * dy))
+
+
+def coverage(grid: Grid, inside, samples: int = 20) -> np.ndarray:
+    """Fraction of each cell's area that lies in a shape, as [row, col].
+
+    inside(x, y) takes coordinate arrays and returns a boolean array. Each
+    cell is tested on a samples x samples lattice (0.25 m apart on 5 m cells,
+    so a shape at least 1 m across is never skipped).
+    """
+    r, n = grid.resolution, samples
+    xs = grid.origin_x + (np.arange(grid.width * n) + 0.5) * r / n
+    ys = grid.origin_y + (np.arange(grid.height * n) + 0.5) * r / n
+    mask = np.asarray(inside(*np.meshgrid(xs, ys)), dtype=float)
+    return mask.reshape(grid.height, n, grid.width, n).mean(axis=(1, 3))

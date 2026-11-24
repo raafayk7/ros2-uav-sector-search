@@ -1,0 +1,49 @@
+{
+  "recordings": [
+    {
+      "world": "runway",
+      "clue": "One hiker, last seen near the hut.",
+      "landmarks": "d383a517053af920",
+      "source": "hand-written",
+      "model": "",
+      "date": "",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [34, 7], \"radius\": 6, \"weight\": 1.0, \"confidence\": 0.8}]}"
+    },
+    {
+      "world": "runway",
+      "clue": "One hiker, last seen near the radio mast.",
+      "landmarks": "d383a517053af920",
+      "source": "hand-written",
+      "model": "",
+      "date": "",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [37, 38], \"radius\": 6, \"weight\": 1.0, \"confidence\": 0.8}]}"
+    },
+    {
+      "world": "runway",
+      "clue": "Two hikers were at the footbridge; a third may be in the copse.",
+      "landmarks": "d383a517053af920",
+      "source": "hand-written",
+      "model": "",
+      "date": "",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [21, 29], \"radius\": 6, \"weight\": 1.0, \"confidence\": 0.8}, {\"shape\": \"circle\", \"center\": [8.5, 11.5], \"radius\": 5, \"weight\": 1.0, \"confidence\": 0.5}]}"
+    },
+    {
+      "world": "runway",
+      "clue": "A walker was following the creek east from the footbridge, or had already turned back to the hut.",
+      "landmarks": "d383a517053af920",
+      "source": "hand-written",
+      "model": "",
+      "date": "",
+      "output": "{\"regions\": [{\"shape\": \"capsule\", \"start\": [21, 29], \"end\": [40, 33], \"radius\": 4, \"weight\": 0.7, \"confidence\": 0.8}, {\"shape\": \"circle\", \"center\": [34, 7], \"radius\": 6, \"weight\": 0.3, \"confidence\": 0.8}]}"
+    },
+    {
+      "world": "runway",
+      "clue": "Nobody knows where they went.",
+      "landmarks": "d383a517053af920",
+      "source": "hand-written",
+      "model": "",
+      "date": "",
+      "output": "{\"regions\": []}"
+    }
+  ]
+}

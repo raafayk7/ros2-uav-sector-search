@@ -6,6 +6,8 @@
     "ci/**": ["src/uav_planning/test/test_ci_files.py"],
     "docker/**": ["src/uav_planning/test/test_ci_files.py"],
     "skills/**": ["src/uav_planning/test/test_ci_files.py"],
-    "src/uav_planning/launch/**": ["src/uav_planning/test/test_arena_view.py"]
+    "src/uav_planning/launch/**": ["src/uav_planning/test/test_arena_view.py"],
+    "src/uav_mapping/package.xml": ["src/uav_mapping/test/test_prior.py"],
+    "worlds/**": ["src/uav_mapping/test/test_prior.py"]
   }
 }

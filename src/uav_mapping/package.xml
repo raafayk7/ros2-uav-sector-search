@@ -26,6 +26,9 @@
   <!-- numpy is used for the pinhole back-projection / ground intersection. -->
   <exec_depend>python3-numpy</exec_depend>
 
+  <!-- The landmark file (core/landmarks.py). -->
+  <exec_depend>python3-yaml</exec_depend>
+
   <!-- Needed only to `ros2 launch` this package's launch files. -->
   <exec_depend>ros2launch</exec_depend>
 

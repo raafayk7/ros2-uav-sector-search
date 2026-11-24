@@ -1,0 +1,18 @@
+# Named places on the 40 x 40 m arena (arena ENU metres: x East, y North), the
+# only description of the ground the language model gets (uav_mapping/core/
+# landmarks.py). They are invented: nothing in the Gazebo world draws them.
+# The three usual targets (ci/spawn_targets.sh) lie near the copse, the
+# footbridge and the hut.
+#
+# Editing this file orphans every recording made against it, on purpose (D48).
+world: runway
+bounds: [0, 0, 40, 40]
+landmarks:
+  - {name: hut, type: point, points: [[34, 7]], description: a stone shelter}
+  - {name: footbridge, type: point, points: [[21, 29]], description: where the path crosses the creek}
+  - {name: creek, type: polyline, points: [[0, 31], [14, 28], [21, 29], [40, 33]], description: "shallow, runs west to east"}
+  - {name: copse, type: polygon, points: [[5, 9], [10, 8], [12, 13], [7, 15]], description: a few dense trees}
+  - {name: trailhead, type: point, points: [[3, 38]], description: parking and a signboard}
+  - {name: radio mast, type: point, points: [[37, 38]], description: on open ground}
+  - {name: well, type: point, points: [[36, 21]], description: capped and fenced}
+  - {name: quarry, type: polygon, points: [[18, 2], [24, 2], [24, 7], [18, 7]], description: disused and shallow}
