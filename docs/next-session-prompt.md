@@ -1,53 +1,63 @@
-# Next-session prompt: the language prior's design and ROS-free core (session 16)
+# Next-session prompt: wire the language prior and fly a clue (session 17)
 
 Paste the block below to open the next session. Replace this file after each session.
 
 ## Where the plan stands
 
-**Session 15 (2026-11-23) built the CI, and both jobs are green on GitHub.** `.github/workflows/ci.yml` (hosted: build + unit tests in stock `ros:jazzy`) passed on GitHub after the push (run 45134386862, 223 passed and 2 skipped, 80 s). `smoke.yml` (self-hosted: the mission, manual dispatch only, never pull requests) passed on the user's runner (`~/actions-runner`, label `uav-smoke`, run 45134386843: 225 tests, then mission DONE with 3 finds, about 6.5 min). By hand it had passed twice (dev container 97 s, clean checkout through `smoke.yml`'s `docker run` line 317 s), mission DONE with 3 finds both times. A first run passed with 0 finds because the arena starts empty; the script now spawns the targets and the checker needs a find. `python3 -m pytest src` in the container: 225 passed; `/verify` is honest: `gstack-checks status` reads READY_FOR_SHIP (container pytest for both the project check and the pregate stage; `.gstack/pregate.json`, `test_ci_files.py`).
+**Session 16 (2026-11-24) settled the five open prior questions (D44-D48) and built the ROS-free library:** `uav_mapping/core/prior.py`, `core/landmarks.py`, `BeliefMap(start=...)`, `worlds/runway/` (8 invented landmarks, 5 hand-written recordings), 127 tests, 358 in total. Scope fully met. No sim ran, no language model was called, nothing uses the library yet. Nothing has been pushed since `origin/main` unless the user did it.
 
-Open for the user, none blocking this session: keep the runner in mind (it only runs while `./run.sh` is up on the user's machine; dispatch the smoke job with `gh workflow run smoke.yml`); whether precision landing is scheduled or out of scope; the eval's optional thesis-timing arm (D42).
+**Sessions left to Dec 10: one (session 17).** At the current pace it lands before the end of November, so Dec 10 is on track with time to spare, and Dec 20 needs sessions 18-19.
+
+Open for the user, none blocking session 17:
+
+- **The eval's recordings need a real language model.** Session 16's are hand-written and the eval refuses them (D48). Session 18 needs `LLM_API_KEY` set by the user, in their shell only, never committed. Choose the one `live` model then.
+- **Eval arena size** (session 18): the session 16 probe says a clue barely matters at 40 m, and that 80-160 m shows it.
+- Whether precision landing is scheduled or out of scope; the eval's optional thesis-timing arm (D42).
 
 | Session | Work | Milestone | Model | Why that model | Time |
 |---|---|---|---|---|---|
-| 1-15 (done 2026-11-07 to 11-23) | Datum through the go/no-go, video v1, CI green (Dec 8 met) | Nov 10, 15, 20, 24, 30; Dec 8 | mixed | see git history | ~34 h |
-| **16 (this prompt)** | Settle the open prior questions, build the ROS-free prior library with tests (parse, rasterize, blend, replay provider, landmark file) | Dec 10 | Opus | Design with open questions: rasterization rule, multi-target clues, misleading-landmark rule, alpha | ~2-3 h |
-| 17 | `mission_prior_node`, wire the prior into `belief_map_node`, first mission driven by a clue; explainer v2 (`docs/explainer/pieces/drone-search-v1`, steps 10-13 become real) | Dec 10 | Sonnet | Wiring against a settled design | ~2 h |
-| 18-19 (estimate) | 2D eval sim, 20 seeds x 4 conditions, results table, video v2, re-run the literature search | Dec 20 | Opus | Eval design and honest reporting | ~4-5 h |
-
-Dec 10 is tight: two sessions in about two days. If session 16 spills, say so early; the roadmap's cut order puts the LLM layer last to go, after the CI and README GIF.
+| 1-16 (done 2026-11-07 to 11-24) | Datum through the go/no-go, video v1, CI green, prior library | Nov 10, 15, 20, 24, 30; Dec 8 | mixed | see git history | ~37 h |
+| **17 (this prompt)** | `mission_prior_node`, wire the prior into `belief_map_node` and `swarm.launch.py`, the `live` provider, first mission driven by a clue; explainer v2 if time allows | **Dec 10** | Sonnet | Wiring against a settled design; one small design choice, below | ~2-3 h |
+| 18 | 2D eval sim, arena size, run matrix, frozen live recordings | Dec 20 | Opus | Eval design and honest reporting | ~3 h |
+| 19 | 20 seeds x 4 conditions, results table, video v2, re-run the literature search | Dec 20 | Opus | Writing what the numbers do and do not show | ~2-3 h |
 
 ---
 
-Continuing the multi-agent UAV ROS 2 rebuild: session 16, the language prior. The mission runs end to end, the go/no-go is a GO and the CI is built. This session decides how a clue becomes a prior and builds that as a pure Python library, with no ROS and no LLM call.
+Continuing the multi-agent UAV ROS 2 rebuild: session 17. The prior library is built and tested. This session makes a typed clue change where the drones go, in Gazebo, from one command.
 
 ## Read first
 
-- `docs/roadmap.md`: Fusion, LLM contract (`mission_prior_node`), Mission timing, Eval design, and "Open engineering questions" (rasterization rule, default alpha, multi-target clue mapping, misleading-landmark rule, replay lookup for unmatched clues).
-- `docs/literature-check.md` (what the claim is: only the eval is novel) and the contribution claim in the roadmap. The claim changes only with the user's yes.
-- `uav_mapping/core/belief.py` (the posterior, `BeliefParams`, 33 tests): where a prior enters, and the fourth eval arm's `p_miss = 0.5`.
-- `docs/planner-decisions.md`: D40, D41, D42 (followers start with the sweep, as the prior needs) and the TODOS.md eval item on tied regions (R12, language priors give broad circles and capsules where every cell ties).
+- `docs/planner-decisions.md`: the session 16 notes (D44-D48, probe limits, what is not shown), D41 and D42.
+- `uav_mapping/core/prior.py` (`make_prior`, `load_replay`), `core/landmarks.py` (`load_world`), `BeliefMap(start=...)` in `core/belief.py`.
+- `uav_mapping/belief_map_node.py`, `uav_planning/launch/swarm.launch.py`, `ci/smoke_test.sh`.
+- `docs/roadmap.md`: LLM contract, Mission timing.
 
 ## Task
 
-1. **Settle the open questions with the user** before code, one at a time: the rasterization rule (circle or capsule to the 8x8 grid: cell centre, area overlap, or max), default alpha (roadmap says a fixed 0.5), how a clue with several targets maps to regions, what "misleading" means as a rule (same template, wrong landmark), and replay lookup for an unmatched clue. State each as a recommendation, not a survey.
-2. **Library.** A ROS-free module with the strict-JSON contract (circle or capsule, weight, confidence, clamped to the map; invalid -> uniform), the landmark file (`worlds/<name>/landmarks.yaml`), the rasterizer, the alpha blend to a starting belief, and the `replay` provider reading committed recorded outputs. Unit tests at the library level, in the style of `belief.py`'s. The LLM's only output is the prior: nothing it produces reaches a setpoint or mode change.
-3. Docs: roadmap Dec 10 row and open questions, `docs/planner-decisions.md` (a decision number per settled question), a session 16 notes section; rewrite this file for session 17.
+1. **The wiring choice, with the user.** `BeliefMap` takes its start only when constructed, so the map must not fuse or publish before the prior is in. Recommendation to put to the user: `mission_prior_node` publishes one latched message; with a clue set, `belief_map_node` drops frames and stays silent until it arrives, then builds its map. `mission_node`'s WAITING already waits for `/heatmap` (D41), so the mission cannot start on a half-built map. An empty clue skips all of it and must be exactly today's behaviour. Decide what happens if the prior node dies (a timeout to uniform with a warning keeps "nothing here can stop a flight").
+2. **`mission_prior_node`** (in `uav_mapping`): parameters clue, world directory, provider (`replay` default), alpha; calls `make_prior`, logs every warning, publishes. It publishes the prior and nothing else (hard rule; extend `test_the_prior_code_cannot_reach_a_drone`).
+3. **`live` provider**: key only from `LLM_API_KEY`, temperature 0, the prompt built from the landmark file and bounds. Testable without a key; do not call it unless the user sets one. It also needs a way to save its output as a recording. Check that the chosen model still accepts a temperature setting.
+4. **Launch.** `swarm.launch.py clue:="One hiker, last seen near the hut."`, replay by default so no key is needed.
+5. **Fly it.** One cold run with the hut clue and one with the radio mast clue (the misleading twin), targets from `ci/spawn_targets.sh`. Show that the first goal sectors differ from a run without a clue, and that all runs end DONE with the finds. Expect little time difference at 40 m: session 16 says so, and one run each is not a measurement.
+6. **Leader lane order** (roadmap: high-prior lanes first) is not built. On 40 m it cannot pay off. Ask whether it stays in scope for Dec 10 or moves to the eval sim.
+7. Docs: roadmap Dec 10 row, decisions, session 17 notes, this file for session 18. Explainer v2 (`docs/explainer/pieces/drone-search-v1`, steps 10-13 become real) only if time allows.
 
 ## Environment
 
-- Before any sim launch: `mount | grep docker-data` and `docker ps --filter name=WinBoat` (tell the user at once if it is up). This session needs no sim; the library tests need no ROS.
-- The smoke runner is stopped between sessions (Ctrl-C in its terminal). To use it: `cd ~/actions-runner && ./run.sh`, then `gh workflow run smoke.yml`; it needs the USB mounted, WinBoat stopped and no sim running. `smoke.yml` is dispatch-only, so nothing queues while it is off.
-- Run tests with `python3 -m pytest src` in the container (`source /usr/local/bin/entrypoint.sh` first in a non-interactive shell); with a sim up, ROS-based tests need `ROS_DOMAIN_ID=77`.
-- The dev container was stopped and restarted in session 15; if `up -d` is needed after a reboot, check setuptools with `/usr/bin/python3` (gotchas 57-58, 64).
+- Before any sim launch: `mount | grep docker-data` and `docker ps --filter name=WinBoat` (tell the user at once if it is up).
+- Session 16 recreated the dev container from the rebuilt image (setuptools 68.1.2 checked). Run `colcon build --symlink-install` after every Python edit (gotcha 32). Not checked since the rebuild: the Gazebo window (TODOS); ask before any GUI run.
+- Tests: `python3 -m pytest src` in the container (`source /usr/local/bin/entrypoint.sh` first); with a sim up, `ROS_DOMAIN_ID=77`.
+- `.gstack/pregate.json` gained `worlds/**` and `uav_mapping/package.xml` lanes; they count only once on `origin/main`, so until a push `/verify` says "tests UNMAPPED" for them.
+- One four-drone run holds about 30 DDS participants (gotcha 61); one more node is one more.
+- The smoke runner is off between sessions (`cd ~/actions-runner && ./run.sh`, then `gh workflow run smoke.yml`).
 - Commit on `main` after each working sub-task. Do not push without asking.
 
 ## Done means
 
-The open questions answered and written as decisions; a tested library that turns a replayed clue into a prior grid and a starting belief; the Dec 10 row and this file updated. Say plainly which changes are code, which are plan-level decisions and which are documentation. For each "not shown" gap, say whether it was in scope and where it now lives.
+A mission launched with a clue flies to the clue's sectors first and ends DONE from one command, with replay and no key; without a clue it behaves as today. The Dec 10 row is updated. Say plainly which changes are code, which are plan-level decisions and which are documentation. For each "not shown" gap, say whether it was in scope and where it now lives.
 
 ## Working agreements
 
 - The user has high-level ROS understanding, not deep. Explain new terms in one paragraph the first time.
-- Settled decisions stay settled (stack, D37-D42). The contribution claim changes only with the user's yes.
+- Settled decisions stay settled (stack, D37-D48). The contribution claim changes only with the user's yes.
 - Do not push without asking.

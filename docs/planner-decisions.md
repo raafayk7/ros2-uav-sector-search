@@ -31,6 +31,11 @@ Status: decided. `mission_node` is built and flew two whole missions to DONE fro
 | Follower start | Followers are enabled when the mission starts, together with the leader's sweep, not after it. The thesis flew the leader first and the followers second. On a flat map a follower holds until the leader's footprints or detections give it something to choose | D42 |
 | CI shape | Two tiers (decided by the user, 2026-11-23, on my recommendation). The 25 GB image cannot be built or pulled on a hosted runner (about 14 GB free). Hosted `ci.yml`: build + unit tests in stock `ros:jazzy`, every push and pull request. Self-hosted `smoke.yml`: the mission (1 leader + 1 follower, targets spawned, needs a find), manual dispatch only (changed the same day from dispatch plus pushes to main: the runner is often off, so a push trigger would queue jobs that GitHub fails after about 24 h, leaving red marks on main), never pull requests, because a self-hosted runner on a public repo runs a fork's code. Rejected: a slim CI image (10+ GB, about 1 h build, no layer cache, GHCR out of scope) and unit-tests-only | D43 |
 | Return to find | After DONE, each find's finder flies to hover over it at its own layer. A drone with two finds keeps the earlier one and the other find goes to the nearest drone without one. Skipped on TIMED_OUT. Latched `/mission_return` (RETURNING, AT_FINDS, TIMED_OUT) | D41 amended |
+| Clue: rasterization | Area overlap: a cell gets the region's value times the fraction of the cell inside it | D44 |
+| Clue: starting belief | Raise only: `0.5 + 0.5 x alpha x u`, alpha 0.5 (cap 0.7), u = weight x confidence x overlap; cells in no region stay unknown (0.5), so a uniform prior is exactly the map without one | D45 |
+| Clue: several targets | Flat list, one region per place; overlaps take the maximum; nothing normalized; head counts ignored | D46 |
+| Clue: misleading | The accurate clue with every target's landmark swapped, at random by seed, for one whose surroundings leave every target's cell and its 8 neighbours unraised; judged on landmark geometry before any LLM call; no valid swap = redraw the targets for all arms | D47 |
+| Clue: replay | Exact match on world, clue text (case and spacing aside) and landmark fingerprint; otherwise uniform with a warning in a mission, an error in the eval; recordings say `live` or `hand-written` and the eval refuses the latter | D48 |
 | Milestone map | New stub publisher, 8x8 at 5 m, multiple peaks | D19 |
 | Camera | Required before footprints: gimbal to nadir, proven with the marker test, 2 h timebox | D30 |
 | Sim speed | 2 h timebox after Nov 15, before Nov 24 (ran 2026-11-16: Gazebo's main thread is the limit; a 2 ms step doubles RTF and is the swarm default) | D23, D37 |
@@ -518,7 +523,7 @@ C) 50% + follower sweep
 State: approved
 Actual answer: A) Unknown = 50% (D18, 2026-11-04)
 Accepted scope: the library maps `-1` to 0.5. Ties go to the nearest sector, then the lowest index, so the choice is deterministic. On a flat map a drone holds unless a peer's zone covers its sector. Required follow-up: the 2D eval sim must check that a uniform-prior run explores once follower footprints feed the map, before any uniform-baseline result is reported.
-History: none
+History: EXTENDED by D45 (2026-11-24, session 16 notes): a cell a language clue raised publishes its starting value until a camera looks; every other unseen cell is still unknown = 0.5.
 
 ### R14: The map the Nov 10 and Nov 15 milestones fly on
 Finding: 14, P1, confidence 8/10, `src/uav_mapping/launch/heatmap.launch.py` (`grid_width` default 4), `src/uav_mapping/uav_mapping/fake_detection_publisher.py` (one synthetic pixel) and `docs/roadmap.md` milestone "3 followers ascending the stub heatmap", native review.
@@ -972,7 +977,7 @@ D) Defer this proposed change only
 State: approved
 Actual answer: A) Apply this change (D31, 2026-11-04)
 Accepted scope: each map cell is the independent probability that it contains at least one target; values need not sum to 1. Stated in `docs/roadmap.md`, whose fusion line is reworded: the prior sets each cell's starting log-odds, blended with the 0.5 baseline by alpha, then updated per footprint. The blend is untested.
-History: none
+History: EXTENDED by D45, D46 (2026-11-24, session 16 notes): a clue sets where a cell starts; cells stay independent and nothing is normalized.
 
 ### R27: What counts as a confirmed find
 Finding: outside voice 7, P1, confidence 8/10, `docs/roadmap.md:62` ("Found = a detection within 2 m of the true position") and R7 accepted scope ("lowers a confirmed sector"), Codex; verified in both.
@@ -1796,6 +1801,57 @@ Times are the checker's wall seconds. Runs 3 and 4 (a fresh `docker run` after a
 
 **Not independently verified:** the checker's "RETRY" path (exit 3, relaunch) never triggered in 3 runs.
 
+## Implementation notes (session 16, 2026-11-24)
+
+Ran: the five open language-prior questions settled with the user one at a time, then the ROS-free library. No sim, no flight, no language model called. The user picked the recommended option each time.
+
+**D44-D48 (decided 2026-11-24 by the user).**
+
+| | Question | Decision | Rejected |
+|---|---|---|---|
+| D44 | Rasterization | Area overlap | Cell centre (a 1.5 m circle vanishes 64 % of the time, and a 4 m one misses its target's own cell 33 %); any touch (a 4 m circle is marked at 2.9 times its area) |
+| D45 | Alpha and the outside level | Alpha 0.5, raise only: outside cells stay unknown, a region lifts a cell to at most 0.75. The roadmap's `alpha * prior + (1 - alpha) * 0.5` with prior = `0.5 + 0.5 u` | Outside = 0 (unmentioned cells start at 0.25, and one full look at a target there reads 0.44, under D14's 0.5); alpha 0.7 |
+| D46 | Several targets | Flat list, maximum on overlap, no normalization, head counts ignored | Noisy-OR (a duplicated region inflates: 0.6 twice gives 0.84); per-target labels |
+| D47 | Misleading | All landmarks swapped, random by seed, one-cell gap, decided on geometry before any LLM call | Furthest landmark (a worst case); any wrong landmark (some would still point at the target) |
+| D48 | Unmatched clue in replay | Exact key, else uniform + warning (mission) or error (eval); provenance on every recording | Always an error; nearest clue ("near" and "not near the river" are close as text) |
+
+The outside level was not on the open list. The roadmap fixed alpha without saying what prior an unmentioned cell gets.
+
+**Probe (`docs/probes/prior_probe.py mission`): 2D point-mass runs of the real planner, sweep, detector noise and belief code, 3 followers, 20 seeds, 41 targets, alpha 0.5.** Median seconds to the first confirmed find, raise only / outside 0:
+
+| Arena | Uniform | Accurate | Misleading | Misleading, negative evidence off |
+|---|---|---|---|---|
+| 40 m | 8.5 | 7.2 / 7.5 | 9.2 / 10.5 | 10.5 / 10.5 |
+| 80 m | 18.5 | 13.0 / 12.5 | 24.2 / 25.0 | 25.0 / 28.0 |
+| 160 m | 42.8 | 25.3 / 25.3 | 60.5 / 61.3 | 115.8 / not run |
+
+- Alpha between 0.3 and 0.7 moved the median first confirmation by under 1 s at 80 m and 3 s at 160 m (0.5 and 0.7 only): the follower rule uses the ranking of cells, not the size of the gaps. Do not expect an alpha sweep in the eval to show much.
+- Raise only against outside 0: no target missed either way with negative evidence on, so the 0.44 concern did not show. With it off at 80 m, outside 0 missed 5 of 41 targets and raise only 1.
+- **The arena sets the size of the effect.** At 40 m the clue barely matters, because a follower's footprint covers about half the arena at 10 m and more above. The eval arena is a session 18 decision, and this says it should be larger than 40 m. D47 agrees: a random 8-landmark world had enough wrong landmarks in 43 % of 40 m scenarios, 92 % at 80 m, 99 % at 120 m.
+- **With negative evidence off the mission cannot end DONE** (20 of 20 seeds hit the timeout): empty looks no longer take any cell below 0.5, so D14's rule is never met. Expected, and the eval must not report time to DONE for that arm.
+- A target within about 0.2 m of a sector edge is sometimes confirmed in two sectors: 7 extra confirmations over 20 seeds at 40 m, uniform, every one 0.05-0.18 m from a target. Eval scoring (2 m from the true position) is unaffected, but a mission report can list one target twice. In TODOS.
+- Limits: no climb, perfect tracking, frames at 2 Hz sim, one circle size (8 m), invented landmarks, and its misleading arm used the *furthest* wrong landmarks (closer to a worst case than D47). It is not the Dec 20 eval and none of these numbers may be quoted as results.
+
+**What was built.**
+
+- `uav_mapping/core/prior.py`: the strict JSON contract, `rasterize`, `starting_belief`, `ReplayProvider`, and `make_prior` (ask, parse, one retry, uniform with the reason in `warnings`; `strict` raises). Details decided while writing: at most 16 regions; a region past the map's edge is cut off, not moved; wholly off the map is dropped; under 1 m radius it is widened to 1 m; a world file that does not match the grid is a launch error. An empty region list is a valid answer (uniform, not a failure).
+- `uav_mapping/core/landmarks.py`: the strict landmark file loader, its fingerprint, and D47's `wrong_landmarks` and `misleading_swap`.
+- `core/geometry.py`: `coverage` and `segment_distance`. `core/belief.py`: `BeliefMap(start=...)`; `logodds` stays NaN until a camera looks, so coverage never counts the prior as a look.
+- `worlds/runway/landmarks.yaml` (8 invented places on the 40 m arena, with the three usual targets near the copse, the footbridge and the hut) and `recordings.json` (5 recordings, **hand-written**, so replay works without a key; not a language model's output). The committed world has a valid swap for 3 targets in 92 % of 300 random scenarios at a 4 m radius, 69 % at 6 m.
+- `test_prior.py`, 127 tests; 358 in total. Eleven rules were broken on purpose (noisy-OR, outside 0, normalized, no minimum radius, no retry, raw clue key, true landmark allowed, no gap, transposed grid, start ignored, uniform not unknown) and every one failed a test.
+
+**Not shown, and where each lives.**
+
+| Gap | In scope here? | Home |
+|---|---|---|
+| A clue driving a flight; `belief_map_node` reading a prior | No | Session 17 |
+| Any real LLM output; the prompt; the `live` provider | No | Session 17 (provider), session 18 (frozen recordings; needs the user's `LLM_API_KEY`) |
+| D46 and D47 in a mission (reasoned and unit-tested, not simulated) | No | Session 18 eval |
+| Tied regions and the best-open-sector rule (R12) | Partly: the probe flies broad circles and finds targets, but compares no alternative rule | Session 18, TODOS |
+| Arena size for the eval | No, evidence only | Session 18 |
+
+**Plan-level versus code.** Plan-level, by the user: D44-D48. Code: everything under "What was built", plus `python3-yaml` in `package.xml` and `ci.yml`, and `worlds/**` in `.gstack/pregate.json` (counts only once pushed). Documentation: this section, the decisions table, History lines on D18 and D31, the roadmap, README, stack overview, CLAUDE.md, the skill, TODOS, the probes README and the session 17 prompt.
+
 ## NOT in scope
 
 - Potential-field layer: altitude layers cover the sim (D5); revisit if a same-altitude flight is ever needed.
@@ -1924,11 +1980,16 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Files: `.github/workflows/ci.yml`, `.github/workflows/smoke.yml`, `ci/`, `src/uav_planning/test/test_arena_view.py`
   - Verify: `ci.yml` green on GitHub 2026-11-23 (run 45134386862, 223 passed, 2 skipped); smoke steps DONE with 3 finds by hand, twice (97 s, 317 s). `smoke.yml` green on the self-hosted runner the same day (run 45134386843: 225 tests, DONE, 3 finds)
 
+- [ ] **T13 (P1, CC: ~4h)** — uav_mapping — the language prior (Dec 10)
+  - Surfaced by: the roadmap's Dec 10 row, D44-D48
+  - [x] ROS-free library, landmark file, hand-written recordings, 127 tests (session 16, 2026-11-24)
+  - [ ] `mission_prior_node`, wired into `belief_map_node` and `swarm.launch.py`; one clue-driven mission (session 17)
+
 Effort assumes features at about 30x and tests at about 50x human-to-CC time, adjusted down for ROS integration.
 
 ## Unresolved decisions
 
-None blocking (D41, the mission state machine, was decided 2026-11-20 and amended 2026-11-22; D42, concurrent timing, 2026-11-22). Open for the user, none blocking: whether precision landing is scheduled or out of scope (it is in no milestone), the eval's optional thesis-timing arm (D42). Decided 2026-11-23: the CI shape (D43), and the runner is registered and green. Decided 2026-11-22: halos and ground markers both stay. D40 set D32's N to 3 (untested against a correlated detector); the D14 thresholds remain provisional values by decision, not open questions, and session 11 measures them live (session 10's probe: worst false alarm after the sweep 23 %). D24's yield cost about 13 s once in session 10, with an arrived drone giving way; that is an observation, not an open decision, unless it recurs.
+None blocking (D44-D48, the language prior, were decided 2026-11-24; D41, the mission state machine, was decided 2026-11-20 and amended 2026-11-22; D42, concurrent timing, 2026-11-22). Open for the user, none blocking: whether precision landing is scheduled or out of scope (it is in no milestone), the eval's optional thesis-timing arm (D42). Decided 2026-11-23: the CI shape (D43), and the runner is registered and green. Decided 2026-11-22: halos and ground markers both stay. D40 set D32's N to 3 (untested against a correlated detector); the D14 thresholds remain provisional values by decision, not open questions, and session 11 measures them live (session 10's probe: worst false alarm after the sweep 23 %). D24's yield cost about 13 s once in session 10, with an arrived drone giving way; that is an observation, not an open decision, unless it recurs.
 
 ## Completion summary
 

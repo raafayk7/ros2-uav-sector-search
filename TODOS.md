@@ -28,6 +28,18 @@
 **Priority:** P2
 **Depends on:** 2D eval sim
 
+### One target near a sector edge can be confirmed twice
+
+**What:** Decide whether a target within about 0.2 m of a sector edge may be listed as two finds, and count it in the eval.
+
+**Why:** Pixel noise puts its detections in both sectors, so followers confirm each. The mission report then shows more finds than targets. 7 extra confirmations in 20 runs of the session 16 probe (40 m, uniform), all 0.05-0.18 m from a target.
+
+**Context:** `docs/probes/prior_probe.py`, D32/D40 in `uav_mapping/core/belief.py`. Never seen in a Gazebo run. Eval scoring (a detection within 2 m of the true position) is unaffected; a find count would be.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** 2D eval sim
+
 ## CI and image
 
 ### Look at the Gazebo window on the rebuilt image

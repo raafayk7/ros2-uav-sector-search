@@ -100,10 +100,11 @@ Verified in SITL, 2026-11-22, in cold runs from one command with a leader and th
 - Detection is a ground-truth stand-in for YOLO: Gazebo target positions with misses (20 %), false alarms (5 % per frame) and 5 px noise, on a camera held straight down.
 - `gui:=true` opens the Gazebo window. `arena_view:=true` adds a video look: the arena drawn as a green plate with a line per sector, a top-down view, coloured drones and a marker on the ground under each. The demo above was recorded this way.
 
-Earlier milestones, still true: one follower flies to a sector and reports `ARRIVED`, and `planner_enable` false holds it (2026-11-08). Three followers each hold a different stub-map peak, and a silent follower's peak is released about 5.6 sim seconds later (2026-11-12). Two cold runs found all 3 targets before the sweep ended, including one 0.3 m inside a sector edge (2026-11-20). 225 tests pass: the planner, sweep, belief map and mission libraries, the DGA/BLL baselines, a 200-seed coordination harness, the shared-datum localization and the mission node, run with no simulator up.
+Earlier milestones, still true: one follower flies to a sector and reports `ARRIVED`, and `planner_enable` false holds it (2026-11-08). Three followers each hold a different stub-map peak, and a silent follower's peak is released about 5.6 sim seconds later (2026-11-12). Two cold runs found all 3 targets before the sweep ended, including one 0.3 m inside a sector edge (2026-11-20). 358 tests pass: the planner, sweep, belief map, language-prior and mission libraries, the DGA/BLL baselines, a 200-seed coordination harness, the shared-datum localization and the mission node, run with no simulator up.
 
 **Not done yet:**
 
+- **Language clue.** The library that turns a recorded clue into a starting map is built and tested (`uav_mapping/core/prior.py`, `worlds/`), but no node uses it, no language model has been called (the recordings are hand-written) and no mission has flown on a clue.
 - **Perception.** YOLO26 is a stretch goal; the noisy ground-truth detector stands in.
 - **Landing.** Precision landing (colour masking + PID in the original) is not rebuilt and is in no milestone; a find ends in a hover.
 - **CI.** Two GitHub Actions workflows (`.github/workflows/`): unit tests on a hosted runner, and the mission as a smoke test on a self-hosted runner (the 25 GB image does not fit a hosted one). Both are green on GitHub: the unit job, and the smoke test on a self-hosted runner, which flew a full mission and found all three targets.
@@ -117,6 +118,7 @@ Known issues and measured quirks are logged in [`docs/docker-notes.md`](docs/doc
 multi-agent-uavs/
 ├── docs/        # thesis, decision record, roadmap, Docker notes, probes
 ├── src/         # colcon workspace: uav_localization, uav_mapping, uav_perception, uav_planning
+├── worlds/      # named places per world, and recorded clue outputs
 ├── docker/      # Dockerfile + compose for the dev container
 ├── ci/          # smoke test scripts the self-hosted workflow runs
 ├── skills/      # Claude skill describing this project (optional tooling)
