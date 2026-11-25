@@ -23,6 +23,7 @@ from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict, replace
 from multiprocessing import get_context
 from pathlib import Path
+from types import SimpleNamespace
 from typing import List
 
 from uav_mapping.core.geometry import Grid
@@ -109,7 +110,8 @@ def _t(v: float) -> str:
 def table(runs) -> str:
     out = ['| Arm | Time to first, s (q25 / median / q75) | Time to all, s | '
            'Runs not finding all | Targets missed | Targets the clue covered | '
-           'Coverage, lowest | Ended DONE |', '|---|---|---|---|---|---|---|---|']
+           'Found by the leader | Extra confirmations | Coverage, lowest | '
+           'Ended DONE |', '|---|---|---|---|---|---|---|---|---|---|']
     for arm, rs in runs.items():
         s = summary(rs)
         out.append(
@@ -117,15 +119,52 @@ def table(runs) -> str:
             f"{' / '.join(map(_t, s['all']))} | {s['all_censored']}/{s['runs']} | "
             f"{s['targets_missed']}/{s['targets']} | "
             f"{s['targets_covered_by_clue']}/{s['targets']} | "
+            f"{s['found_by_leader']}/{s['targets'] - s['targets_missed']} | "
+            f"{s['extra_confirms']} | "
             f"{s['coverage_min']:.2f} | {s['done']}/{s['runs']} |")
-    out += ['', '| Seed by seed | Time | Faster | Slower | Ties | Median difference, s |',
-            '|---|---|---|---|---|---|']
+    out += ['', *_PAIRED_HEAD]
     for a, b in (('accurate', 'uniform'), ('misleading', 'uniform'),
-                 ('fixed', 'misleading')):
+                 ('misleading', 'accurate'), ('fixed', 'misleading')):
         for what in ('first', 'all'):
-            p = paired(runs, a, b, what)
-            out.append(f"| {a} - {b} | {what} | {p['faster']} | {p['slower']} | "
-                       f"{p['ties']} | {p['median_diff']:+.1f} |")
+            out.append(_paired_row(f'{a} - {b}', what, paired(runs, a, b, what)))
+    return '\n'.join(out)
+
+
+_PAIRED_HEAD = ('| Seed by seed | Time | Faster | Slower | Ties | Sign test p | '
+                'Median difference, s (seeds where both finished) |',
+                '|---|---|---|---|---|---|---|')
+
+
+def _paired_row(name: str, what: str, p: dict) -> str:
+    return (f"| {name} | {what} | {p['faster']} | {p['slower']} | {p['ties']} | "
+            f"{p['sign_p']:.3f} | {p['median_diff']:+.1f} ({p['both_found']}) |")
+
+
+def to_json(runs) -> list:
+    return [{'arm': arm, **asdict(r.scenario), 'covered': r.covered,
+             'regions': r.regions, **asdict(r.result)}
+            for arm, rs in runs.items() for r in rs]
+
+
+def from_json(data) -> dict:
+    """The runs of a results file, as far as ``paired`` needs them."""
+    runs = {}
+    for d in data:
+        times = d['found']
+        runs.setdefault(d['arm'], []).append(SimpleNamespace(
+            scenario=SimpleNamespace(seed=d['seed']), result=SimpleNamespace(
+                first=min((t for t in times if t is not None), default=None),
+                all=None if None in times else max(times))))
+    return runs
+
+
+def against(runs, other) -> str:
+    """These runs minus another file's, arm by arm and seed by seed."""
+    out = list(_PAIRED_HEAD)
+    for arm in runs:
+        for what in ('first', 'all'):
+            out.append(_paired_row(f'{arm}, this - that', what, paired(
+                {'a': runs[arm], 'b': other[arm]}, 'a', 'b', what)))
     return '\n'.join(out)
 
 
@@ -139,6 +178,7 @@ def main(argv=None):
     ap.add_argument('--pause', type=float, default=6.0,
                     help='record: s between questions (a per-minute limit)')
     ap.add_argument('--out', help='run: write every run to this JSON file')
+    ap.add_argument('--against', help='run: compare with this results JSON')
     ap.add_argument('--prior-lanes', action='store_true',
                     help="run: the leader flies the clue's lanes first (D53)")
     ap.add_argument('--workers', type=int, default=max(1, (os.cpu_count() or 2) - 1))
@@ -168,10 +208,10 @@ def main(argv=None):
               f"prior lanes {'on' if params.prior_lanes else 'off'}, "
               f"{time.monotonic() - t:.0f} s")
         if a.out:
-            data = [{'arm': arm, **asdict(r.scenario), 'covered': r.covered,
-                     'regions': r.regions, **asdict(r.result)}
-                    for arm, rs in runs.items() for r in rs]
-            Path(a.out).write_text(json.dumps(data, indent=1) + '\n')
+            Path(a.out).write_text(json.dumps(to_json(runs), indent=1) + '\n')
+        if a.against:
+            print('\n' + against(runs, from_json(json.loads(
+                Path(a.against).read_text()))))
 
 
 if __name__ == '__main__':

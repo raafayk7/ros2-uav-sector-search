@@ -252,6 +252,12 @@ def test_paired_differences_go_seed_by_seed():
         arms.paired({'a': [_run(0, 1.0)], 'b': [_run(1, 1.0)]}, 'a', 'b', 'first')
 
 
+def test_the_sign_test_is_the_exact_binomial():
+    assert arms.sign_p(5, 0) == arms.sign_p(0, 5) == 2 / 32
+    assert arms.sign_p(1, 4) == 12 / 32
+    assert arms.sign_p(3, 3) == 1.0 and arms.sign_p(0, 0) == 1.0
+
+
 # ---- The command line -------------------------------------------------------
 
 def test_seed_lists():
@@ -291,6 +297,29 @@ def test_the_table_prints_a_censored_median():
     runs = {a: [_run(0, None, arm=a), _run(1, 2.0, arm=a)] for a in arms.ARMS}
     text = cli.table(runs)
     assert 'cens.' in text and all(f'| {a} |' in text for a in arms.ARMS)
+
+
+def test_the_table_prints_leader_finds_and_extra_confirmations():
+    r = _run(0, 1.0, 2.0, arm='uniform')
+    r = r._replace(result=replace(r.result, found_by=['iris_1', 'iris_2'],
+                                  extra_confirms=7))
+    runs = {a: [r] for a in arms.ARMS}
+    row = next(x for x in cli.table(runs).split('\n') if x.startswith('| uniform'))
+    assert '| 1/2 | 7 |' in row
+
+
+def test_a_results_file_compares_with_the_runs_it_came_from(tmp_path):
+    def rs(*found):
+        real = sc.draw(WORLD, GRID, 1001)
+        return [_run(1001, *found)._replace(scenario=real)]
+    old = cli.from_json(json.loads(json.dumps(cli.to_json({'uniform': rs(5.0, 9.0),
+                                                           'fixed': rs(2.0, None)}))))
+    text = cli.against({'uniform': rs(4.0, 12.0), 'fixed': rs(2.0, 3.0)}, old)
+    rows = [x for x in text.split('\n') if 'this - that' in x]
+    assert '| first | 1 | 0 | 0 | 1.000 | -1.0 (1) |' in rows[0]
+    assert '| all | 0 | 1 | 0 | 1.000 | +3.0 (1) |' in rows[1]
+    assert '| first | 0 | 0 | 1 |' in rows[2]
+    assert '| all | 1 | 0 | 0 | 1.000 | +nan (0) |' in rows[3]
 
 
 def test_the_matrix_runs_every_arm_on_every_seed(tmp_path):

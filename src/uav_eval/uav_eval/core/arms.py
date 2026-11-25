@@ -102,6 +102,13 @@ def summary(runs: Sequence[Run]) -> dict:
     return line
 
 
+def sign_p(faster: int, slower: int) -> float:
+    """Two-sided exact sign test: how often a fair coin would split the
+    untied seeds at least this unevenly."""
+    n, k = faster + slower, min(faster, slower)
+    return min(1.0, 2 * sum(math.comb(n, i) for i in range(k + 1)) / 2 ** n)
+
+
 def paired(runs: Dict[str, Sequence[Run]], a: str, b: str, what: str) -> dict:
     """Seed by seed, arm ``a`` against ``b`` on 'first' or 'all'. Both
     censored is a tie; one censored counts as that arm being slower."""
@@ -116,5 +123,6 @@ def paired(runs: Dict[str, Sequence[Run]], a: str, b: str, what: str) -> dict:
             diffs.append(tx - ty)
     return {'faster': faster, 'slower': slower,
             'ties': len(runs[a]) - faster - slower,
+            'sign_p': sign_p(faster, slower),
             'median_diff': float(np.median(diffs)) if diffs else math.nan,
             'both_found': len(diffs)}
