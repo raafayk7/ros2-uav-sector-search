@@ -218,6 +218,33 @@ def test_three_pilot_seeds_still_give_the_same_times(seed):
         assert run.covered == [arm == 'accurate'] * len(s.targets)
 
 
+# The reported results. A failure means the code no longer produces what was
+# published: either that change is a mistake, or the results need a new run and
+# a new write-up (docs/eval-results.md). Never edit the JSON to match.
+RESULTS = ROOT / 'docs/results'
+
+
+@pytest.mark.parametrize('name, lanes', [('eval', False), ('eval_lanes', True)])
+def test_the_reported_results_still_reproduce(name, lanes):
+    rows = json.loads((RESULTS / f'{name}.json').read_text())
+    assert {(d['arm'], d['seed']) for d in rows} == \
+        {(a, s) for a in arms.ARMS for s in range(20)}
+    provider = arms.strict_replay(RECORDINGS)
+    for d in (d for d in rows if d['seed'] in (0, 13) and d['arm'] != 'fixed'):
+        run = arms.run_arm(d['arm'], sc.draw(WORLD, GRID, d['seed']), WORLD, GRID,
+                           provider, sim.SimParams(prior_lanes=lanes))
+        assert json.loads(json.dumps(cli.to_json({d['arm']: [run]})))[0] == d
+
+
+@pytest.mark.parametrize('name', ['eval', 'eval_lanes'])
+def test_the_published_table_is_the_one_the_json_gives(name):
+    rows = json.loads((RESULTS / f'{name}.json').read_text())
+    runs = {a: [arms.Run(a, SimpleNamespace(seed=d['seed']), d['covered'], d['regions'],
+                         sim.Result(**{k: d[k] for k in sim.Result.__dataclass_fields__}))
+                for d in rows if d['arm'] == a] for a in arms.ARMS}
+    assert (RESULTS / f'{name}_table.md').read_text().startswith(cli.table(runs) + '\n')
+
+
 # ---- Summaries --------------------------------------------------------------
 
 def test_quantiles_put_censored_runs_last():

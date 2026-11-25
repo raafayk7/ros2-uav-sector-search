@@ -9,6 +9,8 @@
     "src/uav_planning/launch/**": ["src/uav_planning/test/test_arena_view.py"],
     "src/uav_mapping/package.xml": ["src/uav_mapping/test/test_prior.py"],
     "src/uav_eval/package.xml": ["src/uav_eval/test/test_eval.py"],
+    "src/uav_eval/uav_eval/**": ["src/uav_eval/test/test_eval.py"],
+    "docs/results/*.json": ["src/uav_eval/test/test_eval.py"],
     "worlds/**": ["src/uav_mapping/test/test_prior.py", "src/uav_eval/test/test_eval.py"]
   }
 }
