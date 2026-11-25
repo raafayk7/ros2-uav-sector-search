@@ -347,7 +347,21 @@ its area that the shape covers.
 
 **Replay provider** — answers a clue from outputs recorded earlier and
 committed to the repo, so no key or network is needed. The `live` provider
-(not built) asks a language model.
+asks a language model (gemini-3.8-flash since 2026-11-25) and its answer can be
+frozen as a recording. Its key comes from the gitignored `docker/llm.env`.
+
+**Kinematic sim** — a simulation of motion only: each drone is a point that
+moves at a set speed, with no thrust, wind or tilt. `src/uav_eval` runs the
+flying code on one, about 0.5 s a mission, so many scenarios can be compared.
+
+**Arm** — one condition of an experiment. The eval has four: uniform, accurate
+clue, misleading clue, and misleading clue with negative evidence off.
+
+**Censored** — a target not found before the time limit. Its time is unknown
+but at least that long, so it is counted and ranked last, not dropped.
+
+**Paired comparison** — the arms fly the same targets and noise seed, so they
+are compared seed by seed instead of only by their medians.
 
 **Negative evidence** — a camera view with no target still says something:
 the sectors it covered become less likely. This is what lets a wrong clue fade.

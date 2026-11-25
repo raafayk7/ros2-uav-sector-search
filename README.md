@@ -40,6 +40,7 @@ Design rationale and the record of decisions: [`docs/planner-decisions.md`](docs
 | Drone harness | [`ArduPilot/ardupilot_gz`](https://github.com/ArduPilot/ardupilot_gz), ArduPilot SITL |
 | ROS ↔ ArduPilot | AP_DDS (native), not MAVROS |
 | Perception | ground-truth detector with noise today; Ultralytics YOLO26 planned |
+| Language prior | gemini-3.8-flash through `google-genai`, replayed from committed recordings (no key needed) |
 
 ## Quickstart
 
@@ -83,6 +84,14 @@ The search itself, a leader, three followers, one detector per drone and the sha
 ros2 launch uav_planning swarm.launch.py leader:=true num_followers:=3
 python3 docs/probes/belief_live_check.py 300 3    # second shell, once the SITLs are up: spawns 3 targets and logs the search
 ```
+
+The 2D eval of language clues (no simulator, no key: it reads committed recordings; seeds 1000-1007 are the pilot):
+
+```bash
+ros2 run uav_eval run_eval run --seeds 1000-1007
+```
+
+Only asking a language model for new recordings needs a key: `docker/llm.env.example` says where it goes.
 
 Tests (no simulator needed; ROS sourced for a few of them):
 

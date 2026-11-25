@@ -23,7 +23,7 @@ Session 12, 2026-11-22. No sim. This checks the roadmap's "Contribution claim" a
 
 Built and flown (D39-D41): a leader flies a full lawnmower sweep. One `belief_map_node` fuses every drone's detections and empty views into a log-odds grid with a per-look cap. Each follower runs the same rule on its own: fly to the highest-value open sector on that map, where sectors peers already hold are blocked, with a stay margin (`core/planner.py`, `choose_goal`). A target is confirmed after 3 consecutive frames by a follower over its sector. A mission node starts and ends the search.
 
-Not built when this was written (since 2026-11-24 the landmark file and a ROS-free prior library exist, not wired or flown, D44-D48): the LLM prior (`mission_prior_node`), the landmark file, the 2D eval sim, and every measurement in the eval.
+Not built when this was written (since 2026-11-24 the prior drives missions, D44-D50; since 2026-11-25 a real model has been called and the 2D eval sim runs a pilot, D51-D54; no result is reported yet): the LLM prior (`mission_prior_node`), the landmark file, the 2D eval sim, and every measurement in the eval.
 
 ## Link 1: natural-language incident report -> spatial prior
 
@@ -110,7 +110,7 @@ The roadmap's chain says "Bayesian posterior with negative evidence -> distribut
 
 ## README sentence the evidence supports
 
-**Now** (LLM layer and eval not built):
+**Now** (written before the LLM layer and the eval existed; both are built since 2026-11-25, the results are not run, so this is still the sentence to use):
 
 > An LLM will turn an operator's field report into a prior map; it never flies the drones. Language-derived search priors already exist (for example LMPath, arXiv 2605.13782, and arXiv 2611.16524), so this project's aim is narrower: to measure what such a prior costs when the clue is wrong, in a multi-drone search whose map learns from empty camera views and whose leader always sweeps the whole area.
 
@@ -127,7 +127,7 @@ The roadmap's chain says "Bayesian posterior with negative evidence -> distribut
 | Gap | In this session's scope? | Where it lives now |
 |---|---|---|
 | Whether negative evidence and the sweep bound a misleading clue's cost | No: needs the eval | Dec 20 results (2D eval sim) |
-| The LLM prior itself (`mission_prior_node`, landmarks, replay) | No | Dec 10 milestone, after go/no-go |
+| The LLM prior itself (`mission_prior_node`, landmarks, replay) | No | Done: Dec 10 row met 2026-11-24, first real model calls 2026-11-25 |
 | Sensors 2026 distributed Bayesian search paper, UAE thesis body (both 403) | Yes, attempted; hosts refused | The user can download them in a browser if wanted. They bear on links 1 and 4, which the claim no longer rests on |
 | Bertuccelli & How 2005, Search-TTA, COMBS read only at abstract level | Partly: not among the closest five | Read Bertuccelli & How before writing the eval section (Dec 20 write-up) |
 | Fresh search for papers newer than 2026-11-22 | No: time-dependent | Re-run before any README claim (Dec 20 write-up) |
