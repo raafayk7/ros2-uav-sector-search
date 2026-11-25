@@ -19,7 +19,7 @@ One mission, 72 s at 4x speed: the leader (yellow) sweeps the arena, the three f
                                   (one cell = one sector)         │
                                                                   ▼
                               each follower picks its best open sector,
-                              penalising sectors its peers already hold,
+                              skipping sectors its peers already hold,
                               and flies there through ArduPilot (AP_DDS)
 ```
 
@@ -124,7 +124,7 @@ A language model's only output here is a starting map written from a report such
 | misleading | 13.5 s | 43.5 s |
 | misleading, negative evidence off | 13.5 s | 141.5 s |
 
-The accurate clue was faster than none to find everything in 19 of 20 seeds and slower in none. The misleading clue was **not measurably worse than no clue**: 6 seeds faster and 8 slower to the first find, 9 and 11 to all found, though when it hurt it hurt more (up to +45 s) than it helped. Twenty seeds cannot tell a small cost from none. Every target was found and everything was covered in all 80 runs, because the sweep always finishes. With negative evidence off, the leader's sweep did most of the finding. This is a kinematic simulation with one sentence template, one model and one world, and none of it was flown: [`docs/eval-results.md`](docs/eval-results.md) has the setup, the paired comparisons and what it does not show.
+The accurate clue was faster than none to find everything in 19 of 20 seeds and slower in none. The misleading clue was **not measurably worse than no clue**: 6 seeds faster and 8 slower to the first find, 9 and 11 to all found, though when it hurt it hurt more (up to +45 s) than it helped. Twenty seeds cannot tell a small cost from none. Every target was found and everything was covered in all 80 runs, because the sweep always finishes. With negative evidence off, the leader's sweep did most of the finding (no-clue runs with it off were not made, so this does not separate the wrong clue's share). This is a kinematic simulation with one sentence template, one model and one world, and none of it was flown: [`docs/eval-results.md`](docs/eval-results.md) has the setup, the paired comparisons and what it does not show.
 
 **Not done yet:**
 
@@ -133,7 +133,7 @@ The accurate clue was faster than none to find everything in 19 of 20 seeds and 
 - **Perception.** YOLO26 is a stretch goal; the noisy ground-truth detector stands in.
 - **Landing.** Precision landing (colour masking + PID in the original) is not rebuilt and is in no milestone; a find ends in a hover.
 - **CI.** Two GitHub Actions workflows (`.github/workflows/`): unit tests on a hosted runner, and the mission as a smoke test on a self-hosted runner (the 25 GB image does not fit a hosted one). Both are green on GitHub: the unit job, and the smoke test on a self-hosted runner, which flew a full mission and found all three targets.
-- **Scale beyond four drones** and **re-enabling after a disable** have not been run. A four-drone run holds about 30 DDS participants, close to the 32 the default RMW allows (`docs/docker-notes.md`, gotcha 61).
+- **Scale beyond four drones** and **re-enabling after a disable** have not been run. A four-drone run holds about 30 DDS participants, close to the 32 the default RMW allows; `docker-compose.yml` raises the limit (`docs/docker-notes.md`, gotcha 61).
 
 Known issues and measured quirks are logged in [`docs/docker-notes.md`](docs/docker-notes.md) and [`TODOS.md`](TODOS.md).
 

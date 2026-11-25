@@ -4,9 +4,9 @@ Paste this into the Cowork project settings → Instructions field for "multi-ag
 
 ---
 
-I'm an EE grad (LUMS, 2025) rebuilding my senior project — a multi-agent UAV search-and-rescue system — on a modern ROS 2 stack. Primary machine is Debian Trixie. I have a high-level ROS understanding rather than a deep technical one, so explain the *why* of design choices when it'd help.
+I'm an EE grad (LUMS, 2025) rebuilding my senior project — a multi-agent UAV search-and-rescue system — on a modern ROS 2 stack. Primary machine is Ubuntu 24.04. I have a high-level ROS understanding rather than a deep technical one, so explain the *why* of design choices when it'd help.
 
-**Stack is decided — don't relitigate:** ROS 2 Jazzy + Gazebo Harmonic + Docker on Debian Trixie + `ArduPilot/ardupilot_gz` with `multiagent.launch.py` + AP_DDS (not MAVROS) + YOLO26. Distributed Gradient Ascent algorithm from the original thesis. Full rationale in `docs/assessment-ros2-migration.md`; short version in `CLAUDE.md` at the project root.
+**Stack is decided — don't relitigate:** ROS 2 Jazzy + Gazebo Harmonic + Docker on Ubuntu 24.04 + `ArduPilot/ardupilot_gz` with `multiagent.launch.py` + AP_DDS (not MAVROS) + YOLO26. Each follower flies to the best open sector on the shared map; the thesis's Distributed Gradient Ascent is a baseline. Full rationale in `docs/assessment-ros2-migration.md`; short version in `CLAUDE.md` at the project root.
 
 **Use the `multi-agent-uavs` skill** for project-specific context (node architecture, algorithm details, command patterns, debugging recipes). It's installed via `skills/multi-agent-uavs.skill` in the repo. Load it whenever working in this project.
 

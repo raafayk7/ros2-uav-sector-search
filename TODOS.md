@@ -16,20 +16,6 @@
 
 ## Eval
 
-### Test the direct rule on realistic maps (done 2026-11-25)
-
-**Done:** session 19 compared four distance discounts (`docs/probes/distance_rule_probe.py`) with the bar written first; none met it, so the rule stays. A discount is a hedge: slower with an accurate clue, faster with a misleading one. Numbers in `docs/eval-results.md`.
-
-**What:** Run the best-open-sector rule on unequal peaks and LLM-shaped region maps; try a distance discount only if results call for it.
-
-**Why:** It was validated only on equal peaks, spiky or Gaussian. It will cross the arena for a 97% sector while ignoring a 90% sector next door, and language priors produce broad circles and capsules, where every cell in a region can tie.
-
-**Context:** Probes are described in `docs/planner-decisions.md` (R12). Do this before reporting any eval result. Start from the rule in `uav_planning/core/planner.py`. Session 16 (2026-11-24): `prior_probe.py` flew the rule on broad 8 m circles and it found the targets (0-1 of 41 missed per arm with negative evidence on), and area overlap (D44) makes edge cells rank below interior ones, so ties are fewer. No alternative rule was compared, so this stays open. Session 18 (2026-11-25): on real LLM regions (12-18 m circles, capsules) the pilot found 15 of 15 targets in every arm, still without an alternative; decide in session 19 before the results table.
-
-**Effort:** S
-**Priority:** P2
-**Depends on:** 2D eval sim
-
 ### One target near a sector edge can be confirmed twice
 
 **What:** Decide whether a target within about 0.2 m of a sector edge may be listed as two finds, and count it in the eval.
@@ -67,6 +53,20 @@
 **Priority:** P3
 
 ## Completed
+
+### Test the direct rule on realistic maps (done 2026-11-25)
+
+**Done:** session 19 compared four distance discounts (`docs/probes/distance_rule_probe.py`) with the bar written first; none met it, so the rule stays. A discount is a hedge: slower with an accurate clue, faster with a misleading one. Numbers in `docs/eval-results.md`.
+
+**What:** Run the best-open-sector rule on unequal peaks and LLM-shaped region maps; try a distance discount only if results call for it.
+
+**Why:** It was validated only on equal peaks, spiky or Gaussian. It will cross the arena for a 97% sector while ignoring a 90% sector next door, and language priors produce broad circles and capsules, where every cell in a region can tie.
+
+**Context:** Probes are described in `docs/planner-decisions.md` (R12). Start from the rule in `uav_planning/core/planner.py`. Session 16 (2026-11-24): `prior_probe.py` flew the rule on broad 8 m circles and it found the targets (0-1 of 41 missed per arm with negative evidence on), and area overlap (D44) makes edge cells rank below interior ones, so ties are fewer. Session 18 (2026-11-25): on real LLM regions (12-18 m circles, capsules) the pilot found 15 of 15 targets in every arm, without an alternative.
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** 2D eval sim
 
 ### Fix the setuptools mix in the Dockerfile (done 2026-11-23)
 

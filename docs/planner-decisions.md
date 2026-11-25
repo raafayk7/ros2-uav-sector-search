@@ -1943,8 +1943,8 @@ Time to the first find hardly separates the clue arms at 8 seeds: three follower
 
 | Gap | In scope here? | Home |
 |---|---|---|
-| The 20 x 4 results | No | Session 19 |
-| The 40 final clues recorded | Partly: tool built and used on the pilot, final seeds left untouched until the rules above were settled | Session 19, first thing |
+| The 20 x 4 results | No | Done in session 19 |
+| The 40 final clues recorded | Partly: tool built and used on the pilot, final seeds left untouched until the rules above were settled | Done in session 19 |
 | R12: an alternative to the best-open-sector rule on LLM-shaped maps | No alternative compared | Done in session 19, before the table: none adopted |
 | The 2D sim against Gazebo (the same scenario in both) | No | Not scheduled; the write-up must call it kinematic |
 | `lane_order_by_prior` in `sweep_node` | No (D53) | TODOS, only if D53 is reversed |
@@ -1984,6 +1984,7 @@ None met it: every discount loses with an accurate clue. It is a hedge against a
 |---|---|---|
 | 3 Gazebo showcase runs, video v2 | Yes, not done: they need the user at the screen with OBS | Session 19b |
 | The 2D sim against Gazebo | No | TODOS |
+| Negative evidence off without a clue, the control for the fourth arm (noticed in the closing audit) | No | Not scheduled; stated in the write-up |
 | Whether a wrong clue costs a little or nothing | Shown not to be measurable at 20 seeds | Not scheduled |
 | Other clue templates, models, worlds, fleet sizes, moving targets | No | Not scheduled; limits in the write-up |
 | Meng 2008, Bertuccelli & How 2005 read | Attempted, refused or paywalled | TODOS |
@@ -2119,7 +2120,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Files: `.github/workflows/ci.yml`, `.github/workflows/smoke.yml`, `ci/`, `src/uav_planning/test/test_arena_view.py`
   - Verify: `ci.yml` green on GitHub 2026-11-23 (run 45134386862, 223 passed, 2 skipped); smoke steps DONE with 3 finds by hand, twice (97 s, 317 s). `smoke.yml` green on the self-hosted runner the same day (run 45134386843: 225 tests, DONE, 3 finds)
 
-- [ ] **T13 (P1, CC: ~4h)** — uav_mapping — the language prior (Dec 10)
+- [x] **T13 (P1, CC: ~4h)** — uav_mapping — the language prior (Dec 10, met 2026-11-24)
   - Surfaced by: the roadmap's Dec 10 row, D44-D48
   - [x] ROS-free library, landmark file, hand-written recordings, 127 tests (session 16, 2026-11-24)
   - [x] `mission_prior_node`, wired into `belief_map_node` and `swarm.launch.py`; one clue-driven mission (session 17, 2026-11-24)

@@ -9,7 +9,7 @@ choice (the trade-offs, the alternatives rejected), see
 `assessment-ros2-migration.md` — that's the source of truth for *why*. For
 build-environment gotchas, see `docker-notes.md`.
 
-Last updated: 2026-11-20 (session 10).
+Last updated: 2026-11-25 (session 19).
 
 ---
 
@@ -56,8 +56,8 @@ stacks on.
 - **2D eval sim** (`src/uav_eval`, 2026-11-25): point-mass drones running the
   flying code on a 120 m arena, four arms. The 20-seed results are in
   `docs/eval-results.md` (2026-11-25): an accurate clue helps, a misleading one
-  was not measurably worse than none, and negative evidence is what keeps it
-  cheap.
+  was not measurably worse than none, and with negative evidence off it was far
+  slower.
 - **Next:** Gazebo showcase runs and video v2 (session 19b, Dec 20). The Nov 30 go/no-go is a GO: video v1 is in
   `docs/media/`.
 - **Built but off:** the leader flying the clue's lanes first (D53: it slowed
@@ -169,9 +169,8 @@ fed a detection at the image center, lit up exactly the expected sector cell
 math was also checked offline against four hand-worked cases before building.
 A ROS gotcha surfaced and was fixed: `use_sim_time=true` with no simulator
 running freezes every node timer (sim time never advances without `/clock`),
-so the launch now forces sim time off in standalone mode. **Still pending:** a
-run against the live `iris_runway` camera and confirming the real iris camera
-mount (the down-facing assumption is a parameter, not code).
+so the launch now forces sim time off in standalone mode. (The run against the
+live camera and its mount came later: 2026-11-04 and 2026-11-16, T6.)
 
 ---
 

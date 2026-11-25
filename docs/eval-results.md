@@ -53,7 +53,7 @@ Raw data: `docs/results/eval.json`; the table as printed: `docs/results/eval_tab
 2. **On time to first find, the misleading arm is not measurably worse than uniform** (13.5 s against 12.0 s, 6 seeds faster, 8 slower, 6 ties). Three followers spread out and something is found soon whatever the clue says.
 3. **On time to all found, a misleading clue is not shown to be worse either, but this is the weaker statement.** The medians are 10 s apart (43.5 against 33.5), the paired median difference is +5.0 s, and the split is 9 faster, 11 slower. The differences run from -17.5 to +45.0 s (mean +7.4): when it hurt it hurt more than it helped. Twenty seeds cannot tell a small cost from none.
 4. **The clue still costs its information.** Against an accurate clue, a misleading one was slower to all found in all 20 seeds (median +16.5 s).
-5. **Negative evidence is what keeps a wrong clue cheap here.** Without it the median to all found goes from 43.5 to 141.5 s (slower in 17 seeds, faster in 1). The sweep is the backstop: the leader found 35 of the 50 targets, against 10 with negative evidence on, and the slowest run still found everything at 194.5 s, before the sweep's end. That arm never ends DONE, because nothing lowers the map (by construction).
+5. **Switching negative evidence off made the misleading arm far slower.** Without it the median to all found goes from 43.5 to 141.5 s (slower in 17 seeds, faster in 1). The sweep is the backstop: the leader found 35 of the 50 targets, against 10 with negative evidence on, and the slowest run still found everything at 194.5 s, before the sweep's end. That arm never ends DONE, because nothing lowers the map (by construction). There is no no-clue arm with negative evidence off, so this does not say how much of the slowdown comes from the wrong clue and how much from losing negative evidence at all.
 
 Point 5 is close to the case arXiv 2611.12317 measured (a map that never updates, where a strongly biased map did worse than a uniform one). The worlds, planners and metrics differ, so the numbers are not comparable.
 
@@ -73,7 +73,8 @@ The rule takes the highest-value sector anywhere and ignores distance except for
 
 | Limit | Home |
 |---|---|
-| Kinematic 2D only; the same scenario was not run in Gazebo | Not scheduled |
+| Kinematic 2D only; the same scenario was not run in Gazebo | TODOS |
+| Negative evidence off without a clue (the control for the fourth arm) | Not scheduled; needs no model answers, but seeds 0-19 are used |
 | One clue template ("last seen near the X"), one model, one invented world, one fleet size (1 + 3), one alpha (0.5) | Not scheduled; stated here |
 | Vague, negated, partly wrong or contradictory reports: here a clue is right about every target or wrong about every target | Not scheduled |
 | Calibrated doubt: the model gave 0.90-0.95 on every region | Not scheduled |

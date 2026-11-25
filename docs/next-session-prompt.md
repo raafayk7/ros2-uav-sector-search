@@ -4,7 +4,7 @@ Paste the block below to open the next session. Replace this file after each ses
 
 ## Where the plan stands
 
-**Session 19 (2026-11-25) did the results half of the Dec 20 row.** 40 final clues recorded, 20 seeds x 4 arms and the lanes-first ablation run once, written up in `docs/eval-results.md` and the README, literature re-checked (claim unchanged). An accurate clue helps; a misleading one was not measurably worse than none; negative evidence is what keeps it cheap. 489 tests. Not pushed unless the git log says so.
+**Session 19 (2026-11-25) did the results half of the Dec 20 row.** 40 final clues recorded, 20 seeds x 4 arms and the lanes-first ablation run once, written up in `docs/eval-results.md` and the README, literature re-checked (claim unchanged). An accurate clue helps; a misleading one was not measurably worse than none; with negative evidence off it was far slower (no no-clue control for that arm). 489 tests. Not pushed unless the git log says so.
 
 **Sessions left to Dec 20: one (19b).** Expected landing: well before Dec 20 (Dec 1 or so at the current pace). What is left is the 3 showcase runs and video v2, which need the user at the screen with OBS.
 
