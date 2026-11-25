@@ -1,61 +1,60 @@
-# Next-session prompt: the 2D eval sim and a real language model (session 18)
+# Next-session prompt: results, showcase runs, write-up (session 19)
 
 Paste the block below to open the next session. Replace this file after each session.
 
 ## Where the plan stands
 
-**Session 17 (2026-11-24) met the Dec 10 row.** `swarm.launch.py leader:=true num_followers:=3 clue:="..."` starts `mission_prior_node`; `belief_map_node` waits for its latched `/mission_prior` (D49), then builds its map from it. One cold headless run each of no clue, the hut clue and the radio mast clue (misleading) ended DONE with all 3 finds (74.7, 74.0 and 72.8 sim-s), and the clue changed the first goal sectors. 382 tests. Not shown: a real language model's output (the `live` provider was unit-tested with a fake client and never called), any time effect (one run each, 40 m arena), leader lane order (moved here, D50). Nothing has been pushed since `origin/main` unless the user did it.
+**Session 18 (2026-11-25) did half of the Dec 20 row.** The Gemini provider works and made the project's first real model calls (23 answers, all parsed first time, about $0.05 at paid prices). `src/uav_eval` is the 2D eval on a 120 m world, and an 8-seed pilot runs end to end on live recordings. 482 tests. The final seeds (0-19) have not been asked or run, on purpose. Nothing has been pushed unless the user did it.
 
-**Sessions left to Dec 20: two (18 and 19).**
+**Sessions left to Dec 20: one (19), maybe two.** The results are about an hour; the showcase runs, video v2 and the literature re-check are the rest. If it runs over, split 19b for the video.
 
-Open for the user, in the order session 18 needs them:
+Open for the user:
 
-- **`LLM_API_KEY`**, set in the user's shell only, never committed, and the one Gemini model to use (the roadmap allows one; the user chose Gemini on 2026-11-24). The live provider written in session 17 calls the Claude API, so **session 18 first writes a Gemini provider** on the `google-genai` package (pinned; not LiteLLM, which was compromised twice in 2026) behind the same interface, tested with a fake client, and installs it in the container (TODOS, docker-notes 67). Gemini 3.x discourages or ignores `temperature`, so none is sent.
-- **Temperature (settled in effect).** The roadmap said temperature 0; current Claude models reject it and Gemini 3.x discourages or ignores it, so none is sent and repeatability comes from frozen recordings.
-- **Eval arena size.** Session 16's probe says a clue barely matters at 40 m and shows at 80-160 m.
+- Recording the 40 final clues (about $0.10 at paid prices, $0 on the free tier; the key's tier and daily limit cannot be read from the key, see AI Studio). `record` resumes where it stopped.
+- Whether to compare one alternative to the best-open-sector rule on LLM-shaped maps before the table (R12, TODOS). Recommendation: yes, a distance discount, on pilot seeds only.
 - Whether precision landing is scheduled or out of scope; the eval's optional thesis-timing arm (D42).
+- Pushing to `origin/main` (CI has not run on sessions 16-18 unless the user pushed).
 
 | Session | Work | Milestone | Model | Why that model | Time |
 |---|---|---|---|---|---|
-| 1-17 (done 2026-11-07 to 11-24) | Datum through the go/no-go, video v1, CI green, prior library, clue-driven mission | Nov 10, 15, 20, 24, 30; Dec 8, 10 | mixed | see git history | ~40 h |
-| **18 (this prompt)** | 2D eval sim, arena size, the first live call and frozen recordings, leader lane order (D50), run matrix | Dec 20 | Opus | Eval design and honest reporting | ~3 h |
-| 19 | 20 seeds x 4 conditions, results table, video v2, re-run the literature search | Dec 20 | Opus | Writing what the numbers do and do not show | ~2-3 h |
+| 1-18 (done 2026-11-07 to 11-25) | Datum through the go/no-go, video v1, CI green, clue-driven mission, live model, 2D eval and pilot | Nov 10, 15, 20, 24, 30; Dec 8, 10; half of Dec 20 | mixed | see git history | ~43 h |
+| **19 (this prompt)** | Final recordings, 20 x 4 results and ablation, results write-up, literature re-check | Dec 20 | Opus | Writing what the numbers do and do not show | ~2-3 h |
+| 19b, if needed | 3 Gazebo showcase runs, video v2 | Dec 20 | Sonnet | Runs and recording, recipes exist (docker-notes 61-62) | ~2 h |
 
 ---
 
-Continuing the multi-agent UAV ROS 2 rebuild: session 18. A clue now drives a Gazebo mission with replay. This session builds the eval that measures what a wrong clue costs, and makes the first real language-model call.
+Continuing the multi-agent UAV ROS 2 rebuild: session 19. The eval harness works. This session produces the results and writes what they show.
 
 ## Read first
 
-- `docs/planner-decisions.md`: the session 16 and 17 notes (D44-D50, the probe's limits, the three flown runs and what they do not show), D41, D42.
-- `docs/roadmap.md`: Eval design, LLM contract, Mission timing. `docs/literature-check.md` for the reworded claim ("What a wrong language-derived search prior costs, measured").
-- `docs/probes/prior_probe.py`: the 2D point-mass sim the eval grows from. `uav_mapping/core/prior.py`, `core/live.py`, `core/landmarks.py` (`wrong_landmarks`, `misleading_swap`).
-- `uav_mapping/mission_prior_node.py` (`record_to`), `docs/probes/prior_live_check.py`.
+- `docs/planner-decisions.md`: session 18 notes (D51-D54, the pilot, "choices made while writing", the not-shown table).
+- `docs/roadmap.md`: Eval design. `docs/literature-check.md`: the claim and what may be said after the eval.
+- `src/uav_eval`: `core/scenario.py`, `core/sim.py`, `core/arms.py`, `run.py`.
 
 ## Task
 
-1. **The first live call, with the user.** Ask the user to set `LLM_API_KEY` in the shell that launches the container command and to name the model. Write the Gemini provider first (see above), then check the model takes the request as built (no temperature; default sampling; a JSON response type with a schema is optional, the strict parser stays the check). Then run `mission_prior_node` alone (no sim) with `provider:=live llm_model:=... record_to=worlds/runway/recordings.json` for the hut and mast clues and read what the model returned before trusting it: regions on the right places, sensible radius, weight and confidence. One call each, show the cost. Never write the key to a file or a log.
-2. **Arena size**, with the user: 40 m shows little (session 16), 80-160 m shows it. The eval sim and the landmark file must match the grid (`World.check_grid`); an 80 m world means a new `worlds/<name>/` with its own landmarks and recordings.
-3. **The 2D eval sim**: point-mass drones, the camera footprint model, the same planner and belief code, faster than real time (grow `prior_probe.py`). Conditions: uniform, accurate clue, misleading (D47), misleading with negative evidence off (`BeliefParams.p_miss = 0.5`). Strict mode (`make_prior(strict=True)`, `load_replay(require_live=True)`): no hand-written recording may reach a result. Report time to first find, time to all found with the censor count, coverage at timeout, and how often the regions covered each target; not time to DONE.
-4. **Leader lane order** (D50): high-prior lanes first in `core/sweep.py`, with the coverage guarantee kept (every lane flown whatever the prior). Build it in the eval sim first; Gazebo only if time allows.
-5. **Run matrix**: pilot a few seeds per condition to check the harness and the cost before the full 20 x 4 (session 19).
-6. Docs: roadmap, decisions (session 18 notes), this file for session 19.
+1. **R12 first, on pilot seeds (1000+) only**: if the user wants it, compare one alternative rule. Change nothing after the final seeds have been run.
+2. **Record the final clues** (with the user's yes): `docker exec --env-file docker/llm.env multi-agent-uavs bash -lc 'cd /workspaces/multi-agent-uavs; export PYTHONPATH=src/uav_mapping:src/uav_planning:src/uav_perception:src/uav_eval; /usr/bin/python3 -m uav_eval.run record --seeds 0-19 --model gemini-3.8-flash'`. Read every answer before running anything. An invalid or odd answer is part of the result: report it, do not re-ask until it looks better.
+3. **Run the matrix once**: `run --seeds 0-19 --out ...`, then `--prior-lanes` for the ablation. Commit the JSON and the table.
+4. **Write it up**: medians and quartiles with censor counts, paired differences, how often the clue covered each target, finds by leader against followers, extra confirmations. Coverage is 100 % everywhere (the sweep always finishes) and separates no arm: say so. Say "kinematic", one template, one model, one world, invented landmarks. If the misleading arm is no worse than uniform on time to first find (as in the pilot), say it in those words.
+5. **Literature re-check** before any README claim.
+6. 3 Gazebo showcase runs and video v2, or 19b.
 
 ## Environment
 
-- Before any sim launch: `mount | grep docker-data` and `docker ps --filter name=WinBoat` (tell the user at once if it is up). The 2D eval needs no sim.
-- Run `colcon build --symlink-install` after every Python edit (gotcha 32). A cold start with no ROS `/clock` happens (docker-notes 33, 68): `docker compose restart ros2` and launch again.
-- Tests: `python3 -m pytest src` in the container (`source /usr/local/bin/entrypoint.sh` first); with a sim up, `ROS_DOMAIN_ID=77`.
-- `.gstack/pregate.json` has `worlds/**` and `uav_mapping/package.xml` lanes; they count only once on `origin/main`, so until a push `/verify` says "tests UNMAPPED" for them.
-- The smoke runner is off between sessions (`cd ~/actions-runner && ./run.sh`, then `gh workflow run smoke.yml`).
+- The USB drive must be in before boot or Docker hangs (docker-notes 69). Before any sim launch: `mount | grep docker-data`, `docker ps --filter name=WinBoat`.
+- The Gemini client is installed in the running container only; after a recreate reinstall it (docker-notes 67). Never open, print or `cat` `docker/llm.env`.
+- `uav_eval` runs on the host too (numpy and yaml are enough) with the same `PYTHONPATH`; `record` needs the container.
+- Run `colcon build --symlink-install` after Python edits (gotcha 32). Tests: `python3 -m pytest src` in the container (`ROS_DOMAIN_ID=77` with a sim up).
+- `.gstack/pregate.json` changes count only once on `origin/main`; until then `/verify` says "tests UNMAPPED".
 - Commit on `main` after each working sub-task. Do not push without asking.
 
 ## Done means
 
-A pilot of the eval runs end to end on frozen live recordings with no hand-written one anywhere in a result, the arena size is decided and recorded, and the harness cost is known. Say plainly which changes are code, which are plan-level decisions and which are documentation. For each "not shown" gap, say whether it was in scope and where it now lives.
+A committed results table over 20 x 4 with its ablation and raw JSON, a README and roadmap that say what it shows and does not, the literature search re-run, and the showcase runs or a 19b prompt for them. Say plainly which changes are code, plan-level or documentation, and give every "not shown" gap its home.
 
 ## Working agreements
 
 - The user has high-level ROS understanding, not deep. Explain new terms in one paragraph the first time.
-- Settled decisions stay settled (stack, D37-D50). The contribution claim changes only with the user's yes.
+- Settled decisions stay settled (stack, D37-D54). The contribution claim changes only with the user's yes.
 - Do not push without asking.

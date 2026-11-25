@@ -22,7 +22,7 @@
 
 **Why:** It was validated only on equal peaks, spiky or Gaussian. It will cross the arena for a 97% sector while ignoring a 90% sector next door, and language priors produce broad circles and capsules, where every cell in a region can tie.
 
-**Context:** Probes are described in `docs/planner-decisions.md` (R12). Do this before reporting any eval result. Start from the rule in `uav_planning/core/planner.py`. Session 16 (2026-11-24): `prior_probe.py` flew the rule on broad 8 m circles and it found the targets (0-1 of 41 missed per arm with negative evidence on), and area overlap (D44) makes edge cells rank below interior ones, so ties are fewer. No alternative rule was compared, so this stays open.
+**Context:** Probes are described in `docs/planner-decisions.md` (R12). Do this before reporting any eval result. Start from the rule in `uav_planning/core/planner.py`. Session 16 (2026-11-24): `prior_probe.py` flew the rule on broad 8 m circles and it found the targets (0-1 of 41 missed per arm with negative evidence on), and area overlap (D44) makes edge cells rank below interior ones, so ties are fewer. No alternative rule was compared, so this stays open. Session 18 (2026-11-25): on real LLM regions (12-18 m circles, capsules) the pilot found 15 of 15 targets in every arm, still without an alternative; decide in session 19 before the results table.
 
 **Effort:** S
 **Priority:** P2
@@ -34,7 +34,7 @@
 
 **Why:** Pixel noise puts its detections in both sectors, so followers confirm each. The mission report then shows more finds than targets. 7 extra confirmations in 20 runs of the session 16 probe (40 m, uniform), all 0.05-0.18 m from a target.
 
-**Context:** `docs/probes/prior_probe.py`, D32/D40 in `uav_mapping/core/belief.py`. Never seen in a Gazebo run. Eval scoring (a detection within 2 m of the true position) is unaffected; a find count would be.
+**Context:** `docs/probes/prior_probe.py`, D32/D40 in `uav_mapping/core/belief.py`. Never seen in a Gazebo run. The eval counts `extra_confirms` per arm (session 18); 5 in 32 pilot missions, not checked for distance from a target. Eval scoring (a detection within 2 m of the true position) is unaffected; a find count would be.
 
 **Effort:** S
 **Priority:** P3
@@ -155,25 +155,24 @@
 **Effort:** S
 **Priority:** P3
 
-### Leader lane order: high-prior lanes first
+### Wire the clue's lanes into `sweep_node`, only if D53 is reversed
 
-**What:** Order the leader's sweep lanes so those through high-prior cells are flown first (roadmap, Mission timing). Not built; D50 moved it out of Dec 10.
+**What:** Pass `lane_order_by_prior` (`uav_planning/core/sweep.py`) to the Gazebo leader through `/mission_prior`.
 
-**Why:** It is the only part of the clue that helps the leader. On the 40 m Gazebo arena it cannot pay off (a sweep is about 60 s and the clue barely matters, session 16 probe); the eval sim's larger arena can show it.
+**Why:** Built and tested in session 18 and off: in the 2D sim it slowed both kinds of clue (100 seeds, `docs/probes/lane_order_probe.py`), so nothing needs it.
 
-**Context:** `uav_planning/core/sweep.py` plans lanes from `camera_info`; the coverage guarantee (every lane flown whatever the prior says) must stay. The prior arrives on `/mission_prior` (D49).
+**Context:** D50, D53. Ablation in the eval: `run_eval run --prior-lanes`.
 
-**Effort:** M
-**Priority:** P2
-**Depends on:** 2D eval sim, arena size
+**Effort:** S
+**Priority:** P4
 
-### The live provider is Claude-only and its package is not in the image
+### Build the image once with the Gemini client step
 
-**What:** The user will use Gemini (decided 2026-11-24). Session 18 writes a Gemini provider on Google's `google-genai` package behind the same `provider(clue, world)` interface in `core/live.py` (not LiteLLM: its PyPI package was compromised twice in 2026, and the key is what that malware took), then adds the package to the Dockerfile's pip step at the next rebuild or installs it in the container (pinned).
+**What:** At the next image rebuild, check `python3 -c "import google.genai"` works in a fresh container and setuptools is still 68.1.2.
 
-**Why:** `LiveProvider` calls the Anthropic SDK, which is not installed either; without a client a live prior is a warning and a uniform map (docker-notes 67). No live call has been made. Gemini 3.x ignores or discourages `temperature`, so none is sent there either.
+**Why:** The Dockerfile step (`requirements-llm.txt`) was written in session 18 and never built; the running container got the same packages by hand.
 
-**Context:** `docker/Dockerfile` (pip block near line 362), `uav_mapping/core/live.py`. A rebuild is about 60 minutes; do not rebuild for this alone.
+**Context:** docker-notes 67. A rebuild is about 60 minutes; do not rebuild for this alone.
 
 **Effort:** S
 **Priority:** P3

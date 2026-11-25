@@ -50,13 +50,17 @@ stacks on.
   (`uav_mapping/core/prior.py`, `landmarks.py`, `worlds/runway/`, and
   `mission_prior_node`): a recorded clue becomes regions, then a starting
   belief that `belief_map_node` waits for before it publishes a map. Three
-  headless missions ended DONE (no clue, accurate, misleading). A `live`
-  provider exists but has never called a model.
-- **Next:** the 2D eval sim, a real language model's recordings and the
-  results (sessions 18-19, Dec 20). The Nov 30 go/no-go is a GO: video v1 is in
+  headless missions ended DONE (no clue, accurate, misleading). The `live`
+  provider has called gemini-3.8-flash (2026-11-25); its answers are frozen as
+  recordings.
+- **2D eval sim** (`src/uav_eval`, 2026-11-25): point-mass drones running the
+  flying code on a 120 m arena, four arms, pilot of 8 seeds run.
+- **Next:** the 20-seed results on the final clues, Gazebo showcase runs and
+  video v2 (session 19, Dec 20). The Nov 30 go/no-go is a GO: video v1 is in
   `docs/media/`.
-- **Not built:** leader lane order (eval sim), YOLO (stretch) and precision
-  landing (in no milestone).
+- **Built but off:** the leader flying the clue's lanes first (D53: it slowed
+  both kinds of clue in the 2D sim).
+- **Not built:** YOLO (stretch) and precision landing (in no milestone).
 
 ---
 

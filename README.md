@@ -100,11 +100,12 @@ Verified in SITL, 2026-11-22, in cold runs from one command with a leader and th
 - Detection is a ground-truth stand-in for YOLO: Gazebo target positions with misses (20 %), false alarms (5 % per frame) and 5 px noise, on a camera held straight down.
 - `gui:=true` opens the Gazebo window. `arena_view:=true` adds a video look: the arena drawn as a green plate with a line per sector, a top-down view, coloured drones and a marker on the ground under each. The demo above was recorded this way.
 
-Earlier milestones, still true: one follower flies to a sector and reports `ARRIVED`, and `planner_enable` false holds it (2026-11-08). Three followers each hold a different stub-map peak, and a silent follower's peak is released about 5.6 sim seconds later (2026-11-12). Two cold runs found all 3 targets before the sweep ended, including one 0.3 m inside a sector edge (2026-11-20). 358 tests pass: the planner, sweep, belief map, language-prior and mission libraries, the DGA/BLL baselines, a 200-seed coordination harness, the shared-datum localization and the mission node, run with no simulator up.
+Earlier milestones, still true: one follower flies to a sector and reports `ARRIVED`, and `planner_enable` false holds it (2026-11-08). Three followers each hold a different stub-map peak, and a silent follower's peak is released about 5.6 sim seconds later (2026-11-12). Two cold runs found all 3 targets before the sweep ended, including one 0.3 m inside a sector edge (2026-11-20). 482 tests pass: the planner, sweep, belief map, language-prior, mission and eval-sim libraries, the DGA/BLL baselines, a 200-seed coordination harness, the shared-datum localization and the mission node, run with no simulator up.
 
 **Not done yet:**
 
-- **Language clue.** `swarm.launch.py leader:=true clue:="..."` turns a recorded clue into a starting map (`uav_mapping/core/prior.py`, `worlds/`) through `mission_prior_node`, and three headless missions (no clue, a clue at the hut, a misleading clue at the radio mast) ended DONE with all 3 finds, the clue changing where the first follower went. No language model has been called yet (the recordings are hand-written and the `live` provider is untested against a real model), and one run each measures nothing about time.
+- **Language clue.** `swarm.launch.py leader:=true clue:="..."` turns a recorded clue into a starting map (`uav_mapping/core/prior.py`, `worlds/`) through `mission_prior_node`, and three headless missions (no clue, a clue at the hut, a misleading clue at the radio mast) ended DONE with all 3 finds, the clue changing where the first follower went. One run each measures nothing about time, and those flights used hand-written recordings. Since 2026-11-25 the `live` provider works with a real model (gemini-3.8-flash): it read every clue asked so far onto the right places, and its answers are frozen as recordings.
+- **Eval.** A 2D sim (`src/uav_eval`, 120 x 120 m, about 0.5 s a mission) runs the flying code over uniform, accurate and misleading clues, and a misleading clue with negative evidence off. An 8-seed pilot runs end to end on live recordings; the 20-seed results are not run yet.
 - **Perception.** YOLO26 is a stretch goal; the noisy ground-truth detector stands in.
 - **Landing.** Precision landing (colour masking + PID in the original) is not rebuilt and is in no milestone; a find ends in a hover.
 - **CI.** Two GitHub Actions workflows (`.github/workflows/`): unit tests on a hosted runner, and the mission as a smoke test on a self-hosted runner (the 25 GB image does not fit a hosted one). Both are green on GitHub: the unit job, and the smoke test on a self-hosted runner, which flew a full mission and found all three targets.
@@ -117,7 +118,7 @@ Known issues and measured quirks are logged in [`docs/docker-notes.md`](docs/doc
 ```
 multi-agent-uavs/
 ├── docs/        # thesis, decision record, roadmap, Docker notes, probes
-├── src/         # colcon workspace: uav_localization, uav_mapping, uav_perception, uav_planning
+├── src/         # colcon workspace: uav_localization, uav_mapping, uav_perception, uav_planning, uav_eval
 ├── worlds/      # named places per world, and recorded clue outputs
 ├── docker/      # Dockerfile + compose for the dev container
 ├── ci/          # smoke test scripts the self-hosted workflow runs

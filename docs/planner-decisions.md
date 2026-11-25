@@ -4,7 +4,7 @@ Review target (fixed): the follower planner section of `docs/roadmap.md`, scoped
 
 ## Decisions at a glance
 
-Status: decided. The language prior's questions are settled, its ROS-free library built, and a clue drives a mission as of 2026-11-24 (sessions 16-17, D44-D50; replay flown with a clue, the `live` provider never called). `mission_node` is built and flew two whole missions to DONE from one command on 2026-11-20 (session 11, two detector seeds), plus one TIMED_OUT run. The mission state machine was designed (D41) and its ROS-free core built and tested the same day (session 10); a leader and 3 followers found all 3 targets in two cold runs. `belief_map_node` and a leader role in the swarm launch are built as of 2026-11-18 (session 9, D40), and one follower completed the Nov 20 search loop in two cold runs. The leader's sweep controller is built and flown as of 2026-11-17 (session 8, D39). T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07. T3 (node) and T4 (arm helper, stub map) are built and flown as of 2026-11-08: one follower in headless SITL reaches the best stub sector and reports ARRIVED, and disabling holds it. T5 (swarm launch) is built and flown as of 2026-11-12: three followers each hold a different stub peak. Full reasoning is in the ledger below.
+Status: decided. The language prior's questions are settled, its ROS-free library built, and a clue drives a mission as of 2026-11-24 (sessions 16-17, D44-D50). A real model was called and the 2D eval sim built and piloted on 2026-11-25 (session 18, D51-D54). `mission_node` is built and flew two whole missions to DONE from one command on 2026-11-20 (session 11, two detector seeds), plus one TIMED_OUT run. The mission state machine was designed (D41) and its ROS-free core built and tested the same day (session 10); a leader and 3 followers found all 3 targets in two cold runs. `belief_map_node` and a leader role in the swarm launch are built as of 2026-11-18 (session 9, D40), and one follower completed the Nov 20 search loop in two cold runs. The leader's sweep controller is built and flown as of 2026-11-17 (session 8, D39). T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07. T3 (node) and T4 (arm helper, stub map) are built and flown as of 2026-11-08: one follower in headless SITL reaches the best stub sector and reports ARRIVED, and disabling holds it. T5 (swarm launch) is built and flown as of 2026-11-12: three followers each hold a different stub peak. Full reasoning is in the ledger below.
 
 | Topic | Decision | Ref |
 |---|---|---|
@@ -36,7 +36,10 @@ Status: decided. The language prior's questions are settled, its ROS-free librar
 | Clue: several targets | Flat list, one region per place; overlaps take the maximum; nothing normalized; head counts ignored | D46 |
 | Clue: misleading | The accurate clue with every target's landmark swapped, at random by seed, for one whose surroundings leave every target's cell and its 8 neighbours unraised; judged on landmark geometry before any LLM call; no valid swap = redraw the targets for all arms | D47 |
 | Clue: wiring | `mission_prior_node` publishes one latched `/mission_prior` JSON; with a clue `belief_map_node` drops frames and publishes no `/heatmap` until it arrives, then builds its map from it; after `prior_timeout` (60 wall-s) it builds uniform with a warning; a prior that fails still publishes (uniform, `failed`); no clue = today's map built at once | D49 |
-| Clue: leader lane order | Not built for Dec 10; moves to the eval sim, where an arena large enough to show an effect exists | D50 |
+| Clue: leader lane order | Built in the eval sim (`lane_order_by_prior`) and off: the leader keeps its default sweep, the clue guides only the followers; lanes-first is an ablation | D50, D53 |
+| Clue: provider and key | The model's name picks the vendor and its one key (`GEMINI_API_KEY` / `ANTHROPIC_API_KEY`), from the environment, normally gitignored `docker/llm.env` | D51 |
+| Eval: arena | 120 x 120 m, `worlds/valley`, 13 invented landmarks, 24 x 24 cells at 5 m | D52 |
+| Eval: misleading clearance | D47's surroundings of a wrong landmark reach 20 m | D54 |
 | Clue: replay | Exact match on world, clue text (case and spacing aside) and landmark fingerprint; otherwise uniform with a warning in a mission, an error in the eval; recordings say `live` or `hand-written` and the eval refuses the latter | D48 |
 | Milestone map | New stub publisher, 8x8 at 5 m, multiple peaks | D19 |
 | Camera | Required before footprints: gimbal to nadir, proven with the marker test, 2 h timebox | D30 |
@@ -1814,7 +1817,7 @@ Ran: the five open language-prior questions settled with the user one at a time,
 | D44 | Rasterization | Area overlap | Cell centre (a 1.5 m circle vanishes 64 % of the time, and a 4 m one misses its target's own cell 33 %); any touch (a 4 m circle is marked at 2.9 times its area) |
 | D45 | Alpha and the outside level | Alpha 0.5, raise only: outside cells stay unknown, a region lifts a cell to at most 0.75. The roadmap's `alpha * prior + (1 - alpha) * 0.5` with prior = `0.5 + 0.5 u` | Outside = 0 (unmentioned cells start at 0.25, and one full look at a target there reads 0.44, under D14's 0.5); alpha 0.7 |
 | D46 | Several targets | Flat list, maximum on overlap, no normalization, head counts ignored | Noisy-OR (a duplicated region inflates: 0.6 twice gives 0.84); per-target labels |
-| D47 | Misleading | All landmarks swapped, random by seed, one-cell gap, decided on geometry before any LLM call | Furthest landmark (a worst case); any wrong landmark (some would still point at the target) |
+| D47 | Misleading | All landmarks swapped, random by seed, one-cell gap, decided on geometry before any LLM call. History: clearance set to 20 m (D54) | Furthest landmark (a worst case); any wrong landmark (some would still point at the target) |
 | D48 | Unmatched clue in replay | Exact key, else uniform + warning (mission) or error (eval); provenance on every recording | Always an error; nearest clue ("near" and "not near the river" are close as text) |
 
 The outside level was not on the open list. The roadmap fixed alpha without saying what prior an unmentioned cell gets.
@@ -1863,7 +1866,7 @@ Ran: the wiring choice put to the user (D49, D50), then `mission_prior_node`, th
 | | Question | Decision | Rejected |
 |---|---|---|---|
 | D49 | How the starting belief reaches the map, and a dead prior node | One latched message; the map is silent until it arrives; uniform with a warning after 60 wall-s | Fail hard on timeout (no silent uniform, but a dead node would stop a flight); compute inside `belief_map_node` (no node, but the prior code moves into the map's owner and the hard-rule test loses its boundary) |
-| D50 | Leader lane order (high-prior lanes first) | Out of Dec 10; built in the eval sim (session 18) | Keep in session 17 (an hour, and a 40 m Gazebo run cannot show it working) |
+| D50 | Leader lane order (high-prior lanes first) | Out of Dec 10; built in the eval sim (session 18). History: built in session 18 and turned off (D53) | Keep in session 17 (an hour, and a 40 m Gazebo run cannot show it working) |
 
 Details decided while writing, not asked: the message is JSON (`start` as 8x8 floats, `failed`, `warnings`, `regions`, `clue`, `provider`) like `/confirmed_finds`, not an `OccupancyGrid`, whose int8 values would round the start; a prior that cannot be built (no recording, no key, invalid twice, world file does not match the grid, unknown provider) is published as a uniform prior marked `failed`, so the map starts at once instead of waiting out the timeout; a missing key or missing client library is one attempt, not a retry (`ProviderUnavailable`); an unreadable message or one arriving after the map was built is warned about and ignored or flown uniform.
 
@@ -1894,6 +1897,62 @@ What this shows: the clue changed where a follower went first (iris_2 flew to th
 One of four cold starts this session had no ROS `/clock` (gotcha 33): `wait_for_clock` timed out at 180 s and the launch shut down before any project node started. Restart and relaunch, as documented; it was not the new code (the prior and map nodes start after that gate).
 
 **Plan-level versus code.** Plan-level, by the user: D49, D50. Plan-level correction, not yet confirmed: no temperature (above). Code: `core/live.py`, `core/prior.py` additions (`prior_message`, `read_prior_message`, `uniform_prior`, `save_recording`, `ProviderUnavailable`), `mission_prior_node.py`, the `belief_map_node` wait, `swarm.launch.py` arguments, `test_prior_wiring.py`, `docs/probes/prior_live_check.py`. Documentation: this section, the table rows, the roadmap, README, stack overview, CLAUDE.md, the skill, TODOS, docker-notes 67-68 and the session 18 prompt.
+
+## Implementation notes (session 18, 2026-11-25)
+
+Ran: the Gemini provider, the first live model calls, then the 2D eval sim with an 8-seed pilot on frozen live recordings. No sim, no flight. 482 tests (382 before).
+
+**D51-D54 (decided 2026-11-25 by the user; the recommendation taken each time except where noted).**
+
+| | Question | Decision | Rejected |
+|---|---|---|---|
+| D51 | Where the key lives and how the provider is chosen | Gitignored `docker/llm.env`, handed to one command with `docker exec --env-file`; the model's name picks the vendor and its own key variable | Shell only (it was the rule: lands in history, invisible to other shells); a file outside the repo (recommended, not taken); an env toggle (can disagree with the model a recording names; with one shared key a forgotten toggle sends it to the wrong vendor) |
+| D52 | Eval arena | 120 x 120 m (`worlds/valley`) | 80 m (smaller effect), 160 m (same ratio, 2.5 times the compute) |
+| D53 | Does the leader's sweep follow the clue | No: the clue guides the followers only; lanes-first is built, tested and reported as an ablation. **Reverses the roadmap's Mission timing** | Lanes first (D50's plan) |
+| D54 | How far round a wrong landmark D47 keeps clear | 20 m | 8 m (37 of 400 drawn runs would have had a "misleading" region touching a target's neighbourhood) |
+
+The model is gemini-3.8-flash: newest Gemini marked Stable on 2026-11-25, no shutdown date announced. This replaces "key only from `LLM_API_KEY`". No `temperature` is sent (Gemini ignores it from 3.5 Flash-Lite and 3.6 Flash on; settles session 17's open correction).
+
+**The model's answers.** 23 calls, 23 parsed at the first attempt, 16,337 tokens in and 10,817 out including thinking, about $0.05 at the paid price (nothing on the free tier; which tier the key is on cannot be read from the key). By eye, every region sat on the place the clue named, and the creek and stone wall came back as capsules along the line. "Near" was 6-7 m on the 40 m runway map and 10-18 m on the 120 m one, confidence 0.9-1.0 everywhere, weight 1.0 everywhere: the model scales "near" with the map and does not express doubt on this template. The eval's "near" (8 m) was fixed before any call on that map and stays, so accurate regions are wider than the truth. 8 of the 23 answers are not used (6 pilot clues that D54's new draws dropped, and the two runway ones are for Gazebo).
+
+**Arena size** (session 16's `prior_probe.run`, 20 seeds, alpha 0.5, raise only, first confirmed find, median with quartiles): 80 m accurate 13 (9-14), uniform 18 (12-22), misleading 24 (17-26); 120 m 19 (15-22), 29 (21-34), 42 (29-48); 160 m 25 (18-29), 43 (32-58), 60 (45-69). Sweep 104 / 206 / 372 s. That probe used the furthest wrong landmarks and 8 m circles, so it overstates the misleading cost.
+
+**Lane order** (`docs/probes/lane_order_probe.py`, 100 seeds, stand-in reader, before D54): median time to all found, uniform 35.0, accurate 21.0 both ways, misleading 47.5 with lanes first and 38.0 without. Seed by seed lanes-first was faster / slower in 7 / 19 runs with an accurate clue and 17 / 44 with a misleading one. The likely reason, not tested: the followers are already at the clue, and the leader is the one drone looking elsewhere.
+
+**Pilot** (seeds 1000-1007, 15 targets, 15 live recordings; a harness check, not a result):
+
+| Arm | First found, s (q25 / median / q75) | All found, s | Missed | Covered by the clue |
+|---|---|---|---|---|
+| uniform | 13.5 / 15.5 / 20.5 | 15.5 / 21.5 / 31.0 | 0/15 | 0/15 |
+| accurate | 8.0 / 14.5 / 15.5 | 15.0 / 21.0 / 27.5 | 0/15 | 15/15 |
+| misleading | 15.0 / 20.5 / 33.5 | 20.5 / 38.0 / 44.5 | 0/15 | 0/15 |
+| misleading, negative evidence off | 15.5 / 22.5 / 122.0 | 62.0 / 144.5 / 160.5 | 0/15 | 0/15 |
+
+Time to the first find hardly separates the clue arms at 8 seeds: three followers spread out and find something soon whatever the clue says. Time to all found, and the paired differences, are where the arms part. Cost: 32 missions in 10 s on 5 processes, so 20 x 4 twice (ablation) is about a minute.
+
+**What was built.**
+
+- `core/live.py`: `VENDORS` (Gemini, Claude), `vendor_of`, a key check that refuses quotes and spaces, redaction of the key from errors, refused and cut-off answers as failed attempts, token counts per answer. `docker/requirements-llm.txt` pins google-genai 2.34.0 and 10 dependencies by hash; installed in the running container for user ros and added to the Dockerfile for the next rebuild (**not rebuilt, so that Dockerfile step has not run**).
+- `src/uav_eval` (no ROS at run time): `core/scenario.py`, `core/sim.py`, `core/arms.py`, `run.py` (`clues`, `record`, `run`). `record` asks only for clues with no recording and stops at the first failure. `run` refuses hand-written recordings, mixed models and missing clues.
+- `core/sweep.py lane_order_by_prior`; `core/landmarks.py landmark_distance`; `worlds/valley/`; the runway hut and mast recordings are now live (the other three stay hand-written).
+- A 3-seed regression on the pilot recordings (exact times) runs in `ci.yml` with the other tests. 22 deliberate breakages; three survived at first, and their tests were tightened until they did not.
+
+**Choices made while writing, not asked:** "found" counts only true detections (a false alarm that happens to land within 2 m of a target does not count); target positions are uniform over the ground within 8 m of the landmark; landmarks are drawn without replacement; medians use lower interpolation with censored runs last; every drone flies 5 m/s (followers in Gazebo use ArduPilot's 10 m/s default, limited by acceleration).
+
+**Not shown, and where each lives.**
+
+| Gap | In scope here? | Home |
+|---|---|---|
+| The 20 x 4 results | No | Session 19 |
+| The 40 final clues recorded | Partly: tool built and used on the pilot, final seeds left untouched until the rules above were settled | Session 19, first thing |
+| R12: an alternative to the best-open-sector rule on LLM-shaped maps | No alternative compared | TODOS, decide in session 19 before the table |
+| The 2D sim against Gazebo (the same scenario in both) | No | Not scheduled; the write-up must call it kinematic |
+| `lane_order_by_prior` in `sweep_node` | No (D53) | TODOS, only if D53 is reversed |
+| The Dockerfile step | Written, not built | Next image rebuild (TODOS) |
+| A live call inside a flight | No | Not scheduled: replay is what flies |
+| The model on vague, negated or multi-place clues (one template only) | No | Not scheduled; a stated limit of the eval |
+
+**Plan-level versus code.** Plan-level, by the user: D51-D54, the model. Code: everything under "What was built". Documentation: this section, the decisions table, roadmap, README, stack overview, CLAUDE.md, the skill, TODOS, docker-notes 67 and 69, the probes README and the session 19 prompt.
 
 ## NOT in scope
 
@@ -2026,13 +2085,18 @@ Synthesized from this review's findings. Each task derives from a specific findi
 - [ ] **T13 (P1, CC: ~4h)** — uav_mapping — the language prior (Dec 10)
   - Surfaced by: the roadmap's Dec 10 row, D44-D48
   - [x] ROS-free library, landmark file, hand-written recordings, 127 tests (session 16, 2026-11-24)
-  - [ ] `mission_prior_node`, wired into `belief_map_node` and `swarm.launch.py`; one clue-driven mission (session 17)
+  - [x] `mission_prior_node`, wired into `belief_map_node` and `swarm.launch.py`; one clue-driven mission (session 17, 2026-11-24)
+
+- [ ] **T14 (P1, CC: ~5h)** — uav_eval — the 2D eval (Dec 20)
+  - Surfaced by: the roadmap's Dec 20 row and Eval design, D51-D54
+  - [x] Gemini provider, first live calls, `worlds/valley`, sim, four arms, pilot (session 18, 2026-11-25)
+  - [ ] 40 final clues recorded, 20 x 4 results with the lanes-first ablation, showcase runs, video v2 (session 19)
 
 Effort assumes features at about 30x and tests at about 50x human-to-CC time, adjusted down for ROS integration.
 
 ## Unresolved decisions
 
-None blocking (D44-D48, the language prior, were decided 2026-11-24; D41, the mission state machine, was decided 2026-11-20 and amended 2026-11-22; D42, concurrent timing, 2026-11-22). Open for the user, none blocking: whether precision landing is scheduled or out of scope (it is in no milestone), the eval's optional thesis-timing arm (D42). Decided 2026-11-23: the CI shape (D43), and the runner is registered and green. Decided 2026-11-22: halos and ground markers both stay. D40 set D32's N to 3 (untested against a correlated detector); the D14 thresholds remain provisional values by decision, not open questions, and session 11 measures them live (session 10's probe: worst false alarm after the sweep 23 %). D24's yield cost about 13 s once in session 10, with an arrived drone giving way; that is an observation, not an open decision, unless it recurs.
+None blocking (D51-D54, provider, arena, sweep order and clearance, were decided 2026-11-25; D44-D50, the language prior, 2026-11-24; D41, the mission state machine, was decided 2026-11-20 and amended 2026-11-22; D42, concurrent timing, 2026-11-22). Open for the user, none blocking: whether precision landing is scheduled or out of scope (it is in no milestone), the eval's optional thesis-timing arm (D42). Decided 2026-11-23: the CI shape (D43), and the runner is registered and green. Decided 2026-11-22: halos and ground markers both stay. D40 set D32's N to 3 (untested against a correlated detector); the D14 thresholds remain provisional values by decision, not open questions, and session 11 measures them live (session 10's probe: worst false alarm after the sweep 23 %). D24's yield cost about 13 s once in session 10, with an arrived drone giving way; that is an observation, not an open decision, unless it recurs.
 
 ## Completion summary
 
