@@ -54,9 +54,11 @@ stacks on.
   provider has called gemini-3.8-flash (2026-11-25); its answers are frozen as
   recordings.
 - **2D eval sim** (`src/uav_eval`, 2026-11-25): point-mass drones running the
-  flying code on a 120 m arena, four arms, pilot of 8 seeds run.
-- **Next:** the 20-seed results on the final clues, Gazebo showcase runs and
-  video v2 (session 19, Dec 20). The Nov 30 go/no-go is a GO: video v1 is in
+  flying code on a 120 m arena, four arms. The 20-seed results are in
+  `docs/eval-results.md` (2026-11-25): an accurate clue helps, a misleading one
+  was not measurably worse than none, and negative evidence is what keeps it
+  cheap.
+- **Next:** Gazebo showcase runs and video v2 (session 19b, Dec 20). The Nov 30 go/no-go is a GO: video v1 is in
   `docs/media/`.
 - **Built but off:** the leader flying the clue's lanes first (D53: it slowed
   both kinds of clue in the 2D sim).
@@ -362,6 +364,12 @@ but at least that long, so it is counted and ranked last, not dropped.
 
 **Paired comparison** — the arms fly the same targets and noise seed, so they
 are compared seed by seed instead of only by their medians.
+
+**Sign test** — of the seeds that differ, how often a fair coin would split
+them at least this unevenly. It counts faster and slower, not by how much.
+
+**Ablation** — the same runs with one part changed or switched off, to see what
+that part is worth (in the eval: the leader flying the clue's lanes first).
 
 **Negative evidence** — a camera view with no target still says something:
 the sectors it covered become less likely. This is what lets a wrong clue fade.

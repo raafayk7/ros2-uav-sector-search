@@ -16,7 +16,9 @@
 
 ## Eval
 
-### Test the direct rule on realistic maps
+### Test the direct rule on realistic maps (done 2026-11-25)
+
+**Done:** session 19 compared four distance discounts (`docs/probes/distance_rule_probe.py`) with the bar written first; none met it, so the rule stays. A discount is a hedge: slower with an accurate clue, faster with a misleading one. Numbers in `docs/eval-results.md`.
 
 **What:** Run the best-open-sector rule on unequal peaks and LLM-shaped region maps; try a distance discount only if results call for it.
 
@@ -34,7 +36,7 @@
 
 **Why:** Pixel noise puts its detections in both sectors, so followers confirm each. The mission report then shows more finds than targets. 7 extra confirmations in 20 runs of the session 16 probe (40 m, uniform), all 0.05-0.18 m from a target.
 
-**Context:** `docs/probes/prior_probe.py`, D32/D40 in `uav_mapping/core/belief.py`. Never seen in a Gazebo run. The eval counts `extra_confirms` per arm (session 18); 5 in 32 pilot missions, not checked for distance from a target. Eval scoring (a detection within 2 m of the true position) is unaffected; a find count would be.
+**Context:** `docs/probes/prior_probe.py`, D32/D40 in `uav_mapping/core/belief.py`. Never seen in a Gazebo run. The eval counts `extra_confirms` per arm (session 18); 5 in 32 pilot missions. Session 19: 33 in the 80 final runs, every one within 0.31 m of a target across a sector edge, none a false alarm (`docs/probes/eval_detail.py`). Still open: whether the report should merge them. Eval scoring (a detection within 2 m of the true position) is unaffected; a find count would be.
 
 **Effort:** S
 **Priority:** P3
@@ -175,4 +177,28 @@
 **Context:** docker-notes 67. A rebuild is about 60 minutes; do not rebuild for this alone.
 
 **Effort:** S
+**Priority:** P3
+
+## Eval follow-ups
+
+### Read Meng 2008 and Bertuccelli & How 2005 before any claim about wrong priors in general
+
+**What:** Both test search against an imprecise or varied numeric prior map; neither could be fetched (403, IEEE).
+
+**Why:** The claim is kept to language-derived priors, which they do not touch. A wider sentence would need them.
+
+**Context:** `docs/literature-check.md`, re-check of 2026-11-25. The user can open them in a browser.
+
+**Effort:** S
+**Priority:** P3
+
+### The same scenario in the 2D sim and in Gazebo
+
+**What:** Fly one eval seed's targets and clues in both and compare the order of events.
+
+**Why:** The results are kinematic. Nothing shows how far they carry to the flown system.
+
+**Context:** No Gazebo world matches `worlds/valley` (120 m); the runway arena is 40 m. Not in any milestone.
+
+**Effort:** M
 **Priority:** P3

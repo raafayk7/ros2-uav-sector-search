@@ -23,7 +23,7 @@ Session 12, 2026-11-22. No sim. This checks the roadmap's "Contribution claim" a
 
 Built and flown (D39-D41): a leader flies a full lawnmower sweep. One `belief_map_node` fuses every drone's detections and empty views into a log-odds grid with a per-look cap. Each follower runs the same rule on its own: fly to the highest-value open sector on that map, where sectors peers already hold are blocked, with a stay margin (`core/planner.py`, `choose_goal`). A target is confirmed after 3 consecutive frames by a follower over its sector. A mission node starts and ends the search.
 
-Not built when this was written (since 2026-11-24 the prior drives missions, D44-D50; since 2026-11-25 a real model has been called and the 2D eval sim runs a pilot, D51-D54; no result is reported yet): the LLM prior (`mission_prior_node`), the landmark file, the 2D eval sim, and every measurement in the eval.
+Not built when this was written (since 2026-11-24 the prior drives missions, D44-D50; since 2026-11-25 a real model has been called and the 2D eval sim runs a pilot, D51-D54; the results are in `docs/eval-results.md`): the LLM prior (`mission_prior_node`), the landmark file, the 2D eval sim, and every measurement in the eval.
 
 ## Link 1: natural-language incident report -> spatial prior
 
@@ -110,11 +110,13 @@ The roadmap's chain says "Bayesian posterior with negative evidence -> distribut
 
 ## README sentence the evidence supports
 
-**Now** (written before the LLM layer and the eval existed; both are built since 2026-11-25, the results are not run, so this is still the sentence to use):
+**Before the eval** (used until 2026-11-25; the README now carries its content beside the results):
 
 > An LLM will turn an operator's field report into a prior map; it never flies the drones. Language-derived search priors already exist (for example LMPath, arXiv 2605.13782, and arXiv 2611.16524), so this project's aim is narrower: to measure what such a prior costs when the clue is wrong, in a multi-drone search whose map learns from empty camera views and whose leader always sweeps the whole area.
 
 **After the Dec 20 eval**, only with the numbers in hand: "Across 20 scenarios, a misleading clue cost X s median time-to-first-find against a uniform prior (Y censored), while an accurate one saved Z s." If the misleading arm is worse than uniform, say so in those words.
+
+**Used since 2026-11-25** (after the re-check below; the README and `docs/eval-results.md` carry it in full): "Across 20 scenarios in a 2D kinematic sim, an accurate clue cut the median time to find all targets from 33.5 s to 19.5 s. A misleading one was not measurably worse than no clue (first find 13.5 against 12.0 s; all found 43.5 against 33.5 s, 9 seeds faster and 11 slower), and with negative evidence off it took 141.5 s." No run was censored. Do not write "a misleading clue costs nothing": 20 seeds cannot show that.
 
 ## What changes, and what is not shown
 
@@ -126,11 +128,30 @@ The roadmap's chain says "Bayesian posterior with negative evidence -> distribut
 
 | Gap | In this session's scope? | Where it lives now |
 |---|---|---|
-| Whether negative evidence and the sweep bound a misleading clue's cost | No: needs the eval | Dec 20 results (2D eval sim) |
+| Whether negative evidence and the sweep bound a misleading clue's cost | No: needs the eval | Answered in the 2D sim, 2026-11-25 (`docs/eval-results.md`) |
 | The LLM prior itself (`mission_prior_node`, landmarks, replay) | No | Done: Dec 10 row met 2026-11-24, first real model calls 2026-11-25 |
 | Sensors 2026 distributed Bayesian search paper, UAE thesis body (both 403) | Yes, attempted; hosts refused | The user can download them in a browser if wanted. They bear on links 1 and 4, which the claim no longer rests on |
-| Bertuccelli & How 2005, Search-TTA, COMBS read only at abstract level | Partly: not among the closest five | Read Bertuccelli & How before writing the eval section (Dec 20 write-up) |
-| Fresh search for papers newer than 2026-11-22 | No: time-dependent | Re-run before any README claim (Dec 20 write-up) |
+| Bertuccelli & How 2005, Search-TTA, COMBS read only at abstract level | Partly: not among the closest five | Bertuccelli & How: abstract and bibliographic record only, again (2026-11-25; the paper is behind IEEE) |
+| Fresh search for papers newer than 2026-11-22 | No: time-dependent | Re-run 2026-11-25 (section below) |
+
+## Re-check, 2026-11-25 (session 19), before the README claim
+
+Seven searches (six in extended mode), seven papers opened and two refused, three days after the first check. **The verdict stands: novel only in the eval. The claim's wording is unchanged.** Nothing found plants a wrong language clue in a multi-UAV search and compares it with no clue and a correct one.
+
+| Work | How read | What it does | Wrong-clue condition? |
+|---|---|---|---|
+| LLM-MCoX, later COMRES-VLM (Wang et al.; arXiv 2509.26324 v1, Sep 2025) | v1 in full | A central LLM plans waypoints for 1-6 robots. An optional sentence says where the object probably is. No belief map | No. Hint against no hint only (with the hint, up to 50 % fewer steps than the baseline). **The closest measured "does a language hint help" in multi-robot search: cite it** |
+| Burks et al., human-autonomy target search (arXiv 1806.00727, FUSION 2018) | Most of the body; results partly from a summary | Human statements and answers fused into a Gaussian-mixture target belief, with no-detection readings; one real robot | Not as a condition. One run where the human gave false observations by accident, belief went wrong and later recovered; no numbers. **Precedent for "wrong reports recover through evidence": cite it** |
+| Seo and Kia (arXiv 2308.11839) | v4 in full | Learns each human operator's reliability while localizing a target, 3 simulated UAVs; drawings, not language | No. Faults are in the sensors only |
+| ReSPIRe (arXiv 2512.24680) | Nearly in full | Single-robot search with a deliberately vague particle prior | No. Prior accuracy is never varied |
+| ESARBench (arXiv 2605.01371) | Main text and tables | Benchmark: one UAV agent, text prompts and physical clues, MLLM baselines | No |
+| LG-HRL for SAR (Ravanbakhsh and Moradi, arXiv 2611.13161, Nov 2026) | Keyword search over the full text, abstract and headings | LLM turns instructions into cues for a hierarchical RL policy over UAVs and UGVs | None found ("misleading", "wrong", "incorrect" do not appear) |
+| High-altitude single-UAV search (arXiv 2610.01067) | Most of the body | POMDP planning, no-detection lowers the belief, no human input | No |
+| Meng 2008, game-theoretic multi-robot search (doi 10.5772/6232) | **Not read (403)**; a search summary says it tests robustness to variations in the prior map | Classical, no language | Possibly, for a numeric map: **the one to read before any claim about wrong priors in general** |
+
+Not reachable: Meng 2008, and an MDPI viewpoint-planning paper with "misleading" posterior conditions (Drones 10/12/881), both 403. Both concern numeric priors, as Bertuccelli & How 2005 does, so they bear on "wrong priors", not on "wrong language clues". **Keep the claim to language-derived priors.** The area still moves weekly: re-run before any submission.
+
+Added sources: LLM-MCoX <https://arxiv.org/abs/2509.26324>; Burks et al. <https://arxiv.org/abs/1806.00727>; Seo and Kia <https://arxiv.org/abs/2308.11839>; ReSPIRe <https://arxiv.org/abs/2512.24680>; ESARBench <https://arxiv.org/abs/2605.01371>; LG-HRL <https://arxiv.org/abs/2611.13161>; high-altitude search <https://arxiv.org/abs/2610.01067>; Meng 2008 <https://doi.org/10.5772/6232>.
 
 ## Sources
 

@@ -85,10 +85,10 @@ ros2 launch uav_planning swarm.launch.py leader:=true num_followers:=3
 python3 docs/probes/belief_live_check.py 300 3    # second shell, once the SITLs are up: spawns 3 targets and logs the search
 ```
 
-The 2D eval of language clues (no simulator, no key: it reads committed recordings; seeds 1000-1007 are the pilot):
+The 2D eval of language clues (no simulator, no key: it reads committed recordings). This prints the table of [`docs/eval-results.md`](docs/eval-results.md):
 
 ```bash
-ros2 run uav_eval run_eval run --seeds 1000-1007
+ros2 run uav_eval run_eval run --seeds 0-19
 ```
 
 Only asking a language model for new recordings needs a key: `docker/llm.env.example` says where it goes.
@@ -109,12 +109,27 @@ Verified in SITL, 2026-11-22, in cold runs from one command with a leader and th
 - Detection is a ground-truth stand-in for YOLO: Gazebo target positions with misses (20 %), false alarms (5 % per frame) and 5 px noise, on a camera held straight down.
 - `gui:=true` opens the Gazebo window. `arena_view:=true` adds a video look: the arena drawn as a green plate with a line per sector, a top-down view, coloured drones and a marker on the ground under each. The demo above was recorded this way.
 
-Earlier milestones, still true: one follower flies to a sector and reports `ARRIVED`, and `planner_enable` false holds it (2026-11-08). Three followers each hold a different stub-map peak, and a silent follower's peak is released about 5.6 sim seconds later (2026-11-12). Two cold runs found all 3 targets before the sweep ended, including one 0.3 m inside a sector edge (2026-11-20). 482 tests pass: the planner, sweep, belief map, language-prior, mission and eval-sim libraries, the DGA/BLL baselines, a 200-seed coordination harness, the shared-datum localization and the mission node, run with no simulator up.
+Earlier milestones, still true: one follower flies to a sector and reports `ARRIVED`, and `planner_enable` false holds it (2026-11-08). Three followers each hold a different stub-map peak, and a silent follower's peak is released about 5.6 sim seconds later (2026-11-12). Two cold runs found all 3 targets before the sweep ended, including one 0.3 m inside a sector edge (2026-11-20). 489 tests pass: the planner, sweep, belief map, language-prior, mission and eval-sim libraries, the DGA/BLL baselines, a 200-seed coordination harness, the shared-datum localization and the mission node, run with no simulator up.
+
+### What a wrong language clue costs (2D sim, 2026-11-25)
+
+A language model's only output here is a starting map written from a report such as "Two hikers are missing: one last seen near the well and one near the orchard"; it never flies the drones. Language-derived search priors already exist (for example LMPath, arXiv 2605.13782, and arXiv 2611.16524), so the question is narrower: what does such a prior cost when the clue is wrong, in a multi-drone search whose map learns from empty camera views and whose leader always sweeps everything?
+
+20 seeds, 50 targets, one 120 x 120 m invented world, answers by gemini-3.8-flash frozen before any run, drones as points at 5 m/s:
+
+| Clue | Median time to first find | Median time to all found |
+|---|---|---|
+| none | 12.0 s | 33.5 s |
+| accurate | 8.5 s | 19.5 s |
+| misleading | 13.5 s | 43.5 s |
+| misleading, negative evidence off | 13.5 s | 141.5 s |
+
+The accurate clue was faster than none to find everything in 19 of 20 seeds and slower in none. The misleading clue was **not measurably worse than no clue**: 6 seeds faster and 8 slower to the first find, 9 and 11 to all found, though when it hurt it hurt more (up to +45 s) than it helped. Twenty seeds cannot tell a small cost from none. Every target was found and everything was covered in all 80 runs, because the sweep always finishes. With negative evidence off, the leader's sweep did most of the finding. This is a kinematic simulation with one sentence template, one model and one world, and none of it was flown: [`docs/eval-results.md`](docs/eval-results.md) has the setup, the paired comparisons and what it does not show.
 
 **Not done yet:**
 
-- **Language clue.** `swarm.launch.py leader:=true clue:="..."` turns a recorded clue into a starting map (`uav_mapping/core/prior.py`, `worlds/`) through `mission_prior_node`, and three headless missions (no clue, a clue at the hut, a misleading clue at the radio mast) ended DONE with all 3 finds, the clue changing where the first follower went. One run each measures nothing about time, and those flights used hand-written recordings. Since 2026-11-25 the `live` provider works with a real model (gemini-3.8-flash): it read every clue asked so far onto the right places, and its answers are frozen as recordings.
-- **Eval.** A 2D sim (`src/uav_eval`, 120 x 120 m, about 0.5 s a mission) runs the flying code over uniform, accurate and misleading clues, and a misleading clue with negative evidence off. An 8-seed pilot runs end to end on live recordings; the 20-seed results are not run yet.
+- **Language clue.** `swarm.launch.py leader:=true clue:="..."` turns a recorded clue into a starting map (`uav_mapping/core/prior.py`, `worlds/`) through `mission_prior_node`, and three headless missions (no clue, a clue at the hut, a misleading clue at the radio mast) ended DONE with all 3 finds, the clue changing where the first follower went. One run each measures nothing about time, and those flights used hand-written recordings. Since 2026-11-25 the `live` provider works with a real model (gemini-3.8-flash): it read every clue asked so far onto the right places, and its answers are frozen as recordings. A live call has not been made inside a flight.
+- **Eval in Gazebo.** The results above are from the 2D sim only; three Gazebo showcase runs and a second video are next.
 - **Perception.** YOLO26 is a stretch goal; the noisy ground-truth detector stands in.
 - **Landing.** Precision landing (colour masking + PID in the original) is not rebuilt and is in no milestone; a find ends in a hover.
 - **CI.** Two GitHub Actions workflows (`.github/workflows/`): unit tests on a hosted runner, and the mission as a smoke test on a self-hosted runner (the 25 GB image does not fit a hosted one). Both are green on GitHub: the unit job, and the smoke test on a self-hosted runner, which flew a full mission and found all three targets.

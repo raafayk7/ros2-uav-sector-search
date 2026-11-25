@@ -4,7 +4,7 @@ Review target (fixed): the follower planner section of `docs/roadmap.md`, scoped
 
 ## Decisions at a glance
 
-Status: decided. The language prior's questions are settled, its ROS-free library built, and a clue drives a mission as of 2026-11-24 (sessions 16-17, D44-D50). A real model was called and the 2D eval sim built and piloted on 2026-11-25 (session 18, D51-D54). `mission_node` is built and flew two whole missions to DONE from one command on 2026-11-20 (session 11, two detector seeds), plus one TIMED_OUT run. The mission state machine was designed (D41) and its ROS-free core built and tested the same day (session 10); a leader and 3 followers found all 3 targets in two cold runs. `belief_map_node` and a leader role in the swarm launch are built as of 2026-11-18 (session 9, D40), and one follower completed the Nov 20 search loop in two cold runs. The leader's sweep controller is built and flown as of 2026-11-17 (session 8, D39). T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07. T3 (node) and T4 (arm helper, stub map) are built and flown as of 2026-11-08: one follower in headless SITL reaches the best stub sector and reports ARRIVED, and disabling holds it. T5 (swarm launch) is built and flown as of 2026-11-12: three followers each hold a different stub peak. Full reasoning is in the ledger below.
+Status: decided. The language prior's questions are settled, its ROS-free library built, and a clue drives a mission as of 2026-11-24 (sessions 16-17, D44-D50). A real model was called and the 2D eval sim built and piloted on 2026-11-25 (session 18, D51-D54), and the results run the same day (session 19, `docs/eval-results.md`). `mission_node` is built and flew two whole missions to DONE from one command on 2026-11-20 (session 11, two detector seeds), plus one TIMED_OUT run. The mission state machine was designed (D41) and its ROS-free core built and tested the same day (session 10); a leader and 3 followers found all 3 targets in two cold runs. `belief_map_node` and a leader role in the swarm launch are built as of 2026-11-18 (session 9, D40), and one follower completed the Nov 20 search loop in two cold runs. The leader's sweep controller is built and flown as of 2026-11-17 (session 8, D39). T1 (shared datum) and T2 (ROS-free library, `uav_planning/core/planner.py`) are built and tested as of 2026-11-07. T3 (node) and T4 (arm helper, stub map) are built and flown as of 2026-11-08: one follower in headless SITL reaches the best stub sector and reports ARRIVED, and disabling holds it. T5 (swarm launch) is built and flown as of 2026-11-12: three followers each hold a different stub peak. Full reasoning is in the ledger below.
 
 | Topic | Decision | Ref |
 |---|---|---|
@@ -493,7 +493,7 @@ C) Thesis steps only
 State: approved
 Actual answer: A) Direct to best open (D17, 2026-11-04)
 Accepted scope: the flying rule picks the highest-value open sector on the whole grid and flies straight to it, with the R11 penalty and the R10 margin unchanged. Thesis DGA (8-neighbour steps) stays in the library beside BLL as a measured baseline. `docs/roadmap.md` and `CLAUDE.md` are reworded so they no longer say the followers fly by gradient ascent; the thesis algorithm is described as the baseline. Supersedes the "DGA only at runtime" wording in the scope record: the node runs this direct rule. The user changed the stack line marked locked in `CLAUDE.md`.
-History: none. Later evidence, 2026-11-04: `leader_node.py:374` updates one cell per detection, with no spatial spread, so spikes are what it produces. `docs/probes/algo_probe6.py` then repeated the comparison on Gaussian-spread peaks (sigma 0-2 sectors, approved conflict rules, 200 seeds, whole-percent values). All 3 peaks held by local steps: 1%, 9%, 24%, 32% at 8x8 and 0%, 2%, 4%, 16% at 12x12. Direct: 100% in every case. The decision does not depend on peaks being single-sector.
+History: distance discounts compared on LLM-shaped maps 2026-11-25 (session 19 notes); none adopted, this rule unchanged. Later evidence, 2026-11-04: `leader_node.py:374` updates one cell per detection, with no spatial spread, so spikes are what it produces. `docs/probes/algo_probe6.py` then repeated the comparison on Gaussian-spread peaks (sigma 0-2 sectors, approved conflict rules, 200 seeds, whole-percent values). All 3 peaks held by local steps: 1%, 9%, 24%, 32% at 8x8 and 0%, 2%, 4%, 16% at 12x12. Direct: 100% in every case. The decision does not depend on peaks being single-sector.
 
 ### R13: Flat or all-unknown maps
 Finding: 13, P1, confidence 7/10, `src/uav_mapping/uav_mapping/leader_node.py:327` (`cur = 0.0  # first observation: prior p=0.5`) and `docs/next-session-prompt.md` step 1, native review.
@@ -1945,7 +1945,7 @@ Time to the first find hardly separates the clue arms at 8 seeds: three follower
 |---|---|---|
 | The 20 x 4 results | No | Session 19 |
 | The 40 final clues recorded | Partly: tool built and used on the pilot, final seeds left untouched until the rules above were settled | Session 19, first thing |
-| R12: an alternative to the best-open-sector rule on LLM-shaped maps | No alternative compared | TODOS, decide in session 19 before the table |
+| R12: an alternative to the best-open-sector rule on LLM-shaped maps | No alternative compared | Done in session 19, before the table: none adopted |
 | The 2D sim against Gazebo (the same scenario in both) | No | Not scheduled; the write-up must call it kinematic |
 | `lane_order_by_prior` in `sweep_node` | No (D53) | TODOS, only if D53 is reversed |
 | The Dockerfile step | Written, not built | Next image rebuild (TODOS) |
@@ -1953,6 +1953,43 @@ Time to the first find hardly separates the clue arms at 8 seeds: three follower
 | The model on vague, negated or multi-place clues (one template only) | No | Not scheduled; a stated limit of the eval |
 
 **Plan-level versus code.** Plan-level, by the user: D51-D54, the model. Code: everything under "What was built". Documentation: this section, the decisions table, roadmap, README, stack overview, CLAUDE.md, the skill, TODOS, docker-notes 67 and 69, the probes README and the session 19 prompt.
+
+## Implementation notes (session 19, 2026-11-25)
+
+Ran: R12, the 40 final clues, the 20 x 4 matrix with its ablation, the write-up, the literature re-check. No sim, no flight. 489 tests (482 before). Results: `docs/eval-results.md`.
+
+**Order, on purpose.** R12 and the report's columns first (committed `a7f70f4`), then the model asked (`31d1f45`), then every answer checked by geometry, then the matrix once (`b0d65d0`). Nothing in the planner, belief map, scenarios or simulator changed.
+
+**R12.** Four discounts (`value * exp(-distance / L)`; pick-30, pick-60 and pick-120 change which sector is chosen, full-60 also whether to move) against today's rule on seeds 4000-4199 with a stand-in reader. The bar, written in the probe before it ran: lower median to all found with an accurate clue, no higher for uniform and misleading, and faster in more seeds than slower in all three arms. Seeds to all found, faster / slower:
+
+| Arm | pick-30 | pick-60 | pick-120 | full-60 |
+|---|---|---|---|---|
+| uniform | 91 / 79 | 98 / 78 | 98 / 76 | 97 / 78 |
+| accurate | 24 / 166 | 27 / 153 | 54 / 116 | 21 / 159 |
+| misleading | 132 / 51 | 123 / 59 | 105 / 75 | 117 / 65 |
+
+None met it: every discount loses with an accurate clue. It is a hedge against a wrong clue. The rule stays; this kept the existing decision (D17), so no new D-number. The second 200 seeds were to confirm a winner and were not run. On the 8 pilot seeds with live recordings the misleading arm also improved (pick-30: 6 faster, 0 slower) and the accurate arm did not clearly (2 faster, 5 slower), 8 seeds only.
+
+**Recordings.** 38 calls, 38 parsed at the first attempt; 2 of the 40 clues were the pilot's own one-hiker sentences and were reused. 27,649 tokens in, 20,868 out. Every region on its place; accurate regions cover 47 of 50 targets; no misleading region touches a target's neighbourhood.
+
+**Literature.** Re-check in `docs/literature-check.md`: verdict and claim unchanged.
+
+**Choices made while writing, not asked:** the sign test (seeds only, no correction, said beside the table); `misleading - accurate` added to the printed pairs (both before the matrix ran). The distribution details (`eval_detail.py`) were written after seeing the table and are labelled descriptive.
+
+**What was built.** `core/arms.py sign_p`; `run.py` (`--against`, `to_json`, `from_json`, two table columns); tests that replay two seeds of each committed file exactly and compare the published tables with the JSON (a corrupted time fails them); `.gstack/pregate.json` lanes for `uav_eval` and `docs/results`; probes `distance_rule_probe.py`, `recordings_check.py`, `eval_detail.py`.
+
+**Not shown, and where each lives.**
+
+| Gap | In scope here? | Home |
+|---|---|---|
+| 3 Gazebo showcase runs, video v2 | Yes, not done: they need the user at the screen with OBS | Session 19b |
+| The 2D sim against Gazebo | No | TODOS |
+| Whether a wrong clue costs a little or nothing | Shown not to be measurable at 20 seeds | Not scheduled |
+| Other clue templates, models, worlds, fleet sizes, moving targets | No | Not scheduled; limits in the write-up |
+| Meng 2008, Bertuccelli & How 2005 read | Attempted, refused or paywalled | TODOS |
+| Thesis-timing arm (D42), landing | No | The user's call |
+
+**Plan-level versus code.** Plan-level: none new (R12 closed on the bar set beforehand; the claim unchanged). Code: the list under "What was built"; no flying code. Documentation: this section, `docs/eval-results.md`, the results files, README, roadmap, literature check, stack overview, CLAUDE.md, the skill, TODOS, the probes README and the session 19b prompt.
 
 ## NOT in scope
 
@@ -2087,10 +2124,11 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - [x] ROS-free library, landmark file, hand-written recordings, 127 tests (session 16, 2026-11-24)
   - [x] `mission_prior_node`, wired into `belief_map_node` and `swarm.launch.py`; one clue-driven mission (session 17, 2026-11-24)
 
-- [ ] **T14 (P1, CC: ~5h)** — uav_eval — the 2D eval (Dec 20)
+- [ ] **T14 (P1, CC: ~5h)** — uav_eval — the 2D eval (Dec 20; results done, showcase runs left)
   - Surfaced by: the roadmap's Dec 20 row and Eval design, D51-D54
   - [x] Gemini provider, first live calls, `worlds/valley`, sim, four arms, pilot (session 18, 2026-11-25)
-  - [ ] 40 final clues recorded, 20 x 4 results with the lanes-first ablation, showcase runs, video v2 (session 19)
+  - [x] R12 probe, 40 final clues recorded, 20 x 4 results with the lanes-first ablation, write-up, literature re-check (session 19, 2026-11-25)
+  - [ ] 3 Gazebo showcase runs, video v2 (session 19b)
 
 Effort assumes features at about 30x and tests at about 50x human-to-CC time, adjusted down for ROS integration.
 

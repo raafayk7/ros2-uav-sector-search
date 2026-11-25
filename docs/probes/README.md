@@ -22,6 +22,9 @@ Throwaway scripts behind the numbers in `docs/planner-decisions.md`. They are ev
 | `prior_live_check.py [--followers a,b,c] [--timeout S]` | Listens only: prints the `/mission_prior` raised cells, mission state changes, each follower's goal sector (marked raised or not), confirmed finds and the report; exit 0 on DONE. Run in the container beside `swarm.launch.py leader:=true clue:=...` after `ci/spawn_targets.sh` (2026-11-24) | session 17, D49 |
 | `prior_probe.py raster\|mission\|feasible` | Offline: rasterization rules on random circles; 2D point-mass missions over clue condition, alpha and outside level at 40 and 80 m (about 4.5 min); how often a wrong landmark exists. The 160 m rows came from calling `run(160, ...)` directly (2026-11-24) | D44, D45, D47 |
 | `lane_order_probe.py` | Offline: the eval sim with a stand-in reader, 100 seeds, clue's lanes first against the default sweep; how often a misleading region touches a target's cell or its neighbours (2026-11-25) | D53, D54 |
+| `distance_rule_probe.py` | Offline: today's follower rule against four distance discounts, 200 seeds with a stand-in reader and the 8 pilot seeds (2026-11-25); none met the bar written in its docstring | R12 |
+| `recordings_check.py [SEEDS]` | Offline: are the recorded regions where the clue says, do they cover the targets, does a misleading one touch a target's neighbourhood (2026-11-25) | session 19 |
+| `eval_detail.py` | Offline: spread of the paired differences, who found what, where the extra confirmations were; replays the committed results and checks they match (2026-11-25) | session 19 |
 | `cmd_gps_pose_probe.py` | One `cmd_gps_pose` flies a drone and `goal_lla` echoes it. Needs a 3-iris swarm, with `iris_2` in GUIDED and airborne | R2 |
 
 Limits: pure Python, no flight dynamics, equal peaks only (see `TODOS.md`).
