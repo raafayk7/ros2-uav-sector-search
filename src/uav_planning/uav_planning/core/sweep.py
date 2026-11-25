@@ -102,6 +102,41 @@ def _dist(a: Point, b: Point) -> float:
     return math.hypot(a[0] - b[0], a[1] - b[1])
 
 
+def _default_order(all_lanes: Sequence[Tuple[Point, Point]], start: Point) -> List[int]:
+    """Index order, from whichever outer lane is nearer ``start``."""
+    near_first = min(_dist(start, p) for p in all_lanes[0])
+    near_last = min(_dist(start, p) for p in all_lanes[-1])
+    order = list(range(len(all_lanes)))
+    return order if near_first <= near_last else order[::-1]
+
+
+def lane_order_by_prior(grid: GridSpec, half_width: float,
+                        raised: Sequence[Sequence[float]], start: Point,
+                        axis: str = 'north') -> List[int]:
+    """Lanes through the clue's cells first (D50), as a ``lane_order``.
+
+    ``raised[row][col]`` >= 0 is how far the clue lifts a cell above "unknown".
+    A lane scores the sum over the cells nearest to it; lanes that score fly
+    first, highest first, and the rest follow in index order from the nearer
+    end. Always a permutation of every lane, so the coverage guarantee holds
+    whatever the clue says. No raised cell: the default order.
+    """
+    all_lanes = lanes(grid, half_width, axis)
+    k = 0 if axis == 'north' else 1
+    scores = [0.0] * len(all_lanes)
+    for s in grid.sectors():
+        at = grid.sector_centre(s)[k]
+        near = min(range(len(all_lanes)), key=lambda i: abs(all_lanes[i][0][k] - at))
+        scores[near] += raised[s.row][s.col]
+    scores = [round(v, 9) for v in scores]
+    default = _default_order(all_lanes, start)
+    first = sorted((i for i in default if scores[i] > 0.0), key=lambda i: -scores[i])
+    rest = [i for i in default if scores[i] <= 0.0]
+    if first and rest and abs(rest[-1] - first[-1]) < abs(rest[0] - first[-1]):
+        rest.reverse()
+    return first + rest
+
+
 def plan_sweep(grid: GridSpec, half_width: float, start: Point,
                axis: str = 'north',
                lane_order: Optional[Sequence[int]] = None) -> List[Point]:
@@ -116,10 +151,7 @@ def plan_sweep(grid: GridSpec, half_width: float, start: Point,
     all_lanes = lanes(grid, half_width, axis)
     n = len(all_lanes)
     if lane_order is None:
-        first, last = all_lanes[0], all_lanes[-1]
-        near_first = min(_dist(start, first[0]), _dist(start, first[1]))
-        near_last = min(_dist(start, last[0]), _dist(start, last[1]))
-        order = list(range(n)) if near_first <= near_last else list(range(n - 1, -1, -1))
+        order = _default_order(all_lanes, start)
     else:
         order = list(lane_order)
         if sorted(order) != list(range(n)):

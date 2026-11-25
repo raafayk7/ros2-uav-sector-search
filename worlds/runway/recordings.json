@@ -2,24 +2,6 @@
   "recordings": [
     {
       "world": "runway",
-      "clue": "One hiker, last seen near the hut.",
-      "landmarks": "d383a517053af920",
-      "source": "hand-written",
-      "model": "",
-      "date": "",
-      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [34, 7], \"radius\": 6, \"weight\": 1.0, \"confidence\": 0.8}]}"
-    },
-    {
-      "world": "runway",
-      "clue": "One hiker, last seen near the radio mast.",
-      "landmarks": "d383a517053af920",
-      "source": "hand-written",
-      "model": "",
-      "date": "",
-      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [37, 38], \"radius\": 6, \"weight\": 1.0, \"confidence\": 0.8}]}"
-    },
-    {
-      "world": "runway",
       "clue": "Two hikers were at the footbridge; a third may be in the copse.",
       "landmarks": "d383a517053af920",
       "source": "hand-written",
@@ -44,6 +26,24 @@
       "model": "",
       "date": "",
       "output": "{\"regions\": []}"
+    },
+    {
+      "world": "runway",
+      "clue": "One hiker, last seen near the hut.",
+      "landmarks": "d383a517053af920",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [34, 7], \"radius\": 7, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "runway",
+      "clue": "One hiker, last seen near the radio mast.",
+      "landmarks": "d383a517053af920",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [37, 38], \"radius\": 6, \"weight\": 1.0, \"confidence\": 0.95}]}"
     }
   ]
 }

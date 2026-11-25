@@ -18,7 +18,8 @@ from uav_mapping.core import live as live_module
 from uav_mapping.core.live import (SYSTEM, VENDORS, LiveProvider, build_prompt,
                                    vendor_of)
 from uav_mapping.core.prior import (ProviderUnavailable, load_replay,
-                                    live_recording, make_prior, parse_regions,
+                                    live_recording, make_prior, parse_recordings,
+                                    parse_regions,
                                     prior_message, read_prior_message,
                                     save_recording)
 
@@ -27,9 +28,8 @@ ROOT = Path(__file__).resolve().parents[3]
 WORLD_FILE = ROOT / 'worlds/runway/landmarks.yaml'
 RECORDINGS = ROOT / 'worlds/runway/recordings.json'
 HUT = 'One hiker, last seen near the hut.'
-HUT_JSON = json.dumps({'regions': [
-    {'shape': 'circle', 'center': [34, 7], 'radius': 6, 'weight': 1.0,
-     'confidence': 0.8}]})
+HUT_JSON = next(r.output for r in parse_recordings(RECORDINGS.read_text())
+                if r.clue == HUT)
 
 
 @pytest.fixture(scope='module')
@@ -365,7 +365,7 @@ def test_with_a_clue_nothing_is_published_until_the_prior_arrives(ros, world):
     ros['send_pose']()
     ros['spin'](5.0, until=lambda: ros['heatmaps'])
     col, row = GRID.cell_of(34, 7)
-    assert ros['heatmaps'][-1][row * 8 + col] == 70
+    assert ros['heatmaps'][-1][row * 8 + col] == 74
 
 
 def test_a_failed_prior_gives_todays_map(ros, world):

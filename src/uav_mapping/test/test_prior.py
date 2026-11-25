@@ -565,7 +565,7 @@ def test_a_replayed_clue_becomes_a_starting_belief(world):
                    load_replay(RECORDINGS))
     data = BeliefMap(GRID, start=p.start).occupancy_data()
     col, row = GRID.cell_of(34, 7)
-    assert data[row * 8 + col] == 70            # 0.5 + 0.25 * 0.8
+    assert data[row * 8 + col] == 74            # 0.5 + 0.25 * 0.95
     assert data.count(-1) > 40                  # the rest stays unknown
 
 

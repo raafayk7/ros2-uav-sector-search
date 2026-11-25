@@ -1,0 +1,22 @@
+# Named places on the eval's 120 x 120 m arena (D52; arena ENU metres: x East,
+# y North), the only description of the ground the language model gets
+# (uav_mapping/core/landmarks.py). Invented, and fixed on 2026-11-25 before any
+# model was asked about them. The 2D eval sim only; no Gazebo world matches it.
+#
+# Editing this file orphans every recording made against it, on purpose (D48).
+world: valley
+bounds: [0, 0, 120, 120]
+landmarks:
+  - {name: hut, type: point, points: [[97, 22]], description: a stone shelter}
+  - {name: footbridge, type: point, points: [[62, 70]], description: where the path crosses the creek}
+  - {name: creek, type: polyline, points: [[0, 92], [24, 84], [44, 78], [62, 70]], description: "shallow, ends at the footbridge pool"}
+  - {name: copse, type: polygon, points: [[16, 28], [28, 25], [33, 36], [21, 41]], description: a few dense trees}
+  - {name: trailhead, type: point, points: [[8, 112]], description: parking and a signboard}
+  - {name: radio mast, type: point, points: [[108, 110]], description: on open ground}
+  - {name: well, type: point, points: [[104, 62]], description: capped and fenced}
+  - {name: quarry, type: polygon, points: [[52, 8], [66, 6], [68, 18], [55, 20]], description: disused and shallow}
+  - {name: chapel, type: point, points: [[38, 108]], description: roofless ruin}
+  - {name: orchard, type: polygon, points: [[74, 92], [90, 90], [92, 102], [77, 104]], description: old apple trees in rows}
+  - {name: stone wall, type: polyline, points: [[70, 38], [84, 46], [90, 50]], description: waist high}
+  - {name: campsite, type: point, points: [[10, 58]], description: a flat clearing}
+  - {name: lookout, type: point, points: [[40, 54]], description: a small rise with a bench}

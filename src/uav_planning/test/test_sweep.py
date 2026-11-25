@@ -7,7 +7,8 @@ import pytest
 from uav_planning.core.planner import GridSpec
 from uav_planning.core.sweep import (
     COMPLETE, SWEEPING, WAITING, Camera, footprint_half_extents,
-    lane_half_width, lane_positions, lanes, parse_lane_order, path_length,
+    lane_half_width, lane_order_by_prior, lane_positions, lanes,
+    parse_lane_order, path_length,
     plan_sweep, sweep_tick)
 
 # The sim camera (docker-notes gotcha 47): 640x480, fx = fy = 205.47.
@@ -227,3 +228,53 @@ def test_a_whole_sweep_visits_every_waypoint_in_order():
             break
     assert out.status == COMPLETE
     assert visited == WPS
+
+
+# ---- Lanes through the clue's cells first (D50) -----------------------------
+
+BIG = GridSpec(24, 24)
+
+
+def _raised(*cells):
+    out = [[0.0] * BIG.width for _ in range(BIG.height)]
+    for col, row, v in cells:
+        out[row][col] = v
+    return out
+
+
+def _order(*cells, start=(2.5, 2.5), axis='north'):
+    return lane_order_by_prior(BIG, 7.47, _raised(*cells), start, axis)
+
+
+def test_no_clue_is_the_default_lane_order():
+    n = len(lanes(BIG, 7.47))
+    assert _order() == list(range(n))
+    assert _order(start=(117.5, 2.5)) == list(range(n - 1, -1, -1))
+    assert plan_sweep(BIG, 7.47, (2.5, 2.5), lane_order=_order()) == \
+        plan_sweep(BIG, 7.47, (2.5, 2.5))
+
+
+def test_the_clues_lane_flies_first_and_every_lane_still_flies():
+    order = _order((22, 20, 0.25))
+    n = len(order)
+    assert order[0] == n - 1 and order[1:] == list(range(n - 2, -1, -1))
+    assert sorted(order) == list(range(n))
+    assert sorted(plan_sweep(BIG, 7.47, (2.5, 2.5), lane_order=order)) == \
+        sorted(plan_sweep(BIG, 7.47, (2.5, 2.5)))
+
+
+def test_the_highest_lane_comes_first_and_the_rest_start_at_the_nearer_end():
+    order = _order((1, 5, 0.1), (13, 5, 0.1), (13, 6, 0.2), (22, 9, 0.2))
+    n = len(order)
+    assert order[:3] == [4, n - 1, 0]
+    assert order[3:] == [i for i in range(n) if i not in order[:3]]
+
+
+def test_equal_lanes_keep_the_default_order():
+    assert _order((1, 5, 0.2), (22, 5, 0.2))[:2] == [0, 7]
+    assert _order((1, 5, 0.2), (22, 5, 0.2), start=(117.5, 2.5))[:2] == [7, 0]
+
+
+def test_east_lanes_are_scored_by_row():
+    assert _order((1, 22, 0.2), axis='east')[0] == 7
+    assert _order((1, 22, 0.2), axis='north')[0] == 0

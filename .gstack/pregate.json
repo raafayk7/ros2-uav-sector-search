@@ -8,6 +8,7 @@
     "skills/**": ["src/uav_planning/test/test_ci_files.py"],
     "src/uav_planning/launch/**": ["src/uav_planning/test/test_arena_view.py"],
     "src/uav_mapping/package.xml": ["src/uav_mapping/test/test_prior.py"],
-    "worlds/**": ["src/uav_mapping/test/test_prior.py"]
+    "src/uav_eval/package.xml": ["src/uav_eval/test/test_eval.py"],
+    "worlds/**": ["src/uav_mapping/test/test_prior.py", "src/uav_eval/test/test_eval.py"]
   }
 }

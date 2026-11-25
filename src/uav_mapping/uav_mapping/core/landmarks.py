@@ -129,9 +129,9 @@ def load_world(path) -> World:
 
 # ---- Misleading clues (D47) -------------------------------------------------
 
-def near_landmark(grid: Grid, lm: Landmark, radius: float) -> np.ndarray:
-    """Fraction of each cell within ``radius`` of a landmark, [row, col].
-    A polygon's inside counts as distance 0."""
+def landmark_distance(lm: Landmark, x, y):
+    """Distance from points (x, y) to a landmark. Arrays welcome. A polygon's
+    inside counts as distance 0."""
     pts = lm.points
     if lm.type == 'point':
         segments = [(pts[0], pts[0])]
@@ -139,13 +139,13 @@ def near_landmark(grid: Grid, lm: Landmark, radius: float) -> np.ndarray:
         segments = list(zip(pts, pts[1:]))
     else:
         segments = list(zip(pts, pts[1:] + pts[:1]))
+    dist = np.min([segment_distance(x, y, a, b) for a, b in segments], axis=0)
+    return np.where(_in_polygon(x, y, pts), 0.0, dist) if lm.type == 'polygon' else dist
 
-    def inside(x, y):
-        dist = np.min([segment_distance(x, y, a, b) for a, b in segments], axis=0)
-        mask = dist <= radius
-        return mask | _in_polygon(x, y, pts) if lm.type == 'polygon' else mask
 
-    return coverage(grid, inside)
+def near_landmark(grid: Grid, lm: Landmark, radius: float) -> np.ndarray:
+    """Fraction of each cell within ``radius`` of a landmark, [row, col]."""
+    return coverage(grid, lambda x, y: landmark_distance(lm, x, y) <= radius)
 
 
 def _in_polygon(x, y, pts) -> np.ndarray:
