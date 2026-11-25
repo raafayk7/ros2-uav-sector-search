@@ -14,8 +14,9 @@ import pytest
 from uav_mapping.core import landmarks as lmk
 from uav_mapping.core.belief import BeliefMap
 from uav_mapping.core.geometry import Grid
-from uav_mapping.core.live import (KEY_VARIABLE, SYSTEM, LiveProvider,
-                                   build_prompt)
+from uav_mapping.core import live as live_module
+from uav_mapping.core.live import (SYSTEM, VENDORS, LiveProvider, build_prompt,
+                                   vendor_of)
 from uav_mapping.core.prior import (ProviderUnavailable, load_replay,
                                     live_recording, make_prior, parse_regions,
                                     prior_message, read_prior_message,
@@ -36,21 +37,56 @@ def world():
     return lmk.load_world(WORLD_FILE)
 
 
-class FakeClient:
+class FakeClaude:
     """Stands in for anthropic.Anthropic: answers from a list, keeps the calls."""
 
-    def __init__(self, *texts, stop_reason='end_turn'):
-        self._texts = list(texts)
-        self._stop = stop_reason
+    model, variable = 'claude-x', 'ANTHROPIC_API_KEY'
+    refused, cut_off = 'refusal', 'max_tokens'
+
+    def __init__(self, *texts, stop='end_turn', error=None):
+        self._texts, self._stop, self._error = list(texts), stop, error
         self.calls = []
         self.messages = self
 
     def create(self, **kwargs):
         self.calls.append(kwargs)
-        text = self._texts.pop(0)
-        return SimpleNamespace(stop_reason=self._stop, content=[
-            SimpleNamespace(type='thinking', thinking=''),
-            SimpleNamespace(type='text', text=text)])
+        if self._error:
+            raise self._error
+        return SimpleNamespace(
+            stop_reason=self._stop,
+            usage=SimpleNamespace(input_tokens=500, output_tokens=60),
+            content=[SimpleNamespace(type='thinking', thinking=''),
+                     SimpleNamespace(type='text', text=self._texts.pop(0))])
+
+
+class FakeGemini:
+    """Stands in for google.genai.Client."""
+
+    model, variable = 'gemini-x', 'GEMINI_API_KEY'
+    refused, cut_off = None, 'MAX_TOKENS'       # refused: no candidates at all
+
+    def __init__(self, *texts, stop='STOP', error=None):
+        self._texts, self._stop, self._error = list(texts), stop, error
+        self.calls = []
+        self.models = self
+
+    def generate_content(self, **kwargs):
+        self.calls.append(kwargs)
+        if self._error:
+            raise self._error
+        reason = SimpleNamespace(name=self._stop)       # an enum in the SDK
+        return SimpleNamespace(
+            text=self._texts.pop(0),
+            candidates=[SimpleNamespace(finish_reason=reason)] if self._stop else [],
+            prompt_feedback=SimpleNamespace(block_reason='SAFETY'),
+            usage_metadata=SimpleNamespace(
+                prompt_token_count=500, candidates_token_count=60,
+                thoughts_token_count=None))
+
+
+@pytest.fixture(params=[FakeClaude, FakeGemini], ids=['claude', 'gemini'])
+def fake(request):
+    return request.param
 
 
 # ---- The prompt -------------------------------------------------------------
@@ -72,60 +108,127 @@ def test_the_prompt_says_nothing_about_targets_or_drones(world):
 
 # ---- The provider -----------------------------------------------------------
 
-def test_a_live_answer_becomes_the_same_prior_as_the_recording(world):
-    live = LiveProvider('some-model', FakeClient(HUT_JSON))
+def test_a_live_answer_becomes_the_same_prior_as_the_recording(world, fake):
+    live = LiveProvider(fake.model, fake(HUT_JSON))
     got = make_prior(HUT, world, GRID, live)
     want = make_prior(HUT, world, GRID, load_replay(RECORDINGS))
     assert not got.failed and np.array_equal(got.start, want.start)
     assert live.outputs == [HUT_JSON]
+    (usage,) = live.usage
+    assert usage['input'] == 500 and usage['output'] == 60
 
 
-def test_no_temperature_is_sent_and_no_key_is_needed_with_a_client(world):
-    client = FakeClient(HUT_JSON)
-    LiveProvider('some-model', client, environ={})(HUT, world)
+def test_the_request_is_the_model_the_rules_and_the_prompt(world, fake):
+    client = fake(HUT_JSON)
+    LiveProvider(fake.model, client, environ={})(HUT, world)
     (call,) = client.calls
-    assert call['model'] == 'some-model'
-    assert not {'temperature', 'top_p', 'top_k'} & set(call)
+    assert call['model'] == fake.model
+    text = repr(call)
+    assert repr(SYSTEM)[1:-1] in text and repr(build_prompt(HUT, world))[1:-1] in text
+    for word in ('temperature', 'top_p', 'top_k', 'tools'):
+        assert f"'{word}'" not in text
 
 
-def test_an_invalid_answer_is_retried_once_and_the_last_output_is_the_valid_one(world):
-    live = LiveProvider('m', FakeClient('not json', HUT_JSON))
+def test_gemini_is_asked_for_json(world):
+    client = FakeGemini(HUT_JSON)
+    LiveProvider('gemini-x', client)(HUT, world)
+    assert client.calls[0]['config']['response_mime_type'] == 'application/json'
+
+
+def test_an_invalid_answer_is_retried_once_and_the_last_output_is_the_valid_one(
+        world, fake):
+    live = LiveProvider(fake.model, fake('not json', HUT_JSON))
     prior = make_prior(HUT, world, GRID, live)
     assert not prior.failed and len(live.outputs) == 2
     assert parse_regions(live.outputs[-1])
 
 
-def test_two_invalid_answers_fly_uniform_with_a_warning(world):
+def test_two_invalid_answers_fly_uniform_with_a_warning(world, fake):
     prior = make_prior(HUT, world, GRID,
-                       LiveProvider('m', FakeClient('nope', '{}')))
+                       LiveProvider(fake.model, fake('nope', '{}')))
     assert prior.failed and np.all(prior.start == 0.5)
     assert len(prior.warnings) == 3         # two attempts, then the uniform note
 
 
-def test_a_refusal_is_a_failed_attempt_not_an_answer(world):
-    live = LiveProvider('m', FakeClient('x', 'y', stop_reason='refusal'))
-    assert make_prior(HUT, world, GRID, live).failed
-    assert live.outputs == []
+@pytest.mark.parametrize('how', ['refused', 'cut_off'])
+def test_a_refusal_or_a_cut_off_answer_is_a_failed_attempt(world, fake, how):
+    live = LiveProvider(fake.model, fake(HUT_JSON, HUT_JSON, stop=getattr(fake, how)))
+    prior = make_prior(HUT, world, GRID, live)
+    assert prior.failed and live.outputs == []
+    assert {'refused': 'declined', 'cut_off': 'stopped early'}[how] in prior.warnings[0]
 
 
-def test_no_key_is_one_attempt_and_a_warning_naming_the_variable(world):
-    live = LiveProvider('m', environ={})
+def test_no_key_is_one_attempt_and_a_warning_naming_the_variable(world, fake):
+    live = LiveProvider(fake.model, environ={})
     prior = make_prior(HUT, world, GRID, live)
     assert prior.failed and np.all(prior.start == 0.5)
-    assert len(prior.warnings) == 2 and KEY_VARIABLE in prior.warnings[0]
+    assert len(prior.warnings) == 2 and fake.variable in prior.warnings[0]
     with pytest.raises(ProviderUnavailable):
         make_prior(HUT, world, GRID, live, strict=True)
 
 
-def test_no_model_name_is_unavailable_not_a_crash():
+def test_one_vendors_key_is_never_used_for_the_other(world, fake):
+    other = {v.key_variable: 'k' for v in VENDORS if v.key_variable != fake.variable}
+    other['LLM_API_KEY'] = other['GOOGLE_API_KEY'] = 'k'
+    with pytest.raises(ProviderUnavailable, match=fake.variable):
+        LiveProvider(fake.model, environ=other)(HUT, world)
+
+
+def test_only_the_right_key_reaches_the_client(world, fake, monkeypatch):
+    got = []
+    monkeypatch.setattr(live_module, 'VENDORS', tuple(
+        v._replace(make_client=lambda key: got.append(key) or fake(HUT_JSON))
+        for v in VENDORS))
+    environ = {v.key_variable: f'key-of-{v.prefix}' for v in VENDORS}
+    LiveProvider(fake.model, environ=environ)(HUT, world)
+    assert got == ['key-of-' + fake.model[:-1]]
+
+
+@pytest.mark.parametrize('key', ['"abc"', "'abc'", ' abc', 'abc\r'])
+def test_a_key_with_quotes_or_spaces_is_refused_without_showing_it(world, fake, key):
+    with pytest.raises(ProviderUnavailable) as e:
+        LiveProvider(fake.model, environ={fake.variable: key})(HUT, world)
+    assert 'abc' not in str(e.value)
+
+
+def test_a_key_in_an_error_is_not_logged(world, fake):
+    live = LiveProvider(fake.model, fake(error=ValueError('bad header s3cret!')),
+                        environ={fake.variable: 's3cret'})
+    prior = make_prior(HUT, world, GRID, live)
+    assert prior.failed and 'bad header <key>' in prior.warnings[0]
+    assert 's3cret' not in ''.join(prior.warnings)
+
+
+def test_a_missing_package_is_one_attempt_naming_it(world, fake, monkeypatch):
+    def missing(key):
+        raise ImportError
+    monkeypatch.setattr(live_module, 'VENDORS', tuple(
+        v._replace(make_client=missing) for v in VENDORS))
+    prior = make_prior(HUT, world, GRID,
+                       LiveProvider(fake.model, environ={fake.variable: 'k'}))
+    assert len(prior.warnings) == 2
+    assert vendor_of(fake.model).package in prior.warnings[0]
+
+
+@pytest.mark.parametrize('model', ['', 'gpt-x', 'my-gemini-x', 'Claude-x'])
+def test_a_model_without_a_known_vendor_is_unavailable_not_a_crash(model):
     with pytest.raises(ProviderUnavailable):
-        LiveProvider('')
+        LiveProvider(model)
 
 
-def test_the_key_is_read_from_the_environment_only():
+def test_the_keys_are_read_from_the_environment_only():
     src = (ROOT / 'src/uav_mapping/uav_mapping/core/live.py').read_text()
-    assert re.findall(r"environ\.get\((\w+)", src) == ['KEY_VARIABLE']
-    assert KEY_VARIABLE == 'LLM_API_KEY'
+    assert re.findall(r"environ\.get\(([\w.]+)", src) == ['self.vendor.key_variable']
+    assert 'open(' not in src
+    assert [v.key_variable for v in VENDORS] == ['GEMINI_API_KEY', 'ANTHROPIC_API_KEY']
+
+
+def test_the_key_file_is_ignored_by_git_and_docker_and_the_example_is_empty():
+    assert 'docker/llm.env*' in (ROOT / '.gitignore').read_text().splitlines()
+    assert 'llm.env*' in (ROOT / 'docker/.dockerignore').read_text().splitlines()
+    example = (ROOT / 'docker/llm.env.example').read_text()
+    keys = [l for l in example.splitlines() if l and not l.startswith('#')]
+    assert keys == [f'{v.key_variable}=' for v in VENDORS]
 
 
 # ---- The prior as a message -------------------------------------------------

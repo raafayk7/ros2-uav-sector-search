@@ -66,11 +66,12 @@ Launch args:
                   mission_prior_node turns it into a starting belief and
                   belief_map_node waits for it (D44-D48, session 17)
   prior_provider  replay (default, no key; committed recordings in worlds/) or
-                  live (the Claude API; key only from LLM_API_KEY)
+                  live (llm_model picks the vendor and its key, D51)
   prior_alpha     0.5 (cap 0.7)
   prior_timeout   wall s the map waits for the prior before flying uniform
   worlds_dir      where worlds/runway/ lives (container path by default)
-  llm_model       model name for prior_provider:=live
+  llm_model       gemini-* (GEMINI_API_KEY) or claude-* (ANTHROPIC_API_KEY),
+                  from the environment: docker/llm.env.example says how
   record_prior    live only: save the answer as a recording in this file
   mission         with a leader, run mission_node and start the planners
                   disabled (default true; ignored without a leader)

@@ -474,6 +474,12 @@ RUN for i in 1 2 3; do \
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
+# The Gemini client for the language prior's live provider (docker-notes 67).
+# Pinned by hash; --no-deps so it can only add packages, never change one.
+COPY requirements-llm.txt /tmp/requirements-llm.txt
+RUN pip3 install --break-system-packages --no-cache-dir --no-deps \
+        --require-hashes -r /tmp/requirements-llm.txt
+
 # Fix ownership of the user's home so pip caches etc. land in the right place
 RUN chown -R ${UID}:${GID} /home/${USERNAME}
 

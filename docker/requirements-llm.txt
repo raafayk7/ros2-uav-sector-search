@@ -1,0 +1,28 @@
+# The Gemini client for mission_prior_node's live provider, and the packages it
+# needs that the image lacks. Pinned by hash: an API key sits in the same process.
+# Nothing here was uploaded after 2026-11-11. google-genai stays below 3.0, as its
+# README asks. Install (in the container, system Python, as user ros):
+#   /usr/bin/python3 -m pip install --user --break-system-packages --no-deps \
+#       --require-hashes -r docker/requirements-llm.txt
+annotated-types==0.8.0 \
+    --hash=sha256:f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0
+google-auth==2.62.2 \
+    --hash=sha256:e9bcdb0679b6a4369ac327c5c59f06d92f7b4cd2624e7100294c14632f55a36b
+google-genai==2.34.0 \
+    --hash=sha256:a4cb02aebc4c357f863d2938132f0e3f7967fc5e00b8a4078673f68aad340665
+pyasn1==0.6.5 \
+    --hash=sha256:4017b0fce125096b8573b39c989fdb1a4b19cf761e683398184550fea0e66587
+pyasn1_modules==0.4.2 \
+    --hash=sha256:29253a9207ce32b64c3ac6600edc75368f98473906e8fd1043bd6b5b1de2c14a
+pydantic==2.14.3 \
+    --hash=sha256:3f7b347782ab7e4cf4c798496ae3a82787d9f21ec12676a9c564355eeef8daa8
+pydantic_core==2.50.4 \
+    --hash=sha256:c81d98e27d9d9261909dcccab1ba5d6ea1c98b0bb9470e368604614fd1d36ddd
+sniffio==1.3.1 \
+    --hash=sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2
+tenacity==9.1.4 \
+    --hash=sha256:6095a360c919085f28c6527de529e76a06ad89b23659fa881ae0649b867a9d55
+typing-inspection==0.4.5 \
+    --hash=sha256:bc210535442b39e1bf2805e0c7a17dfd6a4ace760c84c7f7d16245d23a6b1c39
+websockets==17.4 \
+    --hash=sha256:9ae1429ee9e52b139167ed0169757806a27ed7307e942e8c62037a9184e9843b

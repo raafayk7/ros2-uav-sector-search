@@ -51,6 +51,10 @@ mav.tlog.raw
 # Docker local environment overrides (UID/GID specific, not portable)
 docker/.env
 
+# Language model API keys (docker/llm.env.example is the template)
+docker/llm.env*
+!docker/llm.env.example
+
 # host-specific one-off
 usb-ext4-setup.sh
 usb-ext4-setup2.sh

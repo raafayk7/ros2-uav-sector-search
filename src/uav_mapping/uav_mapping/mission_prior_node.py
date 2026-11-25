@@ -92,6 +92,10 @@ class MissionPriorNode(Node):
                 raise ValueError(f"provider must be 'replay' or 'live', got {kind!r}")
             prior = make_prior(self.clue, world, self.grid, provider,
                                float(g('alpha')))
+            if kind == 'live':
+                for text, usage in zip(provider.outputs, provider.usage):
+                    self.get_logger().info(
+                        f"{provider.model} answered ({usage} tokens): {text}")
             if kind == 'live' and not prior.failed and g('record_to'):
                 rec = live_recording(
                     world, self.clue, g('llm_model'), provider.outputs[-1],

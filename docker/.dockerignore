@@ -4,4 +4,5 @@
 # .dockerignore still speeds up `docker build` by shrinking the context.)
 
 .env
+llm.env*
 *.log
