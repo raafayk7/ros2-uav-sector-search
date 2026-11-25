@@ -134,6 +134,348 @@
       "model": "gemini-3.8-flash",
       "date": "2026-11-25",
       "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [62, 70], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the well, one near the copse and one near the quarry.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [104, 62], \"radius\": 12, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [24.5, 32.5], \"radius\": 12, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [60.25, 13.0], \"radius\": 12, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the radio mast, one near the footbridge and one near the trailhead.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [108, 110], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [62, 70], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [8, 112], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Two hikers are missing: one last seen near the well and one near the orchard.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [104, 62], \"radius\": 15, \"weight\": 0.9, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [83.25, 97], \"radius\": 15, \"weight\": 0.9, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Two hikers are missing: one last seen near the trailhead and one near the quarry.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [8, 112], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [60.25, 13], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the creek, one near the copse and one near the footbridge.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"capsule\", \"start\": [0, 92], \"end\": [62, 70], \"radius\": 12, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [24.5, 32.5], \"radius\": 12, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [62, 70], \"radius\": 10, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the radio mast, one near the trailhead and one near the well.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [108, 110], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [8, 112], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [104, 62], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the copse, one near the creek and one near the hut.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [24.5, 32.5], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"capsule\", \"start\": [0, 92], \"end\": [62, 70], \"radius\": 10, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [97, 22], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the footbridge, one near the well and one near the campsite.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [62, 70], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [104, 62], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [10, 58], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the stone wall, one near the campsite and one near the well.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"capsule\", \"start\": [70, 38], \"end\": [90, 50], \"radius\": 12, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [10, 58], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [104, 62], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the lookout, one near the copse and one near the chapel.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [40, 54], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [24.5, 32.5], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [38, 108], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the chapel, one near the stone wall and one near the hut.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [38, 108], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"capsule\", \"start\": [70, 38], \"end\": [84, 46], \"radius\": 12, \"weight\": 1.0, \"confidence\": 0.9}, {\"shape\": \"capsule\", \"start\": [84, 46], \"end\": [90, 50], \"radius\": 12, \"weight\": 1.0, \"confidence\": 0.9}, {\"shape\": \"circle\", \"center\": [97, 22], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the copse, one near the campsite and one near the lookout.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [24.5, 32.5], \"radius\": 15.0, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [10.0, 58.0], \"radius\": 15.0, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [40.0, 54.0], \"radius\": 15.0, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Two hikers are missing: one last seen near the lookout and one near the well.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [40, 54], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [104, 62], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Two hikers are missing: one last seen near the campsite and one near the chapel.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [10, 58], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [38, 108], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the well, one near the campsite and one near the chapel.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [104, 62], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [10, 58], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [38, 108], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the orchard, one near the quarry and one near the footbridge.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [83.25, 97.0], \"radius\": 15.0, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [60.25, 13.0], \"radius\": 14.0, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [62.0, 70.0], \"radius\": 12.0, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the creek, one near the lookout and one near the copse.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"capsule\", \"start\": [0, 92], \"end\": [62, 70], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [40, 54], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [24.5, 32.5], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the trailhead, one near the footbridge and one near the quarry.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [8, 112], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [62, 70], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [60.25, 13], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Two hikers are missing: one last seen near the lookout and one near the stone wall.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [40, 54], \"radius\": 15, \"weight\": 0.9, \"confidence\": 0.95}, {\"shape\": \"capsule\", \"start\": [70, 38], \"end\": [84, 46], \"radius\": 10, \"weight\": 0.85, \"confidence\": 0.9}, {\"shape\": \"capsule\", \"start\": [84, 46], \"end\": [90, 50], \"radius\": 10, \"weight\": 0.85, \"confidence\": 0.9}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Two hikers are missing: one last seen near the orchard and one near the campsite.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [83.25, 97.0], \"radius\": 18.0, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [10.0, 58.0], \"radius\": 15.0, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the stone wall, one near the copse and one near the creek.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"capsule\", \"start\": [70, 38], \"end\": [90, 50], \"radius\": 12, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [24.5, 32.5], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"capsule\", \"start\": [0, 92], \"end\": [62, 70], \"radius\": 12, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the well, one near the trailhead and one near the chapel.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [104, 62], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [8, 112], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [38, 108], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "One hiker is missing, last seen near the chapel.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [38, 108], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Two hikers are missing: one last seen near the copse and one near the lookout.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [24.5, 32.5], \"radius\": 15.0, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [40.0, 54.0], \"radius\": 15.0, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Two hikers are missing: one last seen near the stone wall and one near the chapel.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"capsule\", \"start\": [70, 38], \"end\": [90, 50], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [38, 108], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the lookout, one near the campsite and one near the orchard.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [40, 54], \"radius\": 15, \"weight\": 1, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [10, 58], \"radius\": 15, \"weight\": 1, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [83.25, 97], \"radius\": 15, \"weight\": 1, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the radio mast, one near the trailhead and one near the stone wall.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [108, 110], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [8, 112], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"capsule\", \"start\": [70, 38], \"end\": [90, 50], \"radius\": 12, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "One hiker is missing, last seen near the radio mast.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [108, 110], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the chapel, one near the stone wall and one near the quarry.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [38, 108], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"capsule\", \"start\": [70, 38], \"end\": [90, 50], \"radius\": 12, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [60, 13], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the lookout, one near the campsite and one near the radio mast.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [40, 54], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [10, 58], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [108, 110], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Two hikers are missing: one last seen near the stone wall and one near the well.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"capsule\", \"start\": [70, 38], \"end\": [84, 46], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"capsule\", \"start\": [84, 46], \"end\": [90, 50], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [104, 62], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Two hikers are missing: one last seen near the campsite and one near the creek.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [10, 58], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"capsule\", \"start\": [0, 92], \"end\": [24, 84], \"radius\": 15, \"weight\": 0.8, \"confidence\": 0.9}, {\"shape\": \"capsule\", \"start\": [24, 84], \"end\": [44, 78], \"radius\": 15, \"weight\": 0.8, \"confidence\": 0.9}, {\"shape\": \"capsule\", \"start\": [44, 78], \"end\": [62, 70], \"radius\": 15, \"weight\": 0.8, \"confidence\": 0.9}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the orchard, one near the creek and one near the footbridge.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [83, 97], \"radius\": 14, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"capsule\", \"start\": [0, 92], \"end\": [62, 70], \"radius\": 10, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [62, 70], \"radius\": 10, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the chapel, one near the well and one near the hut.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [38, 108], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [104, 62], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [97, 22], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the creek, one near the trailhead and one near the orchard.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"capsule\", \"start\": [0, 92], \"end\": [62, 70], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [8, 112], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [83, 97], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Three hikers are missing: one last seen near the well, one near the stone wall and one near the lookout.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [104, 62], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"capsule\", \"start\": [70, 38], \"end\": [84, 46], \"radius\": 12, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"capsule\", \"start\": [84, 46], \"end\": [90, 50], \"radius\": 12, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [40, 54], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Two hikers are missing: one last seen near the radio mast and one near the trailhead.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [108, 110], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [8, 112], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
+    },
+    {
+      "world": "valley",
+      "clue": "Two hikers are missing: one last seen near the lookout and one near the campsite.",
+      "landmarks": "207d012be0b6c446",
+      "source": "live",
+      "model": "gemini-3.8-flash",
+      "date": "2026-11-25",
+      "output": "{\"regions\": [{\"shape\": \"circle\", \"center\": [40, 54], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}, {\"shape\": \"circle\", \"center\": [10, 58], \"radius\": 15, \"weight\": 1.0, \"confidence\": 0.95}]}"
     }
   ]
 }
