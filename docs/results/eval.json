@@ -1,0 +1,4082 @@
+[
+ {
+  "arm": "uniform",
+  "seed": 0,
+  "targets": [
+   [
+    110.60408923644354,
+    63.70617241227488
+   ],
+   [
+    32.07338651247195,
+    34.395999726893535
+   ],
+   [
+    73.92231756120859,
+    23.028045961281368
+   ]
+  ],
+  "names": [
+   "well",
+   "copse",
+   "quarry"
+  ],
+  "swap": {
+   "well": "radio mast",
+   "copse": "footbridge",
+   "quarry": "trailhead"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   39.5,
+   8.5,
+   9.5
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_3",
+   "iris_4"
+  ],
+  "confirmed": [
+   47.0,
+   13.5,
+   27.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 1,
+  "targets": [
+   [
+    100.98930323216777,
+    60.773223183561214
+   ],
+   [
+    94.14188818989501,
+    94.27597409107484
+   ]
+  ],
+  "names": [
+   "well",
+   "orchard"
+  ],
+  "swap": {
+   "well": "trailhead",
+   "orchard": "quarry"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   28.0,
+   36.5
+  ],
+  "found_by": [
+   "iris_2",
+   "iris_3"
+  ],
+  "confirmed": [
+   34.0,
+   42.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 2,
+  "targets": [
+   [
+    7.342200007321686,
+    84.80381998669485
+   ],
+   [
+    32.04249738478922,
+    23.01283434773131
+   ],
+   [
+    54.88234603732909,
+    66.39950988649662
+   ]
+  ],
+  "names": [
+   "creek",
+   "copse",
+   "footbridge"
+  ],
+  "swap": {
+   "creek": "radio mast",
+   "copse": "trailhead",
+   "footbridge": "well"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   17.5,
+   1.5,
+   19.5
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_4",
+   "iris_3"
+  ],
+  "confirmed": [
+   45.0,
+   11.0,
+   28.5
+  ],
+  "extra_confirms": 1,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 3,
+  "targets": [
+   [
+    27.211347190124137,
+    20.012116551692774
+   ],
+   [
+    30.885758876316693,
+    80.2039493293517
+   ],
+   [
+    91.55582263419326,
+    25.753234422547433
+   ]
+  ],
+  "names": [
+   "copse",
+   "creek",
+   "hut"
+  ],
+  "swap": {
+   "copse": "footbridge",
+   "creek": "well",
+   "hut": "campsite"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   1.0,
+   30.5,
+   14.5
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_4",
+   "iris_4"
+  ],
+  "confirmed": [
+   36.0,
+   51.0,
+   27.0
+  ],
+  "extra_confirms": 1,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 4,
+  "targets": [
+   [
+    79.17752685821142,
+    42.053895776423566
+   ],
+   [
+    7.91561268243886,
+    65.50292590905975
+   ],
+   [
+    105.74162586951276,
+    65.27783592903589
+   ]
+  ],
+  "names": [
+   "stone wall",
+   "campsite",
+   "well"
+  ],
+  "swap": {
+   "stone wall": "lookout",
+   "campsite": "copse",
+   "well": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   20.0,
+   12.0,
+   30.0
+  ],
+  "found_by": [
+   "iris_3",
+   "iris_1",
+   "iris_4"
+  ],
+  "confirmed": [
+   36.5,
+   18.0,
+   36.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 5,
+  "targets": [
+   [
+    34.572822081410266,
+    100.8628912381065
+   ],
+   [
+    75.80127970827866,
+    41.437249751759964
+   ],
+   [
+    92.75216322671719,
+    20.959160835602272
+   ]
+  ],
+  "names": [
+   "chapel",
+   "stone wall",
+   "hut"
+  ],
+  "swap": {
+   "chapel": "copse",
+   "stone wall": "campsite",
+   "hut": "lookout"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   47.0,
+   17.0,
+   13.0
+  ],
+  "found_by": [
+   "iris_3",
+   "iris_3",
+   "iris_4"
+  ],
+  "confirmed": [
+   53.5,
+   23.5,
+   31.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 6,
+  "targets": [
+   [
+    37.905075836726056,
+    51.99194824940612
+   ],
+   [
+    106.78918288807189,
+    59.279415286167335
+   ]
+  ],
+  "names": [
+   "lookout",
+   "well"
+  ],
+  "swap": {
+   "lookout": "campsite",
+   "well": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   17.0,
+   25.5
+  ],
+  "found_by": [
+   "iris_2",
+   "iris_3"
+  ],
+  "confirmed": [
+   21.5,
+   37.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 7,
+  "targets": [
+   [
+    99.60331503984946,
+    58.8026605585796
+   ],
+   [
+    15.13965469412426,
+    62.75311086003274
+   ],
+   [
+    37.486959245499534,
+    104.84851882910901
+   ]
+  ],
+  "names": [
+   "well",
+   "campsite",
+   "chapel"
+  ],
+  "swap": {
+   "well": "orchard",
+   "campsite": "quarry",
+   "chapel": "footbridge"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   25.0,
+   11.5,
+   47.5
+  ],
+  "found_by": [
+   "iris_3",
+   "iris_1",
+   "iris_3"
+  ],
+  "confirmed": [
+   38.0,
+   20.0,
+   54.0
+  ],
+  "extra_confirms": 2,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 8,
+  "targets": [
+   [
+    27.984851651204384,
+    78.63951117866635
+   ],
+   [
+    37.96398244942965,
+    47.711257543564386
+   ],
+   [
+    23.805859987369658,
+    24.723268642709833
+   ]
+  ],
+  "names": [
+   "creek",
+   "lookout",
+   "copse"
+  ],
+  "swap": {
+   "creek": "trailhead",
+   "lookout": "footbridge",
+   "copse": "quarry"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   33.5,
+   10.0,
+   3.5
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_3",
+   "iris_3"
+  ],
+  "confirmed": [
+   50.0,
+   18.5,
+   12.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 9,
+  "targets": [
+   [
+    41.65037040082499,
+    58.44054532672286
+   ],
+   [
+    87.77868666572834,
+    55.630643373734216
+   ]
+  ],
+  "names": [
+   "lookout",
+   "stone wall"
+  ],
+  "swap": {
+   "lookout": "orchard",
+   "stone wall": "campsite"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   17.5,
+   24.0
+  ],
+  "found_by": [
+   "iris_2",
+   "iris_3"
+  ],
+  "confirmed": [
+   24.0,
+   34.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 10,
+  "targets": [
+   [
+    67.37415643095272,
+    44.35852926022382
+   ],
+   [
+    12.48534693267672,
+    39.04916735299619
+   ],
+   [
+    59.08059297754725,
+    78.16934190138912
+   ]
+  ],
+  "names": [
+   "stone wall",
+   "copse",
+   "creek"
+  ],
+  "swap": {
+   "stone wall": "well",
+   "copse": "trailhead",
+   "creek": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   15.5,
+   6.0,
+   47.0
+  ],
+  "found_by": [
+   "iris_3",
+   "iris_3",
+   "iris_2"
+  ],
+  "confirmed": [
+   24.0,
+   10.5,
+   51.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 11,
+  "targets": [
+   [
+    61.98844579904184,
+    71.62397372197373
+   ]
+  ],
+  "names": [
+   "footbridge"
+  ],
+  "swap": {
+   "footbridge": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   false
+  ],
+  "regions": 0,
+  "found": [
+   35.0
+  ],
+  "found_by": [
+   "iris_3"
+  ],
+  "confirmed": [
+   41.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 12,
+  "targets": [
+   [
+    14.247572689812124,
+    22.737325133379443
+   ],
+   [
+    37.59822784953532,
+    49.688659945438495
+   ]
+  ],
+  "names": [
+   "copse",
+   "lookout"
+  ],
+  "swap": {
+   "copse": "stone wall",
+   "lookout": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   1.5,
+   15.5
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_3"
+  ],
+  "confirmed": [
+   9.0,
+   19.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 13,
+  "targets": [
+   [
+    36.183141782663625,
+    47.235191323494746
+   ],
+   [
+    17.14345248713701,
+    59.82066705675363
+   ],
+   [
+    93.6644781833253,
+    84.47223831643925
+   ]
+  ],
+  "names": [
+   "lookout",
+   "campsite",
+   "orchard"
+  ],
+  "swap": {
+   "lookout": "radio mast",
+   "campsite": "trailhead",
+   "orchard": "stone wall"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   17.0,
+   10.5,
+   39.5
+  ],
+  "found_by": [
+   "iris_2",
+   "iris_1",
+   "iris_2"
+  ],
+  "confirmed": [
+   21.0,
+   15.0,
+   52.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 14,
+  "targets": [
+   [
+    74.99408000603324,
+    49.67670055629753
+   ]
+  ],
+  "names": [
+   "stone wall"
+  ],
+  "swap": {
+   "stone wall": "radio mast"
+  },
+  "redraws": 0,
+  "covered": [
+   false
+  ],
+  "regions": 0,
+  "found": [
+   21.5
+  ],
+  "found_by": [
+   "iris_3"
+  ],
+  "confirmed": [
+   117.5
+  ],
+  "extra_confirms": 1,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 15,
+  "targets": [
+   [
+    30.7174108110467,
+    109.1455561125397
+   ],
+   [
+    74.43283414673023,
+    42.796270917048396
+   ],
+   [
+    71.00128144844723,
+    15.988088370021227
+   ]
+  ],
+  "names": [
+   "chapel",
+   "stone wall",
+   "quarry"
+  ],
+  "swap": {
+   "chapel": "lookout",
+   "stone wall": "campsite",
+   "quarry": "radio mast"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   27.0,
+   17.0,
+   8.5
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_3",
+   "iris_4"
+  ],
+  "confirmed": [
+   48.5,
+   24.0,
+   25.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 16,
+  "targets": [
+   [
+    65.38665771661488,
+    39.74622741220787
+   ],
+   [
+    105.94414461409087,
+    54.34648005092337
+   ]
+  ],
+  "names": [
+   "stone wall",
+   "well"
+  ],
+  "swap": {
+   "stone wall": "campsite",
+   "well": "creek"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   15.0,
+   24.0
+  ],
+  "found_by": [
+   "iris_3",
+   "iris_3"
+  ],
+  "confirmed": [
+   40.0,
+   29.0
+  ],
+  "extra_confirms": 1,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 17,
+  "targets": [
+   [
+    78.51471801658522,
+    88.44825890685306
+   ],
+   [
+    27.621858593654697,
+    78.27025096555712
+   ],
+   [
+    63.78148973598369,
+    73.78217392821259
+   ]
+  ],
+  "names": [
+   "orchard",
+   "creek",
+   "footbridge"
+  ],
+  "swap": {
+   "orchard": "chapel",
+   "creek": "well",
+   "footbridge": "hut"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   34.0,
+   34.0,
+   37.5
+  ],
+  "found_by": [
+   "iris_2",
+   "iris_1",
+   "iris_2"
+  ],
+  "confirmed": [
+   42.5,
+   50.5,
+   48.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 18,
+  "targets": [
+   [
+    39.91094543038869,
+    86.48419656174737
+   ],
+   [
+    9.653071952539136,
+    111.13041454594904
+   ],
+   [
+    70.16166765482714,
+    91.40788363669654
+   ]
+  ],
+  "names": [
+   "creek",
+   "trailhead",
+   "orchard"
+  ],
+  "swap": {
+   "creek": "well",
+   "trailhead": "stone wall",
+   "orchard": "lookout"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   30.5,
+   21.5,
+   36.5
+  ],
+  "found_by": [
+   "iris_2",
+   "iris_1",
+   "iris_4"
+  ],
+  "confirmed": [
+   70.5,
+   44.5,
+   44.0
+  ],
+  "extra_confirms": 1,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "uniform",
+  "seed": 19,
+  "targets": [
+   [
+    104.38191980637251,
+    102.96077766596042
+   ],
+   [
+    5.658151874696679,
+    114.77277886808116
+   ]
+  ],
+  "names": [
+   "radio mast",
+   "trailhead"
+  ],
+  "swap": {
+   "radio mast": "lookout",
+   "trailhead": "campsite"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 0,
+  "found": [
+   57.5,
+   21.5
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_1"
+  ],
+  "confirmed": [
+   65.0,
+   44.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 0,
+  "targets": [
+   [
+    110.60408923644354,
+    63.70617241227488
+   ],
+   [
+    32.07338651247195,
+    34.395999726893535
+   ],
+   [
+    73.92231756120859,
+    23.028045961281368
+   ]
+  ],
+  "names": [
+   "well",
+   "copse",
+   "quarry"
+  ],
+  "swap": {
+   "well": "radio mast",
+   "copse": "footbridge",
+   "quarry": "trailhead"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   true,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   19.0,
+   5.0,
+   10.0
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_3",
+   "iris_4"
+  ],
+  "confirmed": [
+   33.5,
+   9.5,
+   21.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 1,
+  "targets": [
+   [
+    100.98930323216777,
+    60.773223183561214
+   ],
+   [
+    94.14188818989501,
+    94.27597409107484
+   ]
+  ],
+  "names": [
+   "well",
+   "orchard"
+  ],
+  "swap": {
+   "well": "trailhead",
+   "orchard": "quarry"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   true
+  ],
+  "regions": 2,
+  "found": [
+   16.5,
+   24.0
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_3"
+  ],
+  "confirmed": [
+   25.5,
+   34.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 2,
+  "targets": [
+   [
+    7.342200007321686,
+    84.80381998669485
+   ],
+   [
+    32.04249738478922,
+    23.01283434773131
+   ],
+   [
+    54.88234603732909,
+    66.39950988649662
+   ]
+  ],
+  "names": [
+   "creek",
+   "copse",
+   "footbridge"
+  ],
+  "swap": {
+   "creek": "radio mast",
+   "copse": "trailhead",
+   "footbridge": "well"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   false,
+   true
+  ],
+  "regions": 3,
+  "found": [
+   15.5,
+   1.5,
+   14.5
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_4",
+   "iris_2"
+  ],
+  "confirmed": [
+   33.0,
+   9.0,
+   20.5
+  ],
+  "extra_confirms": 1,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 3,
+  "targets": [
+   [
+    27.211347190124137,
+    20.012116551692774
+   ],
+   [
+    30.885758876316693,
+    80.2039493293517
+   ],
+   [
+    91.55582263419326,
+    25.753234422547433
+   ]
+  ],
+  "names": [
+   "copse",
+   "creek",
+   "hut"
+  ],
+  "swap": {
+   "copse": "footbridge",
+   "creek": "well",
+   "hut": "campsite"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   true,
+   true
+  ],
+  "regions": 3,
+  "found": [
+   1.0,
+   14.5,
+   29.0
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_4",
+   "iris_4"
+  ],
+  "confirmed": [
+   48.5,
+   23.0,
+   41.0
+  ],
+  "extra_confirms": 1,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 4,
+  "targets": [
+   [
+    79.17752685821142,
+    42.053895776423566
+   ],
+   [
+    7.91561268243886,
+    65.50292590905975
+   ],
+   [
+    105.74162586951276,
+    65.27783592903589
+   ]
+  ],
+  "names": [
+   "stone wall",
+   "campsite",
+   "well"
+  ],
+  "swap": {
+   "stone wall": "lookout",
+   "campsite": "copse",
+   "well": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   true,
+   true
+  ],
+  "regions": 3,
+  "found": [
+   11.5,
+   12.0,
+   18.0
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_1",
+   "iris_4"
+  ],
+  "confirmed": [
+   21.0,
+   20.5,
+   45.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 5,
+  "targets": [
+   [
+    34.572822081410266,
+    100.8628912381065
+   ],
+   [
+    75.80127970827866,
+    41.437249751759964
+   ],
+   [
+    92.75216322671719,
+    20.959160835602272
+   ]
+  ],
+  "names": [
+   "chapel",
+   "stone wall",
+   "hut"
+  ],
+  "swap": {
+   "chapel": "copse",
+   "stone wall": "campsite",
+   "hut": "lookout"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   true,
+   true
+  ],
+  "regions": 4,
+  "found": [
+   33.5,
+   14.0,
+   12.5
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_3",
+   "iris_4"
+  ],
+  "confirmed": [
+   45.5,
+   25.5,
+   26.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 6,
+  "targets": [
+   [
+    37.905075836726056,
+    51.99194824940612
+   ],
+   [
+    106.78918288807189,
+    59.279415286167335
+   ]
+  ],
+  "names": [
+   "lookout",
+   "well"
+  ],
+  "swap": {
+   "lookout": "campsite",
+   "well": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   true
+  ],
+  "regions": 2,
+  "found": [
+   7.5,
+   22.5
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_3"
+  ],
+  "confirmed": [
+   15.5,
+   28.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 7,
+  "targets": [
+   [
+    99.60331503984946,
+    58.8026605585796
+   ],
+   [
+    15.13965469412426,
+    62.75311086003274
+   ],
+   [
+    37.486959245499534,
+    104.84851882910901
+   ]
+  ],
+  "names": [
+   "well",
+   "campsite",
+   "chapel"
+  ],
+  "swap": {
+   "well": "orchard",
+   "campsite": "quarry",
+   "chapel": "footbridge"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   true,
+   true
+  ],
+  "regions": 3,
+  "found": [
+   38.5,
+   9.5,
+   20.0
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_4",
+   "iris_3"
+  ],
+  "confirmed": [
+   45.0,
+   16.0,
+   34.0
+  ],
+  "extra_confirms": 2,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 8,
+  "targets": [
+   [
+    27.984851651204384,
+    78.63951117866635
+   ],
+   [
+    37.96398244942965,
+    47.711257543564386
+   ],
+   [
+    23.805859987369658,
+    24.723268642709833
+   ]
+  ],
+  "names": [
+   "creek",
+   "lookout",
+   "copse"
+  ],
+  "swap": {
+   "creek": "trailhead",
+   "lookout": "footbridge",
+   "copse": "quarry"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   true,
+   true
+  ],
+  "regions": 3,
+  "found": [
+   14.5,
+   8.5,
+   2.0
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_3",
+   "iris_4"
+  ],
+  "confirmed": [
+   23.5,
+   16.0,
+   7.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 9,
+  "targets": [
+   [
+    41.65037040082499,
+    58.44054532672286
+   ],
+   [
+    87.77868666572834,
+    55.630643373734216
+   ]
+  ],
+  "names": [
+   "lookout",
+   "stone wall"
+  ],
+  "swap": {
+   "lookout": "orchard",
+   "stone wall": "campsite"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   true
+  ],
+  "regions": 3,
+  "found": [
+   9.5,
+   19.5
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_3"
+  ],
+  "confirmed": [
+   15.0,
+   29.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 10,
+  "targets": [
+   [
+    67.37415643095272,
+    44.35852926022382
+   ],
+   [
+    12.48534693267672,
+    39.04916735299619
+   ],
+   [
+    59.08059297754725,
+    78.16934190138912
+   ]
+  ],
+  "names": [
+   "stone wall",
+   "copse",
+   "creek"
+  ],
+  "swap": {
+   "stone wall": "well",
+   "copse": "trailhead",
+   "creek": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   true,
+   true
+  ],
+  "regions": 3,
+  "found": [
+   13.0,
+   5.0,
+   16.0
+  ],
+  "found_by": [
+   "iris_3",
+   "iris_4",
+   "iris_4"
+  ],
+  "confirmed": [
+   18.5,
+   10.5,
+   24.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 11,
+  "targets": [
+   [
+    61.98844579904184,
+    71.62397372197373
+   ]
+  ],
+  "names": [
+   "footbridge"
+  ],
+  "swap": {
+   "footbridge": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   true
+  ],
+  "regions": 1,
+  "found": [
+   13.0
+  ],
+  "found_by": [
+   "iris_4"
+  ],
+  "confirmed": [
+   25.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 12,
+  "targets": [
+   [
+    14.247572689812124,
+    22.737325133379443
+   ],
+   [
+    37.59822784953532,
+    49.688659945438495
+   ]
+  ],
+  "names": [
+   "copse",
+   "lookout"
+  ],
+  "swap": {
+   "copse": "stone wall",
+   "lookout": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   true
+  ],
+  "regions": 2,
+  "found": [
+   1.5,
+   9.0
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_3"
+  ],
+  "confirmed": [
+   10.0,
+   18.5
+  ],
+  "extra_confirms": 1,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 13,
+  "targets": [
+   [
+    36.183141782663625,
+    47.235191323494746
+   ],
+   [
+    17.14345248713701,
+    59.82066705675363
+   ],
+   [
+    93.6644781833253,
+    84.47223831643925
+   ]
+  ],
+  "names": [
+   "lookout",
+   "campsite",
+   "orchard"
+  ],
+  "swap": {
+   "lookout": "radio mast",
+   "campsite": "trailhead",
+   "orchard": "stone wall"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   true,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   7.5,
+   10.0,
+   21.0
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_3",
+   "iris_4"
+  ],
+  "confirmed": [
+   13.5,
+   20.0,
+   28.0
+  ],
+  "extra_confirms": 1,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 14,
+  "targets": [
+   [
+    74.99408000603324,
+    49.67670055629753
+   ]
+  ],
+  "names": [
+   "stone wall"
+  ],
+  "swap": {
+   "stone wall": "radio mast"
+  },
+  "redraws": 0,
+  "covered": [
+   true
+  ],
+  "regions": 1,
+  "found": [
+   12.0
+  ],
+  "found_by": [
+   "iris_4"
+  ],
+  "confirmed": [
+   21.0
+  ],
+  "extra_confirms": 1,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 15,
+  "targets": [
+   [
+    30.7174108110467,
+    109.1455561125397
+   ],
+   [
+    74.43283414673023,
+    42.796270917048396
+   ],
+   [
+    71.00128144844723,
+    15.988088370021227
+   ]
+  ],
+  "names": [
+   "chapel",
+   "stone wall",
+   "quarry"
+  ],
+  "swap": {
+   "chapel": "lookout",
+   "stone wall": "campsite",
+   "quarry": "radio mast"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   true,
+   true
+  ],
+  "regions": 3,
+  "found": [
+   27.0,
+   11.0,
+   8.5
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_4",
+   "iris_4"
+  ],
+  "confirmed": [
+   41.0,
+   20.5,
+   15.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 16,
+  "targets": [
+   [
+    65.38665771661488,
+    39.74622741220787
+   ],
+   [
+    105.94414461409087,
+    54.34648005092337
+   ]
+  ],
+  "names": [
+   "stone wall",
+   "well"
+  ],
+  "swap": {
+   "stone wall": "campsite",
+   "well": "creek"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   true
+  ],
+  "regions": 3,
+  "found": [
+   8.5,
+   20.5
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_3"
+  ],
+  "confirmed": [
+   16.5,
+   25.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 17,
+  "targets": [
+   [
+    78.51471801658522,
+    88.44825890685306
+   ],
+   [
+    27.621858593654697,
+    78.27025096555712
+   ],
+   [
+    63.78148973598369,
+    73.78217392821259
+   ]
+  ],
+  "names": [
+   "orchard",
+   "creek",
+   "footbridge"
+  ],
+  "swap": {
+   "orchard": "chapel",
+   "creek": "well",
+   "footbridge": "hut"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   true,
+   true
+  ],
+  "regions": 3,
+  "found": [
+   17.5,
+   19.5,
+   14.0
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_2",
+   "iris_4"
+  ],
+  "confirmed": [
+   35.0,
+   32.0,
+   19.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 18,
+  "targets": [
+   [
+    39.91094543038869,
+    86.48419656174737
+   ],
+   [
+    9.653071952539136,
+    111.13041454594904
+   ],
+   [
+    70.16166765482714,
+    91.40788363669654
+   ]
+  ],
+  "names": [
+   "creek",
+   "trailhead",
+   "orchard"
+  ],
+  "swap": {
+   "creek": "well",
+   "trailhead": "stone wall",
+   "orchard": "lookout"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   true,
+   true
+  ],
+  "regions": 3,
+  "found": [
+   15.0,
+   21.0,
+   19.5
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_1",
+   "iris_3"
+  ],
+  "confirmed": [
+   44.5,
+   42.0,
+   42.5
+  ],
+  "extra_confirms": 1,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "accurate",
+  "seed": 19,
+  "targets": [
+   [
+    104.38191980637251,
+    102.96077766596042
+   ],
+   [
+    5.658151874696679,
+    114.77277886808116
+   ]
+  ],
+  "names": [
+   "radio mast",
+   "trailhead"
+  ],
+  "swap": {
+   "radio mast": "lookout",
+   "trailhead": "campsite"
+  },
+  "redraws": 0,
+  "covered": [
+   true,
+   true
+  ],
+  "regions": 2,
+  "found": [
+   26.5,
+   20.0
+  ],
+  "found_by": [
+   "iris_2",
+   "iris_4"
+  ],
+  "confirmed": [
+   31.5,
+   27.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 0,
+  "targets": [
+   [
+    110.60408923644354,
+    63.70617241227488
+   ],
+   [
+    32.07338651247195,
+    34.395999726893535
+   ],
+   [
+    73.92231756120859,
+    23.028045961281368
+   ]
+  ],
+  "names": [
+   "well",
+   "copse",
+   "quarry"
+  ],
+  "swap": {
+   "well": "radio mast",
+   "copse": "footbridge",
+   "quarry": "trailhead"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   53.0,
+   4.5,
+   62.5
+  ],
+  "found_by": [
+   "iris_3",
+   "iris_4",
+   "iris_4"
+  ],
+  "confirmed": [
+   61.0,
+   25.5,
+   74.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 1,
+  "targets": [
+   [
+    100.98930323216777,
+    60.773223183561214
+   ],
+   [
+    94.14188818989501,
+    94.27597409107484
+   ]
+  ],
+  "names": [
+   "well",
+   "orchard"
+  ],
+  "swap": {
+   "well": "trailhead",
+   "orchard": "quarry"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 2,
+  "found": [
+   50.0,
+   55.0
+  ],
+  "found_by": [
+   "iris_3",
+   "iris_4"
+  ],
+  "confirmed": [
+   68.0,
+   75.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 2,
+  "targets": [
+   [
+    7.342200007321686,
+    84.80381998669485
+   ],
+   [
+    32.04249738478922,
+    23.01283434773131
+   ],
+   [
+    54.88234603732909,
+    66.39950988649662
+   ]
+  ],
+  "names": [
+   "creek",
+   "copse",
+   "footbridge"
+  ],
+  "swap": {
+   "creek": "radio mast",
+   "copse": "trailhead",
+   "footbridge": "well"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   15.5,
+   2.5,
+   27.5
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_4",
+   "iris_3"
+  ],
+  "confirmed": [
+   41.0,
+   44.0,
+   56.5
+  ],
+  "extra_confirms": 1,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 3,
+  "targets": [
+   [
+    27.211347190124137,
+    20.012116551692774
+   ],
+   [
+    30.885758876316693,
+    80.2039493293517
+   ],
+   [
+    91.55582263419326,
+    25.753234422547433
+   ]
+  ],
+  "names": [
+   "copse",
+   "creek",
+   "hut"
+  ],
+  "swap": {
+   "copse": "footbridge",
+   "creek": "well",
+   "hut": "campsite"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   1.0,
+   16.5,
+   43.5
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_4",
+   "iris_4"
+  ],
+  "confirmed": [
+   21.5,
+   48.0,
+   49.0
+  ],
+  "extra_confirms": 2,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 4,
+  "targets": [
+   [
+    79.17752685821142,
+    42.053895776423566
+   ],
+   [
+    7.91561268243886,
+    65.50292590905975
+   ],
+   [
+    105.74162586951276,
+    65.27783592903589
+   ]
+  ],
+  "names": [
+   "stone wall",
+   "campsite",
+   "well"
+  ],
+  "swap": {
+   "stone wall": "lookout",
+   "campsite": "copse",
+   "well": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   48.5,
+   12.0,
+   41.0
+  ],
+  "found_by": [
+   "iris_3",
+   "iris_1",
+   "iris_4"
+  ],
+  "confirmed": [
+   59.0,
+   32.5,
+   62.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 5,
+  "targets": [
+   [
+    34.572822081410266,
+    100.8628912381065
+   ],
+   [
+    75.80127970827866,
+    41.437249751759964
+   ],
+   [
+    92.75216322671719,
+    20.959160835602272
+   ]
+  ],
+  "names": [
+   "chapel",
+   "stone wall",
+   "hut"
+  ],
+  "swap": {
+   "chapel": "copse",
+   "stone wall": "campsite",
+   "hut": "lookout"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   21.0,
+   22.5,
+   34.0
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_3",
+   "iris_3"
+  ],
+  "confirmed": [
+   33.0,
+   31.5,
+   38.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 6,
+  "targets": [
+   [
+    37.905075836726056,
+    51.99194824940612
+   ],
+   [
+    106.78918288807189,
+    59.279415286167335
+   ]
+  ],
+  "names": [
+   "lookout",
+   "well"
+  ],
+  "swap": {
+   "lookout": "campsite",
+   "well": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 2,
+  "found": [
+   15.0,
+   45.0
+  ],
+  "found_by": [
+   "iris_3",
+   "iris_3"
+  ],
+  "confirmed": [
+   41.0,
+   61.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 7,
+  "targets": [
+   [
+    99.60331503984946,
+    58.8026605585796
+   ],
+   [
+    15.13965469412426,
+    62.75311086003274
+   ],
+   [
+    37.486959245499534,
+    104.84851882910901
+   ]
+  ],
+  "names": [
+   "well",
+   "campsite",
+   "chapel"
+  ],
+  "swap": {
+   "well": "orchard",
+   "campsite": "quarry",
+   "chapel": "footbridge"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   45.5,
+   11.5,
+   38.5
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_1",
+   "iris_3"
+  ],
+  "confirmed": [
+   54.5,
+   33.0,
+   57.0
+  ],
+  "extra_confirms": 2,
+  "end": 248.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 8,
+  "targets": [
+   [
+    27.984851651204384,
+    78.63951117866635
+   ],
+   [
+    37.96398244942965,
+    47.711257543564386
+   ],
+   [
+    23.805859987369658,
+    24.723268642709833
+   ]
+  ],
+  "names": [
+   "creek",
+   "lookout",
+   "copse"
+  ],
+  "swap": {
+   "creek": "trailhead",
+   "lookout": "footbridge",
+   "copse": "quarry"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   22.0,
+   12.0,
+   5.0
+  ],
+  "found_by": [
+   "iris_3",
+   "iris_3",
+   "iris_3"
+  ],
+  "confirmed": [
+   37.0,
+   44.0,
+   52.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 9,
+  "targets": [
+   [
+    41.65037040082499,
+    58.44054532672286
+   ],
+   [
+    87.77868666572834,
+    55.630643373734216
+   ]
+  ],
+  "names": [
+   "lookout",
+   "stone wall"
+  ],
+  "swap": {
+   "lookout": "orchard",
+   "stone wall": "campsite"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 2,
+  "found": [
+   15.5,
+   45.0
+  ],
+  "found_by": [
+   "iris_3",
+   "iris_3"
+  ],
+  "confirmed": [
+   36.5,
+   56.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 10,
+  "targets": [
+   [
+    67.37415643095272,
+    44.35852926022382
+   ],
+   [
+    12.48534693267672,
+    39.04916735299619
+   ],
+   [
+    59.08059297754725,
+    78.16934190138912
+   ]
+  ],
+  "names": [
+   "stone wall",
+   "copse",
+   "creek"
+  ],
+  "swap": {
+   "stone wall": "well",
+   "copse": "trailhead",
+   "creek": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   9.5,
+   6.5,
+   29.5
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_1",
+   "iris_4"
+  ],
+  "confirmed": [
+   35.5,
+   40.5,
+   45.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 11,
+  "targets": [
+   [
+    61.98844579904184,
+    71.62397372197373
+   ]
+  ],
+  "names": [
+   "footbridge"
+  ],
+  "swap": {
+   "footbridge": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   false
+  ],
+  "regions": 1,
+  "found": [
+   28.5
+  ],
+  "found_by": [
+   "iris_4"
+  ],
+  "confirmed": [
+   36.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 12,
+  "targets": [
+   [
+    14.247572689812124,
+    22.737325133379443
+   ],
+   [
+    37.59822784953532,
+    49.688659945438495
+   ]
+  ],
+  "names": [
+   "copse",
+   "lookout"
+  ],
+  "swap": {
+   "copse": "stone wall",
+   "lookout": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 2,
+  "found": [
+   2.5,
+   60.5
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_1"
+  ],
+  "confirmed": [
+   23.0,
+   80.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 13,
+  "targets": [
+   [
+    36.183141782663625,
+    47.235191323494746
+   ],
+   [
+    17.14345248713701,
+    59.82066705675363
+   ],
+   [
+    93.6644781833253,
+    84.47223831643925
+   ]
+  ],
+  "names": [
+   "lookout",
+   "campsite",
+   "orchard"
+  ],
+  "swap": {
+   "lookout": "radio mast",
+   "campsite": "trailhead",
+   "orchard": "stone wall"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   20.0,
+   10.5,
+   22.5
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_1",
+   "iris_3"
+  ],
+  "confirmed": [
+   47.0,
+   34.5,
+   51.5
+  ],
+  "extra_confirms": 1,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 14,
+  "targets": [
+   [
+    74.99408000603324,
+    49.67670055629753
+   ]
+  ],
+  "names": [
+   "stone wall"
+  ],
+  "swap": {
+   "stone wall": "radio mast"
+  },
+  "redraws": 0,
+  "covered": [
+   false
+  ],
+  "regions": 1,
+  "found": [
+   13.5
+  ],
+  "found_by": [
+   "iris_4"
+  ],
+  "confirmed": [
+   51.5
+  ],
+  "extra_confirms": 1,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 15,
+  "targets": [
+   [
+    30.7174108110467,
+    109.1455561125397
+   ],
+   [
+    74.43283414673023,
+    42.796270917048396
+   ],
+   [
+    71.00128144844723,
+    15.988088370021227
+   ]
+  ],
+  "names": [
+   "chapel",
+   "stone wall",
+   "quarry"
+  ],
+  "swap": {
+   "chapel": "lookout",
+   "stone wall": "campsite",
+   "quarry": "radio mast"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   27.5,
+   17.0,
+   61.5
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_4",
+   "iris_4"
+  ],
+  "confirmed": [
+   48.0,
+   60.0,
+   70.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 16,
+  "targets": [
+   [
+    65.38665771661488,
+    39.74622741220787
+   ],
+   [
+    105.94414461409087,
+    54.34648005092337
+   ]
+  ],
+  "names": [
+   "stone wall",
+   "well"
+  ],
+  "swap": {
+   "stone wall": "campsite",
+   "well": "creek"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 4,
+  "found": [
+   56.5,
+   32.0
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_3"
+  ],
+  "confirmed": [
+   66.5,
+   42.0
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 17,
+  "targets": [
+   [
+    78.51471801658522,
+    88.44825890685306
+   ],
+   [
+    27.621858593654697,
+    78.27025096555712
+   ],
+   [
+    63.78148973598369,
+    73.78217392821259
+   ]
+  ],
+  "names": [
+   "orchard",
+   "creek",
+   "footbridge"
+  ],
+  "swap": {
+   "orchard": "chapel",
+   "creek": "well",
+   "footbridge": "hut"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   29.0,
+   33.0,
+   30.0
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_1",
+   "iris_3"
+  ],
+  "confirmed": [
+   49.0,
+   49.0,
+   52.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 18,
+  "targets": [
+   [
+    39.91094543038869,
+    86.48419656174737
+   ],
+   [
+    9.653071952539136,
+    111.13041454594904
+   ],
+   [
+    70.16166765482714,
+    91.40788363669654
+   ]
+  ],
+  "names": [
+   "creek",
+   "trailhead",
+   "orchard"
+  ],
+  "swap": {
+   "creek": "well",
+   "trailhead": "stone wall",
+   "orchard": "lookout"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 4,
+  "found": [
+   38.5,
+   21.5,
+   35.5
+  ],
+  "found_by": [
+   "iris_2",
+   "iris_1",
+   "iris_2"
+  ],
+  "confirmed": [
+   48.0,
+   53.0,
+   74.5
+  ],
+  "extra_confirms": 1,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "misleading",
+  "seed": 19,
+  "targets": [
+   [
+    104.38191980637251,
+    102.96077766596042
+   ],
+   [
+    5.658151874696679,
+    114.77277886808116
+   ]
+  ],
+  "names": [
+   "radio mast",
+   "trailhead"
+  ],
+  "swap": {
+   "radio mast": "lookout",
+   "trailhead": "campsite"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 2,
+  "found": [
+   49.0,
+   21.5
+  ],
+  "found_by": [
+   "iris_2",
+   "iris_1"
+  ],
+  "confirmed": [
+   53.5,
+   29.5
+  ],
+  "extra_confirms": 0,
+  "end": 237.5,
+  "done": true,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 0,
+  "targets": [
+   [
+    110.60408923644354,
+    63.70617241227488
+   ],
+   [
+    32.07338651247195,
+    34.395999726893535
+   ],
+   [
+    73.92231756120859,
+    23.028045961281368
+   ]
+  ],
+  "names": [
+   "well",
+   "copse",
+   "quarry"
+  ],
+  "swap": {
+   "well": "radio mast",
+   "copse": "footbridge",
+   "quarry": "trailhead"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   192.0,
+   4.5,
+   108.0
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_4",
+   "iris_1"
+  ],
+  "confirmed": [
+   null,
+   25.5,
+   119.5
+  ],
+  "extra_confirms": 0,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 1,
+  "targets": [
+   [
+    100.98930323216777,
+    60.773223183561214
+   ],
+   [
+    94.14188818989501,
+    94.27597409107484
+   ]
+  ],
+  "names": [
+   "well",
+   "orchard"
+  ],
+  "swap": {
+   "well": "trailhead",
+   "orchard": "quarry"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 2,
+  "found": [
+   167.0,
+   173.5
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_1"
+  ],
+  "confirmed": [
+   220.5,
+   null
+  ],
+  "extra_confirms": 0,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 2,
+  "targets": [
+   [
+    7.342200007321686,
+    84.80381998669485
+   ],
+   [
+    32.04249738478922,
+    23.01283434773131
+   ],
+   [
+    54.88234603732909,
+    66.39950988649662
+   ]
+  ],
+  "names": [
+   "creek",
+   "copse",
+   "footbridge"
+  ],
+  "swap": {
+   "creek": "radio mast",
+   "copse": "trailhead",
+   "footbridge": "well"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   15.5,
+   2.5,
+   27.5
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_4",
+   "iris_3"
+  ],
+  "confirmed": [
+   44.0,
+   38.0,
+   52.0
+  ],
+  "extra_confirms": 2,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 3,
+  "targets": [
+   [
+    27.211347190124137,
+    20.012116551692774
+   ],
+   [
+    30.885758876316693,
+    80.2039493293517
+   ],
+   [
+    91.55582263419326,
+    25.753234422547433
+   ]
+  ],
+  "names": [
+   "copse",
+   "creek",
+   "hut"
+  ],
+  "swap": {
+   "copse": "footbridge",
+   "creek": "well",
+   "hut": "campsite"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   1.0,
+   33.0,
+   160.0
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_1",
+   "iris_1"
+  ],
+  "confirmed": [
+   21.5,
+   49.5,
+   178.5
+  ],
+  "extra_confirms": 2,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 4,
+  "targets": [
+   [
+    79.17752685821142,
+    42.053895776423566
+   ],
+   [
+    7.91561268243886,
+    65.50292590905975
+   ],
+   [
+    105.74162586951276,
+    65.27783592903589
+   ]
+  ],
+  "names": [
+   "stone wall",
+   "campsite",
+   "well"
+  ],
+  "swap": {
+   "stone wall": "lookout",
+   "campsite": "copse",
+   "well": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   144.5,
+   12.0,
+   191.5
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_1",
+   "iris_1"
+  ],
+  "confirmed": [
+   null,
+   30.5,
+   null
+  ],
+  "extra_confirms": 0,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 5,
+  "targets": [
+   [
+    34.572822081410266,
+    100.8628912381065
+   ],
+   [
+    75.80127970827866,
+    41.437249751759964
+   ],
+   [
+    92.75216322671719,
+    20.959160835602272
+   ]
+  ],
+  "names": [
+   "chapel",
+   "stone wall",
+   "hut"
+  ],
+  "swap": {
+   "chapel": "copse",
+   "stone wall": "campsite",
+   "hut": "lookout"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   71.0,
+   111.0,
+   159.0
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_1",
+   "iris_1"
+  ],
+  "confirmed": [
+   93.5,
+   155.5,
+   null
+  ],
+  "extra_confirms": 0,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 6,
+  "targets": [
+   [
+    37.905075836726056,
+    51.99194824940612
+   ],
+   [
+    106.78918288807189,
+    59.279415286167335
+   ]
+  ],
+  "names": [
+   "lookout",
+   "well"
+  ],
+  "swap": {
+   "lookout": "campsite",
+   "well": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 2,
+  "found": [
+   61.0,
+   193.0
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_1"
+  ],
+  "confirmed": [
+   77.5,
+   null
+  ],
+  "extra_confirms": 0,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 7,
+  "targets": [
+   [
+    99.60331503984946,
+    58.8026605585796
+   ],
+   [
+    15.13965469412426,
+    62.75311086003274
+   ],
+   [
+    37.486959245499534,
+    104.84851882910901
+   ]
+  ],
+  "names": [
+   "well",
+   "campsite",
+   "chapel"
+  ],
+  "swap": {
+   "well": "orchard",
+   "campsite": "quarry",
+   "chapel": "footbridge"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   166.5,
+   11.5,
+   72.0
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_1",
+   "iris_1"
+  ],
+  "confirmed": [
+   183.5,
+   30.0,
+   null
+  ],
+  "extra_confirms": 1,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 8,
+  "targets": [
+   [
+    27.984851651204384,
+    78.63951117866635
+   ],
+   [
+    37.96398244942965,
+    47.711257543564386
+   ],
+   [
+    23.805859987369658,
+    24.723268642709833
+   ]
+  ],
+  "names": [
+   "creek",
+   "lookout",
+   "copse"
+  ],
+  "swap": {
+   "creek": "trailhead",
+   "lookout": "footbridge",
+   "copse": "quarry"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   33.0,
+   42.5,
+   5.0
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_2",
+   "iris_3"
+  ],
+  "confirmed": [
+   52.5,
+   60.0,
+   68.0
+  ],
+  "extra_confirms": 1,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 9,
+  "targets": [
+   [
+    41.65037040082499,
+    58.44054532672286
+   ],
+   [
+    87.77868666572834,
+    55.630643373734216
+   ]
+  ],
+  "names": [
+   "lookout",
+   "stone wall"
+  ],
+  "swap": {
+   "lookout": "orchard",
+   "stone wall": "campsite"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 2,
+  "found": [
+   62.5,
+   141.5
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_1"
+  ],
+  "confirmed": [
+   80.0,
+   181.0
+  ],
+  "extra_confirms": 0,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 10,
+  "targets": [
+   [
+    67.37415643095272,
+    44.35852926022382
+   ],
+   [
+    12.48534693267672,
+    39.04916735299619
+   ],
+   [
+    59.08059297754725,
+    78.16934190138912
+   ]
+  ],
+  "names": [
+   "stone wall",
+   "copse",
+   "creek"
+  ],
+  "swap": {
+   "stone wall": "well",
+   "copse": "trailhead",
+   "creek": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   9.5,
+   6.5,
+   60.5
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_1",
+   "iris_2"
+  ],
+  "confirmed": [
+   31.5,
+   44.0,
+   71.0
+  ],
+  "extra_confirms": 0,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 11,
+  "targets": [
+   [
+    61.98844579904184,
+    71.62397372197373
+   ]
+  ],
+  "names": [
+   "footbridge"
+  ],
+  "swap": {
+   "footbridge": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   false
+  ],
+  "regions": 1,
+  "found": [
+   86.5
+  ],
+  "found_by": [
+   "iris_1"
+  ],
+  "confirmed": [
+   106.0
+  ],
+  "extra_confirms": 0,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 12,
+  "targets": [
+   [
+    14.247572689812124,
+    22.737325133379443
+   ],
+   [
+    37.59822784953532,
+    49.688659945438495
+   ]
+  ],
+  "names": [
+   "copse",
+   "lookout"
+  ],
+  "swap": {
+   "copse": "stone wall",
+   "lookout": "chapel"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 2,
+  "found": [
+   2.5,
+   38.0
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_2"
+  ],
+  "confirmed": [
+   23.0,
+   88.0
+  ],
+  "extra_confirms": 0,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 13,
+  "targets": [
+   [
+    36.183141782663625,
+    47.235191323494746
+   ],
+   [
+    17.14345248713701,
+    59.82066705675363
+   ],
+   [
+    93.6644781833253,
+    84.47223831643925
+   ]
+  ],
+  "names": [
+   "lookout",
+   "campsite",
+   "orchard"
+  ],
+  "swap": {
+   "lookout": "radio mast",
+   "campsite": "trailhead",
+   "orchard": "stone wall"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   21.0,
+   10.5,
+   171.5
+  ],
+  "found_by": [
+   "iris_3",
+   "iris_1",
+   "iris_1"
+  ],
+  "confirmed": [
+   32.0,
+   32.5,
+   null
+  ],
+  "extra_confirms": 1,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 14,
+  "targets": [
+   [
+    74.99408000603324,
+    49.67670055629753
+   ]
+  ],
+  "names": [
+   "stone wall"
+  ],
+  "swap": {
+   "stone wall": "radio mast"
+  },
+  "redraws": 0,
+  "covered": [
+   false
+  ],
+  "regions": 1,
+  "found": [
+   13.5
+  ],
+  "found_by": [
+   "iris_4"
+  ],
+  "confirmed": [
+   51.5
+  ],
+  "extra_confirms": 1,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 15,
+  "targets": [
+   [
+    30.7174108110467,
+    109.1455561125397
+   ],
+   [
+    74.43283414673023,
+    42.796270917048396
+   ],
+   [
+    71.00128144844723,
+    15.988088370021227
+   ]
+  ],
+  "names": [
+   "chapel",
+   "stone wall",
+   "quarry"
+  ],
+  "swap": {
+   "chapel": "lookout",
+   "stone wall": "campsite",
+   "quarry": "radio mast"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   27.0,
+   111.5,
+   106.0
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_1",
+   "iris_1"
+  ],
+  "confirmed": [
+   41.5,
+   162.5,
+   169.0
+  ],
+  "extra_confirms": 0,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 16,
+  "targets": [
+   [
+    65.38665771661488,
+    39.74622741220787
+   ],
+   [
+    105.94414461409087,
+    54.34648005092337
+   ]
+  ],
+  "names": [
+   "stone wall",
+   "well"
+  ],
+  "swap": {
+   "stone wall": "campsite",
+   "well": "creek"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 4,
+  "found": [
+   111.0,
+   194.5
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_1"
+  ],
+  "confirmed": [
+   426.5,
+   null
+  ],
+  "extra_confirms": 1,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 17,
+  "targets": [
+   [
+    78.51471801658522,
+    88.44825890685306
+   ],
+   [
+    27.621858593654697,
+    78.27025096555712
+   ],
+   [
+    63.78148973598369,
+    73.78217392821259
+   ]
+  ],
+  "names": [
+   "orchard",
+   "creek",
+   "footbridge"
+  ],
+  "swap": {
+   "orchard": "chapel",
+   "creek": "well",
+   "footbridge": "hut"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 3,
+  "found": [
+   21.0,
+   33.0,
+   41.5
+  ],
+  "found_by": [
+   "iris_4",
+   "iris_1",
+   "iris_2"
+  ],
+  "confirmed": [
+   40.5,
+   52.0,
+   60.0
+  ],
+  "extra_confirms": 0,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 18,
+  "targets": [
+   [
+    39.91094543038869,
+    86.48419656174737
+   ],
+   [
+    9.653071952539136,
+    111.13041454594904
+   ],
+   [
+    70.16166765482714,
+    91.40788363669654
+   ]
+  ],
+  "names": [
+   "creek",
+   "trailhead",
+   "orchard"
+  ],
+  "swap": {
+   "creek": "well",
+   "trailhead": "stone wall",
+   "orchard": "lookout"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false,
+   false
+  ],
+  "regions": 4,
+  "found": [
+   28.0,
+   21.5,
+   121.0
+  ],
+  "found_by": [
+   "iris_2",
+   "iris_1",
+   "iris_1"
+  ],
+  "confirmed": [
+   61.5,
+   38.5,
+   null
+  ],
+  "extra_confirms": 1,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ },
+ {
+  "arm": "fixed",
+  "seed": 19,
+  "targets": [
+   [
+    104.38191980637251,
+    102.96077766596042
+   ],
+   [
+    5.658151874696679,
+    114.77277886808116
+   ]
+  ],
+  "names": [
+   "radio mast",
+   "trailhead"
+  ],
+  "swap": {
+   "radio mast": "lookout",
+   "trailhead": "campsite"
+  },
+  "redraws": 0,
+  "covered": [
+   false,
+   false
+  ],
+  "regions": 2,
+  "found": [
+   175.5,
+   21.5
+  ],
+  "found_by": [
+   "iris_1",
+   "iris_1"
+  ],
+  "confirmed": [
+   203.5,
+   null
+  ],
+  "extra_confirms": 0,
+  "end": 900.5,
+  "done": false,
+  "coverage": 1.0,
+  "sweep_done": 206.5,
+  "path": []
+ }
+]
